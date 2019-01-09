@@ -14,7 +14,7 @@ __version__ = "v20181224"
 __copyright__ = "Copyright (c) 2019, Crifan Li"
 __license__ = "GPL"
 
-
+from urllib.parse import quote_plus
 from flask import jsonify
 from bson.objectid import ObjectId
 
@@ -48,7 +48,55 @@ gConst = {
 ################################################################################
 
 
-def getGridfsFile(curGridfs, fileId, fileName=None, filterDataFunc=None):
+def generateMongoUri(host=None,
+                port=None,
+                isUseAuth=False,
+                username=None,
+                password=None,
+                authSource=None,
+                authMechanism=None):
+
+    """"generate mongodb uri"""
+    mongodbUri = ""
+
+    if not host:
+        # host = "127.0.0.0"
+        host = "localhost"
+
+    if not port:
+        port = 27017
+
+    mongodbUri = "mongodb://%s:%s" % (
+        host, \
+        port
+    )
+    # 'mongodb://localhost:27017'
+    # 'mongodb://47.96.131.109:27017'
+
+    if isUseAuth:
+        mongodbUri = "mongodb://%s:%s@%s:%s" % (
+            quote_plus(username), \
+            quote_plus(password), \
+            host, \
+            port \
+        )
+        # print(mongodbUri)
+
+        if authSource:
+            mongodbUri = mongodbUri + ("/%s" % authSource)
+            # print("mongodbUri=%s" % mongodbUri)
+
+        if authMechanism:
+            mongodbUri = mongodbUri + ("?authMechanism=%s" % authMechanism)
+            # print("mongodbUri=%s" % mongodbUri)
+
+    # print("return mongodbUri=%s" % mongodbUri)
+    #mongodb://username:quoted_password@host:port/authSource?authMechanism=authMechanism
+    #mongodb://localhost:27017
+
+    return mongodbUri
+
+def getGridfsFile(curGridfs, fileId, fileName=None, filterDataFunc=None, asAttachment=True):
     """
         generate downloadable gridfs file
     :param curGridfs: current gridfs collection
@@ -89,8 +137,7 @@ def getGridfsFile(curGridfs, fileId, fileName=None, filterDataFunc=None):
         outputFilename = fileName
     # print("outputFilename=%s" % outputFilename)
 
-    return sendFile(fileBytes, fileObj.content_type, outputFilename)
-
+    return sendFile(fileBytes, fileObj.content_type, outputFilename, asAttachment=asAttachment)
 
 ################################################################################
 # Test
@@ -105,6 +152,7 @@ def compressImageSize(fileBytes):
 def testGetGridfsFile():
     fileId = "5c1c631e127588257d568ebd"
     fileName = "rabbit.png"
+    fileType = "image"
     if fileType == "image":
         return getGridfsFile(mongoGridfs, fileId, fileName, compressImageSize)
     else:
