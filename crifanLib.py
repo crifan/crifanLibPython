@@ -129,7 +129,7 @@ http://www.crifan.com/files/doc/docbook/python_summary/release/html/python_summa
 
 __author__ = "Crifan Li (admin@crifan.com)"
 #__version__ = ""
-__copyright__ = "Copyright (c) 2018, Crifan Li"
+__copyright__ = "Copyright (c) 2019, Crifan Li"
 __license__ = "GPL"
 
 import os

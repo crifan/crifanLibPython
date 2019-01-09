@@ -18,7 +18,7 @@ https://github.com/crifan/crifanLibPython
 
 __author__ = "Crifan Li (admin@crifan.com)"
 __version__ = "v20181229"
-__copyright__ = "Copyright (c) 2018, Crifan Li"
+__copyright__ = "Copyright (c) 2019, Crifan Li"
 __license__ = "GPL"
 
 import logging
