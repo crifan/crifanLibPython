@@ -5,7 +5,7 @@ This is the `python` part of [CrifanLib](https://github.com/crifan/crifanLib)
 here contain two version:
 
 * `crifanLib.py` file: old `python 2` version
-  * (Chinese) Document: [crifanLib python 2](https://www.crifan.com/files/doc/docbook/crifanlib_python/release/html/crifanlib_python.html)
+  * how to use: refer (Chinese) Document [crifanLib python 2](https://www.crifan.com/files/doc/docbook/crifanlib_python/release/html/crifanlib_python.html)
 * `crifanLib` folder: new `python 3` version
   * seperate to many aspect:
 
@@ -33,4 +33,4 @@ here contain two version:
 ├── crifanUrl.py
 ├── crifanWechat.py
 ```
-
+  * how to use: refer [crifanLib/demo](https://github.com/crifan/crifanLibPython/tree/master/crifanLib/demo)
