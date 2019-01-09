@@ -6,7 +6,7 @@ Function: crifanLib's string related functions.
 Version: v1.2 20180615
 Note:
 1. latest version and more can found here:
-https://github.com/crifan/crifanLib/blob/master/python/crifanLib
+https://github.com/crifan/crifanLibPython
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"

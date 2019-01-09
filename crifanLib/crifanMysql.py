@@ -6,7 +6,7 @@ Function: crifanLib's mysql related functions.
 Version: v20181229
 Note:
 1. latest version and more can found here:
-https://github.com/crifan/crifanLib/blob/master/python/crifanLib
+https://github.com/crifan/crifanLibPython
 
   If you want to modify to your mysql and table, you need:
   (1) change change MysqlDb config to your mysql config

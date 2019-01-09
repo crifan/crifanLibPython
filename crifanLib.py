@@ -9,7 +9,7 @@ crifan's common functions, implemented by Python 2.x.
 
 [Note]
 1. online latest version can found at:
-https://github.com/crifan/crifanLib/blob/master/python/crifanLib.py
+https://github.com/crifan/crifanLibPython.py
 
 2. detailed explanation about this lib:
 crifan的Python库：crifanLib.py
