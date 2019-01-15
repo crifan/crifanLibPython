@@ -66,7 +66,7 @@ MysqlConfig = {
     'user': 'root',
     'password': 'crifan_mysql',
     # 'database': 'AutohomeResultdb',
-    'database': 'naturling',
+    'database': 'db_name',
     'charset': "utf8"
 }
 

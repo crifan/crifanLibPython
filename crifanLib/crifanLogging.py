@@ -56,7 +56,7 @@ def loggingInit(filename = None,
         logFilename = filename
     else:
         # logFilename = __file__ + ".log"
-        # '/Users/crifan/dev/dev_root/company/naturling/projects/NLP/sourcecode/naturling/processData/mysqlQa/crifanLogging.py.log'
+        # '/Users/crifan/dev/dev_root/xxx/crifanLogging.py.log'
         logFilename = CURRENT_LIB_FILENAME + ".log"
 
     # logging.basicConfig(
