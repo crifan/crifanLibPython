@@ -1,76 +1,67 @@
-# Function: Demo how use python output list/dict to csv file
+# Function: Demo how use python save/write list/dict to csv file
 # Version: 20190404
 # Author: Crifan Li
 
 import os
-import csv
-import codecs
+import sys
 
-OutputFilename = "OutputDemoData.csv"
-OutputFilename_utf8 = "OutputDemoData_utf8.csv"
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from crifanCsv import saveToCsvByHeaderAndList, saveToCsvByDictList
 
-OutputCsvHeader = ["Word", "DuplicatedRatio", "SourceList"]
-OutputCsvHeader_utf8 = ["单词", "重复频率", "来源列表"]
+OutputFilenameByHeaderAndList = "OutputDemoData_ByHeaderAndList.csv"
+OutputFilenameByDictList = "OutputDemoData_ByDictList.csv"
+
+OutputCsvHeader = ["单词", "重复频率", "来源列表"]
 
 curFile = os.path.abspath(__file__)
 curFolder = os.path.dirname(curFile)
 
-DemoDataList = [
+DemoRowListList = [
   ["a", 0.5, ['NewConcept', 'FamilyAndFriends']],
   ["about", 0.75, ['NewConcept', 'YLE', 'EverybodyUp']],
   ["above", 0.5, ['NewConcept', 'YLE']],
   ["abroad", 0.25, ['NewConcept']]
 ]
 
+DemoDictList = [
+  {
+    "单词": "a",
+    "重复频率": 0.5,
+    "来源列表": ['NewConcept', 'FamilyAndFriends'],
+  },
+  {
+    "单词": "about",
+    "重复频率": 0.75,
+    "来源列表": ['NewConcept', 'YLE', 'EverybodyUp'],
+  },
+  {
+    "单词": "above",
+    "重复频率": 0.5,
+    "来源列表": ['NewConcept', 'YLE'],
+  },
+  {
+    "单词": "abroad",
+    "重复频率": 0.25,
+    "来源列表": ['NewConcept'],
+  },
+]
+
 def demoCsvOutput():
-  fullOutputFilePath = os.path.join(curFolder, OutputFilename)
+  # Demo1: save by list of each row item list
+  fullFilePathByHeaderAndList = os.path.join(curFolder, OutputFilenameByHeaderAndList)
+  saveToCsvByHeaderAndList(OutputCsvHeader, DemoRowListList, fullFilePathByHeaderAndList)
 
-  # Demo1: write by row or allrows, of list, all ASCII
-  with open(fullOutputFilePath, "w") as outCsvFp:
-    csvWriter = csv.writer(outCsvFp)
-    # write header from list
-    csvWriter.writerow(OutputCsvHeader)
+  # Demo1: save by list of dict, not need assign header
+  fullFilePathByDictList = os.path.join(curFolder, OutputFilenameByDictList)
+  saveToCsvByDictList(DemoDictList, fullFilePathByDictList)
 
-    # type1: write each row
-    # for eachRowList in DemoDataList:
-    #   csvWriter.writerow(eachRowList)
-
-    # type2: write all rows
-    csvWriter.writerows(DemoDataList)
-
-    """
-    Word,DuplicatedRatio,SourceList
-    a,0.5,"['NewConcept', 'FamilyAndFriends']"
-    about,0.75,"['NewConcept', 'YLE', 'EverybodyUp']"
-    above,0.5,"['NewConcept', 'YLE']"
-    abroad,0.25,['NewConcept']
-
-    """
-
-  # Demo2: write by row of dict, using utf-8 encoding to support non-ASCII
-  fullOutputFilePath_utf8 = os.path.join(curFolder, OutputFilename_utf8)
-  with codecs.open(fullOutputFilePath_utf8, "w", "UTF-8") as outCsvUtf8Fp:
-    csvDictWriter = csv.DictWriter(outCsvUtf8Fp, fieldnames=OutputCsvHeader_utf8)
-
-    # write header by inner function from fieldnames
-    csvDictWriter.writeheader()
-
-    for eachRowList in DemoDataList:
-      eachRowDict = {
-        "单词": eachRowList[0],
-        "重复频率": eachRowList[1],
-        "来源列表": eachRowList[2],
-      }
-      csvDictWriter.writerow(eachRowDict)
-
-    """
-    单词,重复频率,来源列表
-    a,0.5,"['NewConcept', 'FamilyAndFriends']"
-    about,0.75,"['NewConcept', 'YLE', 'EverybodyUp']"
-    above,0.5,"['NewConcept', 'YLE']"
-    abroad,0.25,['NewConcept']
-
-    """
+  """
+  单词,重复频率,来源列表
+  a,0.5,"['NewConcept', 'FamilyAndFriends']"
+  about,0.75,"['NewConcept', 'YLE', 'EverybodyUp']"
+  above,0.5,"['NewConcept', 'YLE']"
+  abroad,0.25,['NewConcept']
+  """
 
 if __name__ == "__main__":
   demoCsvOutput()
