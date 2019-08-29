@@ -16,6 +16,7 @@ __license__ = "GPL"
 
 import os
 import io
+import re
 
 cfgDefaultImageResample = None
 try:
@@ -29,7 +30,7 @@ try:
 except:
     print("need audioread if use crifanMultimedia audio functions")
 
-from crifanLib.crifanSystem import runCommand
+from crifanLib.crifanSystem import runCommand, getCommandOutput
 from crifanLib.crifanFile  import isFileObject
 
 ################################################################################
@@ -159,6 +160,62 @@ def extractAudioFromVideo(
     return extractIsOk, extractedAudioPath, errMsg
 
 #----------------------------------------
+# Video
+#----------------------------------------
+
+def detectVideoDimension(videoFullPath):
+    """
+        detect video dimention(width x height) using ffprobe
+    """
+    # print("detectVideoDimension: videoFullPath=%s" % videoFullPath)
+    videoWidth = 0
+    videoHeight = 0
+
+    ffprobeCmd = 'ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 %s' % videoFullPath
+    # print("ffprobeCmd=%s" % ffprobeCmd)
+    isRunCmdOk, consoleOutput = getCommandOutput(ffprobeCmd)
+    # print("isRunCmdOk=%s, consoleOutput=%s" % (isRunCmdOk, consoleOutput))
+    if isRunCmdOk:
+        # extract width and height
+        videoDimensionStr = consoleOutput # '640x360\n'
+        foundDimension = re.search("(?P<videoWidth>\d+)x(?P<videoHeight>\d+)", videoDimensionStr)
+        # print("foundDimension=%s" % foundDimension)
+        if foundDimension:
+            videoWidth = foundDimension.group("videoWidth")
+            videoWidth = int(videoWidth)
+            videoHeight = foundDimension.group("videoHeight")
+            videoHeight = int(videoHeight)
+            # print("videoWidth=%s, videoHeight=%s" % (videoWidth, videoHeight))
+
+    return (videoWidth, videoHeight)
+
+def removeVideoWatermark(inputVideoFullPath, outputVideoFullPath, watermarkPositionDict, isOverwrite=False, isVerbose=False):
+    """
+        remove video water mark using ffmpeg
+    """
+    # print("removeVideoWatermark: inputVideoFullPath=%s, outputVideoFullPath=%s, watermarkPositionDict=%s" % (inputVideoFullPath, outputVideoFullPath, watermarkPositionDict))
+    # ffmpeg -i input_video.mp4 -vf "delogo=x=490:y=30:w=130:h=50" -c:a copy output_video.mp4
+    # ffmpegCmd = 'ffmpeg -i %s -vf "delogo=x=490:y=30:w=130:h=50" -c:a copy %s' % (inputVideoFullPath, outputVideoFullPath)
+    extraOptionList = []
+    if isOverwrite:
+        optionOverwrite = "-y"
+        extraOptionList.append(optionOverwrite)
+    if not isVerbose:
+        optionLessOutput = "-hide_banner -loglevel error"
+        extraOptionList.append(optionLessOutput)
+    optionAvoidHang = "-nostdin"
+    extraOptionList.append(optionAvoidHang)
+    extraOptionStr = " ".join(extraOptionList)
+    print("extraOptionStr=%s" % extraOptionStr)
+    ffmpegCmd = 'ffmpeg %s -i %s -vf "delogo=x=%d:y=%d:w=%d:h=%d" -c:a copy %s' % \
+        (extraOptionStr, inputVideoFullPath, watermarkPositionDict["x"], watermarkPositionDict["y"], watermarkPositionDict["w"], watermarkPositionDict["h"], outputVideoFullPath)
+    print("ffmpegCmd=%s" % ffmpegCmd)
+    # ffmpegCmd=ffmpeg -hide_banner -loglevel error -nostdin -i /xxx/video_normalWatermark_480w360h.mp4 -vf "delogo=x=324:y=28:w=140:h=53" -c:a copy /xxx/video_normalWatermark_480w360h_removedWatermark.mp4
+    isRemovedWatermarkOk, errMsg = runCommand(ffmpegCmd)
+    # print("isRemovedWatermarkOk=%s, errMsg=%s" % (isRemovedWatermarkOk, errMsg))
+    return isRemovedWatermarkOk, errMsg
+
+#----------------------------------------
 # Audio
 #----------------------------------------
 
@@ -265,7 +322,6 @@ def detectAudioMetaInfo(audioFullPath):
         return isOk, audioMetaInfo
     else:
         return isOk, errMsg
-
 
 #----------------------------------------
 # Image

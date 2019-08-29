@@ -74,6 +74,36 @@ def runCommand(consoleCommand):
 
     return isRunCmdOk, errMsg
 
+
+def getCommandOutput(consoleCommand, consoleOutputEncoding="utf-8"):
+    """
+        get command output from terminal
+    """
+    # print("getCommandOutput: consoleCommand=%s" % consoleCommand)
+    isRunCmdOk = False
+    consoleOutput = ""
+    try:
+        # consoleOutputByte = subprocess.check_output(consoleCommand)
+
+        consoleOutputByte = subprocess.check_output(consoleCommand, shell=True)
+
+        # commandPartList = consoleCommand.split(" ")
+        # print("commandPartList=%s" % commandPartList)
+        # consoleOutputByte = subprocess.check_output(commandPartList)
+        # print("type(consoleOutputByte)=%s" % type(consoleOutputByte)) # <class 'bytes'>
+        # print("consoleOutputByte=%s" % consoleOutputByte) # b'640x360\n'
+
+        consoleOutput = consoleOutputByte.decode(consoleOutputEncoding) # '640x360\n'
+        consoleOutput = consoleOutput.strip() # '640x360'
+        isRunCmdOk = True
+    except subprocess.CalledProcessError as callProcessErr:
+        cmdErrStr = str(callProcessErr)
+        print("Error %s for run command %s" % (cmdErrStr, consoleCommand))
+
+    # print("isRunCmdOk=%s, consoleOutput=%s" % (isRunCmdOk, consoleOutput))
+    return isRunCmdOk, consoleOutput
+
+
 ################################################################################
 # Test
 ################################################################################

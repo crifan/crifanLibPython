@@ -23,13 +23,12 @@ import json
 try:
     import pysrt
 except ImportError:
-    print("crifanFile: Can not found lib pysrt")
+    print("need pysrt if using crifanFile functions: extractRawSubtitleList")
 
 try:
     import chardet
 except ImportError:
-    print("crifanFile: Can not found lib chardet")
-
+    print("need chardet if using crifanFile functions: extractRawSubtitleList")
 
 # from . import crifanList
 import crifanLib.crifanList

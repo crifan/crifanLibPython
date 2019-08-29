@@ -11,7 +11,7 @@ sys.path.append(parentParentParentFolder)
 
 import datetime
 from crifanMultimedia import resizeImage
-from crifanMultimedia import detectAudioMetaInfo
+from crifanMultimedia import detectAudioMetaInfo, removeVideoWatermark, detectVideoDimension
 
 def testFilename():
   imageFilename = "/Users/crifan/dev/tmp/python/resize_image_demo/hot day.png"
@@ -80,9 +80,31 @@ def demoDetectAudioMeta():
     isOk, errOrInfo = detectAudioMetaInfo(eachAudioFullPath)
     print("isOk=%s, errOrInfo=%s" % (isOk, errOrInfo))
 
+def demoRemoveVideoWatermark():
+  curPath = os.path.dirname(__file__)
+  inputVideoFilePath = "input/video/video_normalWatermark_480w360h.mp4"
+  inputVideoFullPath = os.path.join(curPath, inputVideoFilePath)
+  outputVideoFilePath = "output/video/video_normalWatermark_480w360h_removedWatermark.mp4"
+  outputVideoFullPath = os.path.join(curPath, outputVideoFilePath)
+  watermarkPostionDict = {
+    "x": 324,
+    "y": 28,
+    "w": 140,
+    "h": 53
+  }
+  # isRemovedWatermarkOk, errMsg = removeVideoWatermark(inputVideoFullPath, outputVideoFullPath, watermarkPostionDict)
+  isRemovedWatermarkOk, errMsg = removeVideoWatermark(inputVideoFullPath, outputVideoFullPath, watermarkPostionDict, isOverwrite=True, isVerbose=True)
+  print("isRemovedWatermarkOk=%s, errMsg=%s" % (isRemovedWatermarkOk, errMsg))
+
+def demoDetectVideoDimension():
+  curPath = os.path.dirname(__file__)
+  inputVideoFilePath = "input/video/video_normalWatermark_480w360h.mp4"
+  inputVideoFullPath = os.path.join(curPath, inputVideoFilePath)
+  videoWidth, videoHeight = detectVideoDimension(inputVideoFullPath)
+  print("videoWidth=%s, videoHeight=%s" % (videoWidth, videoHeight))
+
 if __name__ == "__main__":
   # demoResizeImage()
-
   # imageFilename=/Users/crifan/dev/tmp/python/resize_image_demo/hot day.png
   # procesTime: 0:00:00.619377
   # procesTime: 0:00:00.745228
@@ -92,8 +114,14 @@ if __name__ == "__main__":
   # len(resizedImageBytes)=753258
   # procesTime: 0:00:00.738237
 
-  demoDetectAudioMeta()
+  # demoDetectAudioMeta()
   # isOk=True, errOrInfo={'duration': 637.8, 'channels': 2, 'sampleRate': 44100}
   # isOk=True, errOrInfo={'duration': 2.3510204081632655, 'channels': 2, 'sampleRate': 44100}
   # isOk=False, errOrInfo=detect audio info error: [Errno 2] No such file or directory: '/Users/crifan/dev/dev_root/crifan/crifanLibPython/crifanLib/demo/not_exist_audio.wav'
   # isOk=False, errOrInfo=detect audio info error: 
+
+  # demoRemoveVideoWatermark()
+  # isRemovedWatermarkOk=True, errMsg=
+
+  demoDetectVideoDimension()
+  # videoWidth=480, videoHeight=360
