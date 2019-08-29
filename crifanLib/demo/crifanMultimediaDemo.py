@@ -11,6 +11,7 @@ sys.path.append(parentParentParentFolder)
 
 import datetime
 from crifanMultimedia import resizeImage
+from crifanMultimedia import detectAudioMetaInfo
 
 def testFilename():
   imageFilename = "/Users/crifan/dev/tmp/python/resize_image_demo/hot day.png"
@@ -64,8 +65,23 @@ def demoResizeImage():
   testFileObject()
   testBinaryBytes()
 
+
+def demoDetectAudioMeta():
+  curPath = os.path.dirname(__file__)
+  inputAudioList = [
+    "input/audio/actual_aac_but_suffix_mp3.mp3",
+    "input/audio/real_mp3_format.mp3",
+    "not_exist_audio.wav",
+    "input/audio/fake_audio_actual_image.wav",
+  ]
+
+  for eachAudioPath in inputAudioList:
+    eachAudioFullPath = os.path.join(curPath, eachAudioPath)
+    isOk, errOrInfo = detectAudioMetaInfo(eachAudioFullPath)
+    print("isOk=%s, errOrInfo=%s" % (isOk, errOrInfo))
+
 if __name__ == "__main__":
-  demoResizeImage()
+  # demoResizeImage()
 
   # imageFilename=/Users/crifan/dev/tmp/python/resize_image_demo/hot day.png
   # procesTime: 0:00:00.619377
@@ -75,3 +91,9 @@ if __name__ == "__main__":
   # procesTime: 0:00:00.773289
   # len(resizedImageBytes)=753258
   # procesTime: 0:00:00.738237
+
+  demoDetectAudioMeta()
+  # isOk=True, errOrInfo={'duration': 637.8, 'channels': 2, 'sampleRate': 44100}
+  # isOk=True, errOrInfo={'duration': 2.3510204081632655, 'channels': 2, 'sampleRate': 44100}
+  # isOk=False, errOrInfo=detect audio info error: [Errno 2] No such file or directory: '/Users/crifan/dev/dev_root/crifan/crifanLibPython/crifanLib/demo/not_exist_audio.wav'
+  # isOk=False, errOrInfo=detect audio info error: 

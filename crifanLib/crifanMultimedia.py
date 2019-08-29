@@ -16,10 +16,18 @@ __license__ = "GPL"
 
 import os
 import io
+
+cfgDefaultImageResample = None
 try:
     from PIL import Image
+    cfgDefaultImageResample = Image.BICUBIC # Image.LANCZOS
 except:
     print("need Pillow if use crifanMultimedia Image functions")
+
+try:
+    import audioread
+except:
+    print("need audioread if use crifanMultimedia audio functions")
 
 from crifanLib.crifanSystem import runCommand
 from crifanLib.crifanFile  import isFileObject
@@ -51,6 +59,9 @@ gConst = {
 # Python Multimedia Function
 ################################################################################
 
+#----------------------------------------
+# Audio/Video
+#----------------------------------------
 
 def formatFfmpegTimeStr(timeValue, seperatorHms=":", seperatorMs="."):
     """
@@ -69,78 +80,6 @@ def formatFfmpegTimeStr(timeValue, seperatorHms=":", seperatorMs="."):
         timeValue.second, seperatorMs,
         millisecond)
     return ffmpegTimeStr
-
-def splitAudio(
-        inputAudioFullPath,
-        startTime,
-        endTime,
-        outputAudioFullPath="",
-        isOutputLog=False,
-        isAskOverwrite=False,
-    ):
-    """
-        split specified time duration(startTime - endTime) auido (default mp3) file from input (whole) audio (normally .mp4) file
-        Note:
-            internal using ffmpeg, your system must installed ffmpeg
-
-        params:
-        * `inputAudioFullPath`: /whole/audio/path/input_audio_name.mp3
-        * `startTime`: start time of type datetime.time
-        * `endTime`: end time of type datetime.time
-        * `outputAudioFullPath`:
-            * `""`: -> /whole/audio/path/ + input_audio_name_{startTime}_{endTime}.mp3
-            * `"/output/audio/path/output_audio_name.mp3"`: /output/audio/path/output_audio_name.mp3
-        * `isOutputLog`: ffmpeg show console log or not
-            if not, will redirect to null device to omit it
-        * `isAskOverwrite`: when existed file, whether ask overwrite or not
-            default Not ask, that is force overwrite
-
-        return: (bool, str, str)
-                    bool: extract OK or not
-                    str: splitted audio full path
-                    str: error message string
-    """
-    extractIsOk = False
-    splittedAudioFullPath = ""
-    errMsg = "Unknown Error"
-
-    if not outputAudioFullPath:
-        inputAudioPath = os.path.dirname(inputAudioFullPath)
-        inputAudioName = os.path.basename(inputAudioFullPath)
-        inputAudioNameNoSuffix, inputAudioSuffix = os.path.splitext(inputAudioName) # 'show_14322648_audio', '.mp3'
-
-        startTimeStrForName = formatFfmpegTimeStr(startTime, "", "")
-        endTimeStrForName = formatFfmpegTimeStr(endTime, "", "")
-        timeDurationStr = "_" + startTimeStrForName + "_" + endTimeStrForName
-
-        audioFilename = inputAudioNameNoSuffix + timeDurationStr + inputAudioSuffix # 'show_14322648_audio_000004237_000006336.mp3'
-        outputAudioFullPath = os.path.join(inputAudioPath, audioFilename)
-
-    startTimeStrFfmpeg = formatFfmpegTimeStr(startTime)
-    endTimeStrFfmpeg = formatFfmpegTimeStr(endTime)
-    timeDurationPara = "-ss %s -to %s" % (startTimeStrFfmpeg, endTimeStrFfmpeg) # '-ss 00:00:04.237 -to 00:00:06.336'
-
-    extraPara = ""
-    if not isAskOverwrite:
-        extraPara += "-y"
-
-    redirectOutputPara = ""
-    if not isOutputLog:
-        redirectOutputPara += "2> /dev/null"
-
-    ffmpegCmd = "ffmpeg %s -i %s %s -b:a 128k %s %s" % (
-        extraPara, inputAudioFullPath, timeDurationPara, outputAudioFullPath, redirectOutputPara)
-    # print("ffmpegCmd=%s" % ffmpegCmd)
-
-    # Example:
-    # ffmpeg -y -i /xxx/show_14322648_audio.mp3 -ss 00:00:04.237 -to 00:00:06.336 -b:a 128k /xxx/show_14322648_audio_000004237_000006336.mp3 2> /dev/null
-
-    extractIsOk, errMsg = runCommand(ffmpegCmd)
-    if extractIsOk:
-        splittedAudioFullPath = outputAudioFullPath
-
-    return extractIsOk, splittedAudioFullPath, errMsg
-
 
 def extractAudioFromVideo(
         videoFullPath,
@@ -219,6 +158,114 @@ def extractAudioFromVideo(
 
     return extractIsOk, extractedAudioPath, errMsg
 
+#----------------------------------------
+# Audio
+#----------------------------------------
+
+
+def splitAudio(
+        inputAudioFullPath,
+        startTime,
+        endTime,
+        outputAudioFullPath="",
+        isOutputLog=False,
+        isAskOverwrite=False,
+    ):
+    """
+        split specified time duration(startTime - endTime) auido (default mp3) file from input (whole) audio (normally .mp4) file
+        Note:
+            internal using ffmpeg, your system must installed ffmpeg
+
+        params:
+        * `inputAudioFullPath`: /whole/audio/path/input_audio_name.mp3
+        * `startTime`: start time of type datetime.time
+        * `endTime`: end time of type datetime.time
+        * `outputAudioFullPath`:
+            * `""`: -> /whole/audio/path/ + input_audio_name_{startTime}_{endTime}.mp3
+            * `"/output/audio/path/output_audio_name.mp3"`: /output/audio/path/output_audio_name.mp3
+        * `isOutputLog`: ffmpeg show console log or not
+            if not, will redirect to null device to omit it
+        * `isAskOverwrite`: when existed file, whether ask overwrite or not
+            default Not ask, that is force overwrite
+
+        return: (bool, str, str)
+                    bool: extract OK or not
+                    str: splitted audio full path
+                    str: error message string
+    """
+    extractIsOk = False
+    splittedAudioFullPath = ""
+    errMsg = "Unknown Error"
+
+    if not outputAudioFullPath:
+        inputAudioPath = os.path.dirname(inputAudioFullPath)
+        inputAudioName = os.path.basename(inputAudioFullPath)
+        inputAudioNameNoSuffix, inputAudioSuffix = os.path.splitext(inputAudioName) # 'show_14322648_audio', '.mp3'
+
+        startTimeStrForName = formatFfmpegTimeStr(startTime, "", "")
+        endTimeStrForName = formatFfmpegTimeStr(endTime, "", "")
+        timeDurationStr = "_" + startTimeStrForName + "_" + endTimeStrForName
+
+        audioFilename = inputAudioNameNoSuffix + timeDurationStr + inputAudioSuffix # 'show_14322648_audio_000004237_000006336.mp3'
+        outputAudioFullPath = os.path.join(inputAudioPath, audioFilename)
+
+    startTimeStrFfmpeg = formatFfmpegTimeStr(startTime)
+    endTimeStrFfmpeg = formatFfmpegTimeStr(endTime)
+    timeDurationPara = "-ss %s -to %s" % (startTimeStrFfmpeg, endTimeStrFfmpeg) # '-ss 00:00:04.237 -to 00:00:06.336'
+
+    extraPara = ""
+    if not isAskOverwrite:
+        extraPara += "-y"
+
+    redirectOutputPara = ""
+    if not isOutputLog:
+        redirectOutputPara += "2> /dev/null"
+
+    ffmpegCmd = "ffmpeg %s -i %s %s -b:a 128k %s %s" % (
+        extraPara, inputAudioFullPath, timeDurationPara, outputAudioFullPath, redirectOutputPara)
+    # print("ffmpegCmd=%s" % ffmpegCmd)
+
+    # Example:
+    # ffmpeg -y -i /xxx/show_14322648_audio.mp3 -ss 00:00:04.237 -to 00:00:06.336 -b:a 128k /xxx/show_14322648_audio_000004237_000006336.mp3 2> /dev/null
+
+    extractIsOk, errMsg = runCommand(ffmpegCmd)
+    if extractIsOk:
+        splittedAudioFullPath = outputAudioFullPath
+
+    return extractIsOk, splittedAudioFullPath, errMsg
+
+
+def detectAudioMetaInfo(audioFullPath):
+    """
+        detect audio meta info: duration, channels, sampleRate
+    """
+    isOk = False
+    errMsg = ""
+    audioMetaInfo = {
+        "duration": 0,
+        "channels": 0,
+        "sampleRate": 0,
+    }
+
+    try:
+        with audioread.audio_open(audioFullPath) as audioFp:
+            audioMetaInfo["duration"] = audioFp.duration
+            audioMetaInfo["channels"] = audioFp.channels
+            audioMetaInfo["sampleRate"] = audioFp.samplerate
+
+            isOk = True
+    except OSError as osErr:
+        errMsg = "detect audio info error: %s" % str(osErr)
+    except EOFError as eofErr:
+        errMsg = "detect audio info error: %s" % str(eofErr)
+    except audioread.DecodeError as decodeErr:
+        errMsg = "detect audio info error: %s" % str(decodeErr)
+    
+    if isOk:
+        return isOk, audioMetaInfo
+    else:
+        return isOk, errMsg
+
 
 #----------------------------------------
 # Image
@@ -226,7 +273,7 @@ def extractAudioFromVideo(
 
 def resizeImage(inputImage,
                 newSize,
-                resample=Image.BICUBIC, # Image.LANCZOS,
+                resample=cfgDefaultImageResample,
                 outputFormat=None,
                 outputImageFile=None
                 ):
