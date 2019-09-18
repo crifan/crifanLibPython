@@ -19,11 +19,8 @@ import math
 import uuid
 import random
 import string
+from hashlib import md5 # only for python 3.x
 
-try:
-    import md5
-except ImportError:
-    from hashlib import md5
 
 ################################################################################
 # Config
@@ -115,7 +112,6 @@ def generateUUID(prefix = ""):
 # MD5
 #----------------------------------------
 
-
 def generateMd5(strToMd5) :
     """
     generate md5 string from input string
@@ -124,20 +120,18 @@ def generateMd5(strToMd5) :
         xxxxxxxx -> af0230c7fcc75b34cbb268b9bf64da79
 
     :param strToMd5: input string
-    :return: md5 string
+    :return: md5 string of 32 chars
     """
-
     encrptedMd5 = ""
-    md5Instance = md5.new()
-    # logging.debug("md5Instance=%s", md5Instance)
-    #md5Instance=<md5 HASH object @ 0x1062af738>
-    md5Instance.update(strToMd5)
-    # logging.debug("md5Instance=%s", md5Instance)
-    #md5Instance=<md5 HASH object @ 0x1062af738>
+    md5Instance = md5()
+    # print("type(md5Instance)=%s" % type(md5Instance)) # type(md5Instance)=<class '_hashlib.HASH'>
+    # print("type(strToMd5)=%s" % type(strToMd5)) # type(strToMd5)=<class 'str'>
+    bytesToMd5 = bytes(strToMd5, "UTF-8")
+    # print("type(bytesToMd5)=%s" % type(bytesToMd5)) # type(bytesToMd5)=<class 'bytes'>
+    md5Instance.update(bytesToMd5)
     encrptedMd5 = md5Instance.hexdigest()
-    # logging.debug("encrptedMd5=%s", encrptedMd5)
-    #encrptedMd5=af0230c7fcc75b34cbb268b9bf64da79
-
+    # print("type(encrptedMd5)=%s" % type(encrptedMd5)) # type(encrptedMd5)=<class 'str'>
+    # print("encrptedMd5=%s" % encrptedMd5) # encrptedMd5=3a821616bec2e86e3e232d0c7f392cf5
     return encrptedMd5
 
 #----------------------------------------
