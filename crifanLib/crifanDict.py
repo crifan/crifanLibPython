@@ -16,6 +16,7 @@ __license__ = "GPL"
 
 
 import sys
+from collections import OrderedDict
 import crifanLib.crifanSystem
 
 ################################################################################
@@ -151,12 +152,18 @@ bDict should use deepcopy, otherwise will be altered after call this function !!
 
     return bDict
 
+def sortDictByKey(originDict):
+    """
+        Sort dict by key
+    """
+    originItems = originDict.items()
+    sortedOriginItems = sorted(originItems)
+    sortedOrderedDict = OrderedDict(sortedOriginItems)
+    return sortedOrderedDict
 
 ################################################################################
 # Test
 ################################################################################
-
-
 
 if __name__ == '__main__':
     print("[crifanLib-%s] %s" % (CURRENT_LIB_FILENAME, __version__))
