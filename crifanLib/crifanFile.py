@@ -3,14 +3,14 @@
 """
 Filename: crifanFile.py
 Function: crifanLib's file related functions.
-Last Update: 20181201
+Last Update: 20191213
 Note:
 1. latest version and more can found here:
 https://github.com/crifan/crifanLibPython
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v20181201"
+__version__ = "v20191213"
 __copyright__ = "Copyright (c) 2019, Crifan Li"
 __license__ = "GPL"
 
@@ -140,6 +140,25 @@ def loadTextFromFile(fullFilename, fileEncoding="utf-8"):
         allText = fp.read()
         # logging.debug("Complete load text from %s", fullFilename)
         return allText
+
+def readBinDataFromFile(filePath):
+    """Read binary data from file
+
+    Args:
+        filePath (str): file path
+    Returns:
+        bytes, file binary data
+    Raises:
+    """
+    binaryData = None
+    try:
+        readFp = open(filePath, "rb")
+        binaryData = readFp.read()
+        readFp.close()
+    except:
+        binaryData = None
+
+    return binaryData
 
 ################################################################################
 # Folder Function

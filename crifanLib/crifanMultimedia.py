@@ -3,24 +3,28 @@
 """
 Filename: crifanMultimedia.py
 Function: crifanLib's python multimedia (audio, video, image) related functions
-Version: v20181223
+Version: v20191213
 Note:
 1. latest version and more can found here:
 https://github.com/crifan/crifanLibPython
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v20181223"
+__version__ = "v20191213"
 __copyright__ = "Copyright (c) 2019, Crifan Li"
 __license__ = "GPL"
 
 import os
 import io
 import re
+import base64
+import requests
+import logging
 
 cfgDefaultImageResample = None
 try:
     from PIL import Image
+    from PIL import ImageDraw
     cfgDefaultImageResample = Image.BICUBIC # Image.LANCZOS
 except:
     print("need Pillow if use crifanMultimedia Image functions")
@@ -31,7 +35,7 @@ except:
     print("need audioread if use crifanMultimedia audio functions")
 
 from crifanLib.crifanSystem import runCommand, getCommandOutput
-from crifanLib.crifanFile  import isFileObject
+from crifanLib.crifanFile  import isFileObject, readBinDataFromFile
 
 ################################################################################
 # Config
@@ -379,6 +383,145 @@ def resizeImage(inputImage,
         compressRatio = float(compressedImageLen)/float(inputImageLen)
         print("%s -> %s, resize ratio: %d%%" % (inputImageLen, compressedImageLen, int(compressRatio * 100)))
         return compressedImageBytes
+
+	def imageDrawRectangle(inputImg, rectLocation, outlineColor="green", outlineWidth=0):
+		"""Draw a rectangle for image
+
+		Args:
+			inputImg (Image): a pillow(PIL) Image instance
+			rectLocation (tuple): the rectangle location, (x, y, width, height)
+		Returns:
+			Nothing, just show result image with rectangle
+		Raises:
+		"""
+		draw = ImageDraw.Draw(inputImg)
+		x0 = rectLocation[0]
+		y0 = rectLocation[1]
+		x1 = x0 + rectLocation[2]
+		y1 = y0 + rectLocation[3]
+		draw.rectangle(
+			[x0, y0, x1, y1],
+			# fill="yellow",
+			# outline="yellow",
+			outline=outlineColor,
+			width=outlineWidth,
+		)
+
+		inputImg.show()
+
+#----------------------------------------
+# Image ORC
+#----------------------------------------
+
+
+class ImageOcr():
+	# OCR_URL = "https://aip.baidubce.com/rest/2.0/ocr/v1/general_basic" # 通用文字识别
+    # OCR_URL = "https://aip.baidubce.com/rest/2.0/ocr/v1/general"        # 通用文字识别（含位置信息版）
+    # OCR_URL = "https://aip.baidubce.com/rest/2.0/ocr/v1/accurate_basic" # 通用文字识别（高精度版）
+    OCR_URL = "https://aip.baidubce.com/rest/2.0/ocr/v1/accurate"       # 通用文字识别（高精度含位置版）
+
+    TOKEN_URL = 'https://aip.baidubce.com/oauth/2.0/token'
+
+    RESP_ERR_CODE_QPS_LIMIT_REACHED = 18
+    RESP_ERR_TEXT_QPS_LIMIT_REACHED = "Open api qps request limit reached"
+
+    RESP_ERR_CODE_DAILY_LIMIT_REACHED = 17
+    RESP_ERR_TEXT_DAILY_LIMIT_REACHED = "Open api daily request limit reached"
+
+    API_KEY = 'your_baidu_ocr_api_key'
+    SECRET_KEY = 'your_baidu_ocr_api_secrect_key'
+
+    def initOcr(self):
+        self.curToken = self.baiduFetchToken()
+
+    def baiduFetchToken(self):
+        """Fetch Baidu token for OCR"""
+        params = {
+            'grant_type': 'client_credentials',
+            'client_id': self.API_KEY,
+            'client_secret': self.SECRET_KEY
+        }
+
+        resp = requests.get(self.TOKEN_URL, params=params)
+        respJson = resp.json()
+
+        respToken = ""
+
+        if ('access_token' in respJson.keys() and 'scope' in respJson.keys()):
+            if not 'brain_all_scope' in respJson['scope'].split(' '):
+                logging.error('please ensure has check the  ability')
+            else:
+                respToken = respJson['access_token']
+        else:
+            logging.error('please overwrite the correct API_KEY and SECRET_KEY')
+
+        # '24.869xxxxxx52.25xxx0.1578xxx79.2xxx5-17xxxx5'
+        return respToken
+
+    def baiduImageToWords(self, imageFullPath):
+        """Detect text from image using Baidu OCR api"""
+
+        # # Note: if using un-paid = free baidu api, need following wait sometime to reduce: qps request limit
+        # time.sleep(0.15)
+
+        respWordsResutJson = ""
+
+        # 读取图片二进制数据
+        imgBinData = readBinDataFromFile(imageFullPath)
+        encodedImgData = base64.b64encode(imgBinData)
+
+        paramDict = {
+            "access_token": self.curToken
+        }
+
+        headerDict = {
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+
+        # 参数含义：http://ai.baidu.com/ai-doc/OCR/vk3h7y58v
+        dataDict = {
+            "image": encodedImgData,
+            "recognize_granularity": "small",
+            # "vertexes_location": "true",
+        }
+        resp = requests.post(self.OCR_URL, params=paramDict, headers=headerDict, data=dataDict)
+        respJson = resp.json()
+
+        logging.debug("baidu OCR: imgage=%s -> respJson=%s", imageFullPath, respJson)
+
+        if "error_code" in respJson:
+            logging.warning("respJson=%s" % respJson)
+            errorCode = respJson["error_code"]
+            # {'error_code': 17, 'error_msg': 'Open api daily request limit reached'}
+            # {'error_code': 18, 'error_msg': 'Open api qps request limit reached'}
+            # the limit count can found from
+            # 文字识别 - 免费额度 | 百度AI开放平台
+            # https://ai.baidu.com/ai-doc/OCR/fk3h7xu7h
+            # for "通用文字识别（高精度含位置版）" is "50次/天"
+            if errorCode == self.RESP_ERR_CODE_QPS_LIMIT_REACHED:
+                # wait sometime and try again
+                time.sleep(1.0)
+                resp = requests.post(self.OCR_URL, params=paramDict, headers=headerDict, data=dataDict)
+                respJson = resp.json()
+                logging.debug("baidu OCR: for errorCode=%s, do again, imgage=%s -> respJson=%s", errorCode, imageFullPath, respJson)
+            elif errorCode == self.RESP_ERR_CODE_DAILY_LIMIT_REACHED:
+                logging.error("Fail to continue using baidu OCR api today !!!")
+                respJson = None
+
+        """
+        {
+        "log_id": 6937531796498618000,
+        "words_result_num": 32,
+        "words_result": [
+            {
+            "chars": [
+                ...
+        """
+        if "words_result" in respJson:
+            respWordsResutJson = respJson
+
+        return respWordsResutJson
+
 
 ################################################################################
 # Test
