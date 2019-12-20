@@ -3,3 +3,4 @@ __pycache__/
 .vscode/
 
 crifanLib/demo/output/
+.DS_Store
