@@ -9,7 +9,7 @@ sys.path.append(parentFolder)
 sys.path.append(parentParentFolder)
 sys.path.append(parentParentParentFolder)
 
-from crifanFile import getFileFolderSize, formatSize
+from crifanFile import getFileFolderSize, formatSize, findNextNumberFilename
 
 def testNormalFile():
   normalFile = "/Users/crifan/dev/dev_root/crifan/CrifanLib/crifanLib/python/crifanLib/demo/crifanFileDemo.py"
@@ -84,7 +84,18 @@ def demoFormatSize():
   # 763832854988542 -> 694.70TB
   # 763832854988542665 -> 678.4199PB
 
+def demoFindNextNumberFilename():
+  notExistFile = "crifanLib/demo/input/image/some_not_exist_filename.jpg"
+  nextFilename = findNextNumberFilename(notExistFile)
+  print("notExistFile=%s -> nextFilename=%s" % (notExistFile, nextFilename))
+  # notExistFile=crifanLib/demo/input/image/some_not_exist_filename.jpg -> nextFilename=crifanLib/demo/input/image/some_not_exist_filename.jpg
+
+  realExistFile = "crifanLib/demo/input/image/20191219_172616_drawRect_40x40.jpg"
+  nextUntilNotExistFilename = findNextNumberFilename(realExistFile)
+  print("realExistFile=%s -> nextUntilNotExistFilename=%s" % (realExistFile, nextUntilNotExistFilename))
+  # realExistFile=crifanLib/demo/input/image/20191219_172616_drawRect_40x40.jpg -> nextUntilNotExistFilename=crifanLib/demo/input/image/20191219_172616_drawRect_40x40_2.jpg
 
 if __name__ == "__main__":
-  demoGetFileFolderSize()
-  demoFormatSize()
+  # demoGetFileFolderSize()
+  # demoFormatSize()
+    demoFindNextNumberFilename()

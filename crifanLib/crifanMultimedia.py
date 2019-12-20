@@ -35,7 +35,8 @@ except:
     print("need audioread if use crifanMultimedia audio functions")
 
 from crifanLib.crifanSystem import runCommand, getCommandOutput
-from crifanLib.crifanFile  import isFileObject, readBinDataFromFile
+from crifanLib.crifanFile  import isFileObject, readBinDataFromFile, findNextNumberFilename
+from crifanLib.crifanDatetime  import getCurDatetimeStr
 
 ################################################################################
 # Config
@@ -384,30 +385,69 @@ def resizeImage(inputImage,
         print("%s -> %s, resize ratio: %d%%" % (inputImageLen, compressedImageLen, int(compressRatio * 100)))
         return compressedImageBytes
 
-	def imageDrawRectangle(inputImg, rectLocation, outlineColor="green", outlineWidth=0):
-		"""Draw a rectangle for image
+# def imageDrawRectangle(inputImgOrImgPath, rectLocation, outlineColor="green", outlineWidth=0, isShow=False, isAutoSave=False):
+# def imageDrawRectangle(inputImgOrImgPath, rectLocation, outlineColor="green", outlineWidth=0, isShow=True, isAutoSave=True):
+def imageDrawRectangle(inputImgOrImgPath, rectLocation, outlineColor="green", outlineWidth=0, isShow=False, isAutoSave=True):
+    """Draw a rectangle for image, and show it
 
-		Args:
-			inputImg (Image): a pillow(PIL) Image instance
-			rectLocation (tuple): the rectangle location, (x, y, width, height)
-		Returns:
-			Nothing, just show result image with rectangle
-		Raises:
-		"""
-		draw = ImageDraw.Draw(inputImg)
-		x0 = rectLocation[0]
-		y0 = rectLocation[1]
-		x1 = x0 + rectLocation[2]
-		y1 = y0 + rectLocation[3]
-		draw.rectangle(
-			[x0, y0, x1, y1],
-			# fill="yellow",
-			# outline="yellow",
-			outline=outlineColor,
-			width=outlineWidth,
-		)
+    Args:
+        inputImgOrImgPath (Image/str): a pillow(PIL) Image instance or image file path
+        rectLocation (tuple): the rectangle location, (x, y, width, height)
+        outlineColor (str): Color name
+        outlineWidth (int): rectangle outline width
+        isShow (bool): True to call image.show() for debug
+        isAutoSave (bool): True to auto save the image file with drawed rectangle
+    Returns:
+        modified image
+    Raises:
+    """
+    inputImg = inputImgOrImgPath
+    if isinstance(inputImgOrImgPath, str):
+        inputImg = Image.open(inputImgOrImgPath)
+    draw = ImageDraw.Draw(inputImg)
+    x, y, w, h = rectLocation
+    x0 = x
+    y0 = y
+    x1 = x0 + w
+    y1 = y0 + h
+    draw.rectangle(
+        [x0, y0, x1, y1],
+        # fill="yellow",
+        # outline="yellow",
+        outline=outlineColor,
+        width=outlineWidth,
+    )
 
-		inputImg.show()
+    if isShow:
+        inputImg.show()
+
+    if isAutoSave:
+        intW = int(w)
+        intH = int(h)
+        drawRectStr = "_drawRect_%sx%s" % (intW, intH)
+
+        inputImgPath = None
+        if isinstance(inputImgOrImgPath, str):
+            inputImgPath = str(inputImgOrImgPath)
+        elif inputImg.filename:
+            inputImgPath = str(inputImg.filename)
+
+        if inputImgPath:
+            imgFolderName, pointSuffix = os.path.splitext(inputImgPath)
+            newImgFolderName = imgFolderName + drawRectStr
+            newImgPath = newImgFolderName + pointSuffix
+            newImgPath = findNextNumberFilename(newImgPath)
+        else:
+            curDatetimeStr = getCurDatetimeStr() # '20191219_143400'
+            suffix = str(inputImg.format).lower() # 'jpeg'
+            newImgFilename = "%s%s.%s" % (curDatetimeStr, drawRectStr, suffix)
+            imgPathRoot = "debug/安卓app/GameScreenshot"
+            newImgPath = os.path.join(imgPathRoot, newImgFilename)
+
+        inputImg.save(newImgPath)
+
+    return inputImg
+
 
 #----------------------------------------
 # Image ORC

@@ -19,6 +19,7 @@ import sys
 import shutil
 import codecs
 import json
+import re
 
 try:
     import pysrt
@@ -382,6 +383,41 @@ def getInputFileBasenameNoSuffix():
     inputFileBasename = getInputFileBasename()
     basenameRemovedSuffix = removeSuffix(inputFileBasename)
     return basenameRemovedSuffix
+
+def findNextNumberFilename(curFilename):
+    """Find the next available filename from current name
+
+    Args:
+        curFilename (str): current filename
+    Returns:
+        next available (not existed) filename
+    Raises:
+    Examples:
+        (1) 'crifanLib/demo/input/image/20201219_172616_drawRect_40x40.jpg'
+            not exist -> 'crifanLib/demo/input/image/20201219_172616_drawRect_40x40.jpg'
+        (2) 'crifanLib/demo/input/image/20191219_172616_drawRect_40x40.jpg'
+            exsit -> next until not exist 'crifanLib/demo/input/image/20191219_172616_drawRect_40x40_3.jpg'
+    """
+    newFilename = curFilename
+
+    newPathRootPart, pointSuffix = os.path.splitext(newFilename)
+    # 'crifanLib/demo/input/image/20191219_172616_drawRect_40x40_1'
+    filenamePrefix = newPathRootPart
+    while os.path.exists(newFilename):
+        newTailNumberInt = 1
+        foundTailNumber = re.search("^(?P<filenamePrefix>.+)_(?P<tailNumber>\d+)$", newPathRootPart)
+        if foundTailNumber:
+            tailNumberStr = foundTailNumber.group("tailNumber") # '1'
+            tailNumberInt = int(tailNumberStr)
+            newTailNumberInt = tailNumberInt + 1 # 2
+            filenamePrefix = foundTailNumber.group("filenamePrefix") # 'crifanLib/demo/input/image/20191219_172616_drawRect_40x40'
+        # existed previously saved, change to new name
+        newPathRootPart = "%s_%s" % (filenamePrefix, newTailNumberInt)
+        # 'crifanLib/demo/input/image/20191219_172616_drawRect_40x40_2'
+        newFilename = newPathRootPart + pointSuffix
+        # 'crifanLib/demo/input/image/20191219_172616_drawRect_40x40_2.jpg'
+
+    return newFilename
 
 ################################################################################
 # SRT Subtitle Parsing
