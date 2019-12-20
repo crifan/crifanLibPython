@@ -98,4 +98,4 @@ def demoFindNextNumberFilename():
 if __name__ == "__main__":
   # demoGetFileFolderSize()
   # demoFormatSize()
-    demoFindNextNumberFilename()
+  demoFindNextNumberFilename()
