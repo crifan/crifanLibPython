@@ -3,15 +3,15 @@
 """
 Filename: crifanFile.py
 Function: crifanLib's file related functions.
-Last Update: 20191213
+Last Update: 20200221
 Note:
 1. latest version and more can found here:
 https://github.com/crifan/crifanLibPython
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v20191213"
-__copyright__ = "Copyright (c) 2019, Crifan Li"
+__version__ = "v20200221"
+__copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
 import os
@@ -134,6 +134,12 @@ def loadJsonFromFile(fullFilename, fileEncoding="utf-8"):
         jsonDict = json.load(jsonFp)
         # logging.debug("Complete load json from %s", fullFilename)
         return jsonDict
+
+def saveTextToFile(fullFilename, text, fileEncoding="utf-8"):
+    """save text content into file"""
+    with codecs.open(fullFilename, 'w', encoding=fileEncoding) as fp:
+        fp.write(text)
+        fp.close()
 
 def loadTextFromFile(fullFilename, fileEncoding="utf-8"):
     """load file text content from file"""
@@ -280,12 +286,28 @@ def getBasename(fullFilename):
         xxx.exe          -> xxx.exe
         xxx              -> xxx
         Mac/Linux:
-           your/path/xxx.py -> xxx.py
+            your/path/xxx.py -> xxx.py
         Windows:
-           your\path\\xxx.py -> xxx.py
+            your\path\\xxx.py -> xxx.py
     """
 
     return os.path.basename(fullFilename)
+
+def getFilenameNoPointSuffix(curFilePath):
+    """Get current filename without point and suffix
+
+    Args:
+        curFilePath (str): current file path. Normally can use __file__
+    Returns:
+        str, file name without .xxx
+    Raises:
+    Examples:
+        input: /Users/xxx/pymitmdump/mitmdumpOtherApi.py 
+        output: mitmdumpOtherApi
+    """
+    root, pointSuffix = os.path.splitext(curFilePath)
+    curFilenameNoSuffix = root.split(os.path.sep)[-1]
+    return curFilenameNoSuffix
 
 
 def getFileSuffix(filename):
