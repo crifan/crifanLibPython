@@ -3,15 +3,15 @@
 """
 Filename: crifanMultimedia.py
 Function: crifanLib's python multimedia (audio, video, image) related functions
-Version: v20191213
+Version: v20200225
 Note:
 1. latest version and more can found here:
 https://github.com/crifan/crifanLibPython
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v20191213"
-__copyright__ = "Copyright (c) 2019, Crifan Li"
+__version__ = "v20200225"
+__copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
 import os
@@ -362,7 +362,11 @@ def resizeImage(inputImage,
         inputImageLen = len(inputImage)
         openableImage = io.BytesIO(inputImage)
 
-    imageFile = Image.open(openableImage) # <PIL.PngImagePlugin.PngImageFile image mode=RGBA size=3543x3543 at 0x1065F7A20>
+    if openableImage:
+        imageFile = Image.open(openableImage)
+    elif isinstance(inputImage, Image.Image):
+        imageFile = inputImage
+    # <PIL.PngImagePlugin.PngImageFile image mode=RGBA size=3543x3543 at 0x1065F7A20>
     imageFile.thumbnail(newSize, resample)
     if outputImageFile:
         # save to file
@@ -391,18 +395,20 @@ def imageDrawRectangle(inputImgOrImgPath,
     outlineWidth=0,
     isShow=False,
     isAutoSave=True,
-    isDrawCenterCircle=True,
+    isDrawClickedPosCircle=True,
+    clickedPos=None,
 ):
     """Draw a rectangle for image (and a small circle), and show it,
 
     Args:
         inputImgOrImgPath (Image/str): a pillow(PIL) Image instance or image file path
-        rectLocation (tuple): the rectangle location, (x, y, width, height)
+        rectLocation (tuple/Rect): the rectangle location, (x, y, width, height)
         outlineColor (str): Color name
         outlineWidth (int): rectangle outline width
         isShow (bool): True to call image.show() for debug
         isAutoSave (bool): True to auto save the image file with drawed rectangle
-        isDrawCenterCircle (bool): draw small circle in center point of rectangle or not
+        clickedPos (tuple): x,y of clicked postion; default None; if None, use the center point
+        isDrawClickedPosCircle (bool): draw small circle in clicked point
     Returns:
         modified image
     Raises:
@@ -411,7 +417,21 @@ def imageDrawRectangle(inputImgOrImgPath,
     if isinstance(inputImgOrImgPath, str):
         inputImg = Image.open(inputImgOrImgPath)
     draw = ImageDraw.Draw(inputImg)
-    x, y, w, h = rectLocation
+
+    isRectObj = False
+    hasX = hasattr(rectLocation, "x")
+    hasY = hasattr(rectLocation, "y")
+    hasWidth = hasattr(rectLocation, "width")
+    hasHeight = hasattr(rectLocation, "height")
+    isRectObj = hasX and hasY and hasWidth and hasHeight
+    if isinstance(rectLocation, tuple):
+        x, y, w, h = rectLocation
+    elif isRectObj:
+        x = rectLocation.x
+        y = rectLocation.y
+        w = rectLocation.width
+        h = rectLocation.height
+
     x0 = x
     y0 = y
     x1 = x0 + w
@@ -424,7 +444,7 @@ def imageDrawRectangle(inputImgOrImgPath,
         width=outlineWidth,
     )
 
-    if isDrawCenterCircle:
+    if isDrawClickedPosCircle:
         # radius = 3
         # radius = 2
         radius = 4
@@ -433,10 +453,13 @@ def imageDrawRectangle(inputImgOrImgPath,
         circleLineWidthInt = 1
         # circleLineWidthInt = 3
 
-        centerX = x + w/2
-        centerY = y + h/2
-        startPointInt = (int(centerX - radius), int(centerY - radius))
-        endPointInt = (int(centerX + radius), int(centerY + radius))
+        if clickedPos:
+            clickedX, clickedY = clickedPos
+        else:
+            clickedX = x + w/2
+            clickedY = y + h/2
+        startPointInt = (int(clickedX - radius), int(clickedY - radius))
+        endPointInt = (int(clickedX + radius), int(clickedY + radius))
         draw.ellipse([startPointInt, endPointInt], outline=circleOutline, width=circleLineWidthInt)
 
     if isShow:

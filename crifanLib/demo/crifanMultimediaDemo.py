@@ -103,6 +103,12 @@ def demoDetectVideoDimension():
   videoWidth, videoHeight = detectVideoDimension(inputVideoFullPath)
   print("videoWidth=%s, videoHeight=%s" % (videoWidth, videoHeight))
 
+def demoImageDrawRectangle():
+  imageDrawRectangle(curPillowImg, curLocation)
+  imageDrawRectangle(curPillowImg, calculatedLocation)
+  curImg = imageDrawRectangle(imgPath, firstMatchLocation, clickedPos=clickedPos)
+  curImg = imageDrawRectangle(imgPath, firstMatchLocation)
+
 if __name__ == "__main__":
   # demoResizeImage()
   # imageFilename=/Users/crifan/dev/tmp/python/resize_image_demo/hot day.png
@@ -125,3 +131,5 @@ if __name__ == "__main__":
 
   demoDetectVideoDimension()
   # videoWidth=480, videoHeight=360
+
+  demoImageDrawRectangle()
