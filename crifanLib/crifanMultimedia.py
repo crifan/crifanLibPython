@@ -395,6 +395,7 @@ def imageDrawRectangle(inputImgOrImgPath,
     outlineWidth=0,
     isShow=False,
     isAutoSave=True,
+    saveTail="_drawRect_%wx%h",
     isDrawClickedPosCircle=True,
     clickedPos=None,
 ):
@@ -402,11 +403,12 @@ def imageDrawRectangle(inputImgOrImgPath,
 
     Args:
         inputImgOrImgPath (Image/str): a pillow(PIL) Image instance or image file path
-        rectLocation (tuple/Rect): the rectangle location, (x, y, width, height)
+        rectLocation (tuple/list/Rect): the rectangle location, (x, y, width, height)
         outlineColor (str): Color name
         outlineWidth (int): rectangle outline width
         isShow (bool): True to call image.show() for debug
         isAutoSave (bool): True to auto save the image file with drawed rectangle
+        saveTail(str): save filename tail part. support format %x/%y/%w/%h use only when isAutoSave=True
         clickedPos (tuple): x,y of clicked postion; default None; if None, use the center point
         isDrawClickedPosCircle (bool): draw small circle in clicked point
     Returns:
@@ -426,12 +428,19 @@ def imageDrawRectangle(inputImgOrImgPath,
     isRectObj = hasX and hasY and hasWidth and hasHeight
     if isinstance(rectLocation, tuple):
         x, y, w, h = rectLocation
+    if isinstance(rectLocation, list):
+        x = rectLocation[0]
+        y = rectLocation[1]
+        w = rectLocation[2]
+        h = rectLocation[3]
     elif isRectObj:
         x = rectLocation.x
         y = rectLocation.y
         w = rectLocation.width
         h = rectLocation.height
 
+    w = int(w)
+    h = int(h)
     x0 = x
     y0 = y
     x1 = x0 + w
@@ -466,9 +475,10 @@ def imageDrawRectangle(inputImgOrImgPath,
         inputImg.show()
 
     if isAutoSave:
-        intW = int(w)
-        intH = int(h)
-        drawRectStr = "_drawRect_%sx%s" % (intW, intH)
+        saveTail = saveTail.replace("%x", str(x))
+        saveTail = saveTail.replace("%y", str(y))
+        saveTail = saveTail.replace("%w", str(w))
+        saveTail = saveTail.replace("%h", str(h))
 
         inputImgPath = None
         if isinstance(inputImgOrImgPath, str):
@@ -477,14 +487,14 @@ def imageDrawRectangle(inputImgOrImgPath,
             inputImgPath = str(inputImg.filename)
 
         if inputImgPath:
-            imgFolderName, pointSuffix = os.path.splitext(inputImgPath)
-            newImgFolderName = imgFolderName + drawRectStr
-            newImgPath = newImgFolderName + pointSuffix
+            imgFolderAndName, pointSuffix = os.path.splitext(inputImgPath)
+            imgFolderAndName = imgFolderAndName + saveTail
+            newImgPath = imgFolderAndName + pointSuffix
             newImgPath = findNextNumberFilename(newImgPath)
         else:
             curDatetimeStr = getCurDatetimeStr() # '20191219_143400'
             suffix = str(inputImg.format).lower() # 'jpeg'
-            newImgFilename = "%s%s.%s" % (curDatetimeStr, drawRectStr, suffix)
+            newImgFilename = "%s%s.%s" % (curDatetimeStr, saveTail, suffix)
             imgPathRoot = os.getcwd()
             newImgPath = os.path.join(imgPathRoot, newImgFilename)
 

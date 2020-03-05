@@ -109,6 +109,12 @@ def demoImageDrawRectangle():
   curImg = imageDrawRectangle(imgPath, firstMatchLocation, clickedPos=clickedPos)
   curImg = imageDrawRectangle(imgPath, firstMatchLocation)
 
+  curBoundList = self.get_ElementBounds(eachElement)
+  curWidth = curBoundList[2] - curBoundList[0]
+  curHeight = curBoundList[3] - curBoundList[1]
+  curRect = [curBoundList[0], curBoundList[1], curWidth, curHeight]
+  curImg = imageDrawRectangle(curImg, curRect, isShow=True, saveTail="_rect_%x|%y|%w|%h", isDrawClickedPosCircle=False)
+
 if __name__ == "__main__":
   # demoResizeImage()
   # imageFilename=/Users/crifan/dev/tmp/python/resize_image_demo/hot day.png
