@@ -27,13 +27,12 @@ except ImportError:
 # Config
 ################################################################################
 
-# LOG_FORMAT_FILE = "%(asctime)s %(filename)s:%(lineno)-4d %(levelname)-7s %(message)s"
-LOG_FORMAT_FILE = "%(color)s%(asctime)s %(filename)s:%(lineno)-4d %(levelname)-7s%(end_color)s %(message)s"
+LOG_FORMAT_FILE = "%(asctime)s %(filename)s:%(lineno)-4d %(levelname)-7s %(message)s"
 LOG_LEVEL_FILE = logging.DEBUG
 # LOG_FORMAT_CONSOLE = "%(asctime)s %(filename)s:%(lineno)-4d %(levelname)-7s %(message)s"
 LOG_FORMAT_CONSOLE = "%(color)s%(asctime)s %(filename)s:%(lineno)-4d %(levelname)-7s%(end_color)s %(message)s"
-# LOG_LEVEL_CONSOLE = logging.INFO
-LOG_LEVEL_CONSOLE = logging.DEBUG
+LOG_LEVEL_CONSOLE = logging.INFO
+# LOG_LEVEL_CONSOLE = logging.DEBUG
 
 
 ################################################################################
@@ -42,7 +41,9 @@ LOG_LEVEL_CONSOLE = logging.DEBUG
 CURRENT_LIB_FILENAME = "crifanLogging"
 
 
-# logzero/colors.py
+# refered: logzero
+#   https://github.com/metachris/logzero/blob/master/logzero/__init__.py
+#   https://github.com/metachris/logzero/blob/master/logzero/colors.py
 
 CSI = '\033['
 # OSC = '\033]'
