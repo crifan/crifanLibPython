@@ -4,3 +4,5 @@ __pycache__/
 
 crifanLib/demo/output/
 .DS_Store
+
+*.log
