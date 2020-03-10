@@ -10,7 +10,7 @@ https://github.com/crifan/crifanLibPython
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v20200309"
+__version__ = "v20200310"
 __copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
@@ -31,8 +31,8 @@ LOG_FORMAT_FILE = "%(asctime)s %(filename)s:%(lineno)-4d %(levelname)-7s %(messa
 LOG_LEVEL_FILE = logging.DEBUG
 # LOG_FORMAT_CONSOLE = "%(asctime)s %(filename)s:%(lineno)-4d %(levelname)-7s %(message)s"
 LOG_FORMAT_CONSOLE = "%(color)s%(asctime)s %(filename)s:%(lineno)-4d %(levelname)-7s%(end_color)s %(message)s"
-LOG_LEVEL_CONSOLE = logging.INFO
-# LOG_LEVEL_CONSOLE = logging.DEBUG
+# LOG_LEVEL_CONSOLE = logging.INFO
+LOG_LEVEL_CONSOLE = logging.DEBUG
 
 
 ################################################################################
@@ -40,15 +40,24 @@ LOG_LEVEL_CONSOLE = logging.INFO
 ################################################################################
 CURRENT_LIB_FILENAME = "crifanLogging"
 
+# refered: 
+#   logzero
+#       https://github.com/metachris/logzero/blob/master/logzero/__init__.py
+#       https://github.com/metachris/logzero/blob/master/logzero/colors.py
+#   wiki
+#       https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_codes
 
-# refered: logzero
-#   https://github.com/metachris/logzero/blob/master/logzero/__init__.py
-#   https://github.com/metachris/logzero/blob/master/logzero/colors.py
-
-CSI = '\033['
+# CSI = '\033['
 # OSC = '\033]'
+
 # CSI = '\e['
 # OSC = '\e]'
+
+# ESCAPE = '\033' # octal expression
+ESCAPE = '\x1b' # hex expression
+CSI = ESCAPE + '['
+OSC = ESCAPE + ']'
+
 # BEL = '\007'
 
 def code_to_chars(code):
@@ -71,7 +80,8 @@ class AnsiCodes(object):
         for name in dir(self):
             if not name.startswith('_'):
                 value = getattr(self, name)
-                setattr(self, name, code_to_chars(value))
+                charValue = code_to_chars(value)
+                setattr(self, name, charValue)
 
 
 class AnsiCursor(object):
