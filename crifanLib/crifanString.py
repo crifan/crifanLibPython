@@ -19,6 +19,8 @@ import re
 import json
 import random
 from enum import Enum
+import time
+import uuid
 
 try:
     import chardet
@@ -57,6 +59,37 @@ gVal = {
 }
 
 gConst = {
+}
+
+# login to manager app key:
+#     有道智云
+#     https://ai.youdao.com/fanyi-services.s
+Youdao_API_URL = "https://openapi.youdao.com/api"
+Youdao_APP_ID = "xxx"
+Youdao_SECRET_KEY = "yyy"
+
+# for supported languages can refer:
+#     有道智云 -> 帮助与文档 > 产品文档 > 自然语言翻译 > API 文档 > 支持的语言表
+#     http://ai.youdao.com/docs/doc-trans-api.s#p05
+constYoudaoErrorCode = {
+    101: "缺少必填的参数，出现这个情况还可能是et的值和实际加密方式不对应",
+    102: "不支持的语言类型",
+    103: "翻译文本过长",
+    104: "不支持的API类型",
+    105: "不支持的签名类型",
+    106: "不支持的响应类型",
+    107: "不支持的传输加密类型",
+    108: "appKey无效，注册账号， 登录后台创建应用和实例并完成绑定， 可获得应用ID和密钥等信息，其中应用ID就是appKey（ 注意不是应用密钥）",
+    109: "batchLog格式不正确",
+    110: "无相关服务的有效实例",
+    111: "开发者账号无效，可能是账号为欠费状态",
+    201: "解密失败，可能为DES,BASE64,URLDecode的错误",
+    202: "签名检验失败",
+    203: "访问IP地址不在可访问IP列表",
+    301: "辞典查询失败",
+    302: "翻译查询失败",
+    303: "服务端的其它异常",
+    401: "账户已经欠费停"
 }
 
 ################################################################################
@@ -364,103 +397,88 @@ def getStrPossibleCharset(inputStr):
 # String related using http
 #----------------------------------------
 
-def translateString(strToTranslate, fromLanguage="zh-CHS", toLanguage="EN"):
+def translateString(strToTrans, fromLanguage="zh-CHS", toLanguage="EN"):
     """
-    translate strToTranslate from fromLanguage to toLanguage
+    translate string from source language to destination language
 
-    for supported languages can refer:
-        有道智云 -> 帮助与文档 > 产品文档 > 自然语言翻译 > API 文档 > 支持的语言表
-        http://ai.youdao.com/docs/doc-trans-api.s#p05
-
-    :param strToTranslate: string to translate
+    :param strToTrans: string to translate
     :param fromLanguage: from language
     :param toLanguage: to language
     :return: translated unicode string
     """
+    # logging.debug("strToTrans=%s, from=%s, to=%s", strToTrans, fromLanguage, toLanguage)
+    transOK, respInfo = False, None
 
-    # logging.debug("translateString: strToTranslate=%s, from=%s, to=%s", strToTranslate, fromLanguage, toLanguage)
+    curTimeFloat = time.time() # 1584168160.8058722
+    curTimeInt = int(curTimeFloat) # 1584168160
+    curTimeStr = str(curTimeInt) # '1584168160'
+    appId = Youdao_APP_ID
+    # saltStr = str(random.randint(1, 65536))
+    curUuid = uuid.uuid1() # UUID('bd9ef086-65c1-11ea-93e4-acbc327f0101')
+    saltStr = str(curUuid) # 'bd9ef086-65c1-11ea-93e4-acbc327f0101'
+    secretKey = Youdao_SECRET_KEY
+    inputLen = len(strToTrans)
+    if inputLen > 20:
+        first10 = strToTrans[:10]
+        last10 = strToTrans[-10:]
+        lenStr = str(inputLen)
+        inputPart = first10 + lenStr + last10
+    else:
+        inputPart = strToTrans
+    strToMd5 = appId + inputPart + saltStr + curTimeStr + secretKey
+    # '15xxx26Mac中给pip更换源以加速下载eae1e774-65c1-11ea-b769-acbc327f01011584169409olj4xxxV'
+    sha256Sign = crifanLib.crifanMath.calcSha256(strToMd5) # 
 
-    errorCodeDict = {
-        101: "缺少必填的参数，出现这个情况还可能是et的值和实际加密方式不对应",
-        102: "不支持的语言类型",
-        103: "翻译文本过长",
-        104: "不支持的API类型",
-        105: "不支持的签名类型",
-        106: "不支持的响应类型",
-        107: "不支持的传输加密类型",
-        108: "appKey无效，注册账号， 登录后台创建应用和实例并完成绑定， 可获得应用ID和密钥等信息，其中应用ID就是appKey（ 注意不是应用密钥）",
-        109: "batchLog格式不正确",
-        110: "无相关服务的有效实例",
-        111: "开发者账号无效，可能是账号为欠费状态",
-        201: "解密失败，可能为DES,BASE64,URLDecode的错误",
-        202: "签名检验失败",
-        203: "访问IP地址不在可访问IP列表",
-        301: "辞典查询失败",
-        302: "翻译查询失败",
-        303: "服务端的其它异常",
-        401: "账户已经欠费停"
+    curHeaders = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json",
     }
+    # query string
+    qsDict = {
+        "q": strToTrans,
+        "from": fromLanguage,
+        "to": toLanguage,
+        "appKey": appId,
+        "salt": saltStr,
+        "sign": sha256Sign,
+        "signType": "v3",
+        "curtime": curTimeStr,
+    }
+    resp = requests.post(Youdao_API_URL, headers=curHeaders, data=qsDict)
+    logging.info("resp=%s", resp)
 
-    transOK = False
-    translatedStr = strToTranslate
-    transErr = ''
+    respJson = resp.json()
+    logging.info("respJson=%s", respJson)
+    # {'tSpeakUrl': 'http://openapi.youdao.com/ttsapi?q=Give+the+PIP+replacement+source+to+the+Mac+to+speed+up+the+download&langType=en&sign=45D395166167C153EA9D8C1567002419&salt=1584171072079&voice=4&format=mp3&appKey=152xxx26', 'query': 'Mac中给pip更换源以加速下载', 'translation': ['Give the PIP replacement source to the Mac to speed up the download'], 'errorCode': '0', 'dict': {'url': 'yddict://m.youdao.com/dict?le=eng&q=Mac%E4%B8%AD%E7%BB%99pip%E6%9B%B4%E6%8D%A2%E6%BA%90%E4%BB%A5%E5%8A%A0%E9%80%9F%E4%B8%8B%E8%BD%BD'}, 'webdict': {'url': 'http://m.youdao.com/dict?le=eng&q=Mac%E4%B8%AD%E7%BB%99pip%E6%9B%B4%E6%8D%A2%E6%BA%90%E4%BB%A5%E5%8A%A0%E9%80%9F%E4%B8%8B%E8%BD%BD'}, 'l': 'zh-CHS2en', 'speakUrl': 'http://openapi.youdao.com/ttsapi?q=Mac%E4%B8%AD%E7%BB%99pip%E6%9B%B4%E6%8D%A2%E6%BA%90%E4%BB%A5%E5%8A%A0%E9%80%9F%E4%B8%8B%E8%BD%BD&langType=zh-CHS&sign=E789E4FCDB1321503332112FA1058BFC&salt=1584171072079&voice=4&format=mp3&appKey=15xxx26'}
 
-    appKey = "152e0e77723a0026"
-    saltStr = str(random.randint(1, 65536))
-    secretKey = "sYmnnOaisQgZZrlrBFozWAtsaRyyJg4N"
-    # logging.debug("appKey=%s,strToTranslate=%s,saltStr=%s,secretKey=%s", appKey, strToTranslate, saltStr, secretKey)
-    strToMd5 = appKey + strToTranslate + saltStr + secretKey
-    # logging.debug("strToMd5=%s", strToMd5)
-    md5Sign = crifanLib.crifanMath.generateMd5(strToMd5)
-
-    try:
-        quotedQueryStr = urllib.quote(strToTranslate)
-        # transUrl = "http://openapi.youdao.com/api?q=纠删码(EC)的学习&from=zh_CHS&to=EN&appKey=152e0e77723a0026&salt=4&sign=6BE15F1868019AD71C442E6399DB1FE4"
-        # transUrl = "http://openapi.youdao.com/api?q=%s&from=zh_CHS&to=EN&appKey=152e0e77723a0026&salt=4&sign=6BE15F1868019AD71C442E6399DB1FE4" % (quotedQueryStr)
-        transUrl = "http://openapi.youdao.com/api?q=%s&from=%s&to=%s&appKey=%s&salt=%s&sign=%s" \
-                   % (quotedQueryStr, fromLanguage, toLanguage, appKey, saltStr, md5Sign)
-        # logging.debug("transUrl=%s", transUrl)
-        respJsonStr = crifanLib.crifanHttp.getUrlRespHtml(transUrl)
-        # logging.debug("respJsonStr=%s", respJsonStr)
-        # respJsonStr={"query":"纠删码(EC)的学习","translation":["The study of correcting code (EC)"],"errorCode":"0","dict":{"url":"yddict://m.youdao.com/dict?le=eng&q=%E7%BA%A0%E5%88%A0%E7%A0%81%28EC%29%E7%9A%84%E5%AD%A6%E4%B9%A0"},"webdict":{"url":"http://m.youdao.com/dict?le=eng&q=%E7%BA%A0%E5%88%A0%E7%A0%81%28EC%29%E7%9A%84%E5%AD%A6%E4%B9%A0"},"l":"zh-CHS2en"}
-        translatedDict = json.loads(respJsonStr)
-        # logging.debug("translatedDict=%s", translatedDict)
-        # translatedDict={u'l': u'zh-CHS2EN', u'errorCode': u'0', u'dict': {u'url': u'yddict://m.youdao.com/dict?le=eng&q=%E9%9B%A2%E5%B3%B6%E9%A2%A8%E5%85%89%E7%9A%84%E6%B5%81%E9%80%A3%E5%BF%98%E8%BF%94'}, u'webdict': {u'url': u'http://m.youdao.com/dict?le=eng&q=%E9%9B%A2%E5%B3%B6%E9%A2%A8%E5%85%89%E7%9A%84%E6%B5%81%E9%80%A3%E5%BF%98%E8%BF%94'}, u'query': u'\u96e2\u5cf6\u98a8\u5149\u7684\u6d41\u9023\u5fd8\u8fd4', u'translation': [u'Away from the island scenery']}
-
-        errorCode = int(translatedDict["errorCode"])
-        # logging.debug("errorCode=%s", errorCode)
-        errorCodeDictKeys = errorCodeDict.keys()
-        # logging.debug("errorCodeDictKeys=%s", errorCodeDictKeys)
+    if resp.ok:
+        # {'errorCode': '101', 'l': 'null2null'}
+        errorCode = int(respJson["errorCode"])
         if errorCode != 0:
-            if errorCode in errorCodeDictKeys:
-                # logging.info("errorCode=%s in errorCodeDictKeys=%s", errorCode, errorCodeDictKeys)
-                transOK = False
-                transErr = errorCodeDict[errorCode]
-                # logging.info("transErr=%s ", transErr)
-            else:
-                transOK = False
-                transErr = "未知错误"
+            transOK = False
+            errMsg = "未知错误"
+            if errorCode in constYoudaoErrorCode.keys():
+                errMsg = constYoudaoErrorCode[errorCode]
+
+            respInfo = {
+                "errCode": errorCode,
+                "errMsg": errMsg
+            }
         else:
-            queryUnicode = translatedDict["query"]
-            translationUnicode = translatedDict["translation"][0]
-            # logging.debug(u"queryUnicode=%s, translationUnicode=%s", queryUnicode, translationUnicode)
+            queryUnicode = respJson["query"]
+            translatedEnStr = respJson["translation"][0]
 
             transOK = True
-            translatedStr = translationUnicode.encode("utf-8")
-            # logging.debug("translatedStr=%s ", translatedStr)
-    except urllib2.URLError as reason:
-        transOK = False
-        transErr = reason
-    except urllib2.HTTPError as code:
-        transOK = False
-        transErr = code
-
-    if transOK:
-        # logging.info("Translate OK: %s -> %s", strToTranslate, translatedStr)
-        return transOK, translatedStr
+            respInfo = translatedEnStr
     else:
-        # logging.info("Translate fail for %s", transErr)
-        return transOK, transErr
+        transOK = False
+        respInfo = {
+            "errCode": resp.status_code,
+            "errMsg": resp.text
+        }
+
+    logging.info("%s -> [%s, %s]", strToTrans, transOK, respInfo)
+    return transOK, respInfo
 
 
 def transZhcnToEn(strToTrans):

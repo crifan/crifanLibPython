@@ -134,6 +134,21 @@ def generateMd5(strToMd5) :
     # print("encrptedMd5=%s" % encrptedMd5) # encrptedMd5=3a821616bec2e86e3e232d0c7f392cf5
     return encrptedMd5
 
+def calcSha256(intputStr):
+    """Calculate sha256 value for input string
+
+    Args:
+        intputStr (str): input string
+    Returns:
+        str, eg: '43db4098546cba9677d34770f635a0a88e5959ab784f72ef1b7408024b02654f'
+    Raises:
+    """
+    sha256Obj = hashlib.sha256()
+    inputBytes = intputStr.encode("UTF-8")
+    sha256Obj.update(inputBytes)
+    sha256ValueStr = sha256Obj.hexdigest()
+    return sha256ValueStr
+
 #----------------------------------------
 # Random String/Number
 #----------------------------------------
