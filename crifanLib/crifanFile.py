@@ -3,18 +3,19 @@
 """
 Filename: crifanFile.py
 Function: crifanLib's file related functions.
-Last Update: 20200221
+Update: v20200415
 Note:
 1. latest version and more can found here:
 https://github.com/crifan/crifanLibPython
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v20200221"
+__version__ = "v20200415"
 __copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
 import os
+import stat
 import sys
 import shutil
 import codecs
@@ -166,6 +167,22 @@ def readBinDataFromFile(filePath):
         binaryData = None
 
     return binaryData
+
+def chmodAddX(someFile):
+    """add file executable mode, like chmod +x
+
+    Args:
+        someFile (str): file full path
+    Returns:
+        soup
+    Raises:
+    """
+    if os.path.exists(someFile):
+        if os.path.isfile(someFile):
+            # add executable
+            curState = os.stat(someFile)
+            newState = curState.st_mode | stat.S_IEXEC
+            os.chmod(someFile, newState)
 
 ################################################################################
 # Folder Function

@@ -3,14 +3,14 @@
 """
 Filename: crifanBeautifulSoup.py
 Function: crifanLib's BeautifulSoup related functions.
-Version: v1.0 20180605
+Version: v20200414
 Note:
 1. latest version and more can found here:
 https://github.com/crifan/crifanLibPython
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v1.0"
+__version__ = "v20200414"
 __copyright__ = "Copyright (c) 2019, Crifan Li"
 __license__ = "GPL"
 
@@ -19,6 +19,9 @@ try:
     from BeautifulSoup import BeautifulSoup, Tag, CData, NavigableString
 except ImportError:
     print("crifanBeautifulSoup: Can not found lib BeautifulSoup")
+
+from bs4 import BeautifulSoup
+
 
 # from . import crifanList
 import crifanLib.crifanList
@@ -248,6 +251,96 @@ def findFirstNavigableString(soupContents):
 
     return firstString
 
+#-------------------------------------------------------------------------------
+# bs4 = BeautifulSoup v4
+#-------------------------------------------------------------------------------
+
+def xmlToSoup(xmlStr):
+    """convert to xml string to soup
+        Note: xml is tag case sensitive -> retain tag upper case -> NOT convert tag to lowercase
+
+    Args:
+        xmlStr (str): xml str, normally page source
+    Returns:
+        soup
+    Raises:
+    """
+    # HtmlParser = 'html.parser'
+    # XmlParser = 'xml'
+    XmlParser = 'lxml-xml'
+    curParser = XmlParser
+    soup = BeautifulSoup(xmlStr, curParser)
+    return soup
+
+
+def bsChainFind(curLevelSoup, queryChainList):
+    """BeautifulSoup find with query chain
+
+    Args:
+        curLevelSoup (soup): BeautifulSoup
+        queryChainList (list): str list of all level query dict
+    Returns:
+        soup
+    Raises:
+    Examples:
+        input: 
+            [
+                {
+                    "tag": "XCUIElementTypeWindow",
+                    "attrs": {"visible":"true", "enabled":"true", "width": "%s" % ScreenX, "height": "%s" % ScreenY}
+                },
+                {
+                    "tag": "XCUIElementTypeButton",
+                    "attrs": {"visible":"true", "enabled":"true", "width": "%s" % ScreenX, "height": "%s" % ScreenY}
+                },
+                {
+                    "tag": "XCUIElementTypeStaticText",
+                    "attrs": {"visible":"true", "enabled":"true", "value":"可能离开微信，打开第三方应用"}
+                },
+            ]
+        output:
+            soup node of 
+                <XCUIElementTypeStaticText type="XCUIElementTypeStaticText" value="可能离开微信，打开第三方应用" name="可能离开微信，打开第三方应用" label="可能离开微信，打开第三方应用" enabled="true" visible="true" x="71" y="331" width="272" height="18"/>
+                in :
+                <XCUIElementTypeWindow type="XCUIElementTypeWindow" enabled="true" visible="true" x="0" y="0" width="414" height="736">
+                    <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" x="0" y="0" width="414" height="736">
+                        <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" x="0" y="0" width="414" height="736">
+                            <XCUIElementTypeOther type="XCUIElementTypeOther" enabled="true" visible="true" x="0" y="0" width="414" height="736">
+                                <XCUIElementTypeButton type="XCUIElementTypeButton" enabled="true" visible="true" x="0" y="0" width="414" height="736">
+                                    <XCUIElementTypeStaticText type="XCUIElementTypeStaticText" enabled="true" visible="false" x="47" y="288" width="0" height="0"/>
+                                    <XCUIElementTypeStaticText type="XCUIElementTypeStaticText" value="可能离开微信，打开第三方应用" name="可能离开微信，打开第三方应用" label="可能离开微信，打开第三方应用" enabled="true" visible="true" x="71" y="331" width="272" height="18"/>
+                                    <XCUIElementTypeStaticText type="XCUIElementTypeStaticText" value="取消" name="取消" label="取消" enabled="true" visible="true" x="109" y="409" width="36" height="22"/>
+                                    <XCUIElementTypeStaticText type="XCUIElementTypeStaticText" value="继续" name="继续" label="继续" enabled="true" visible="true" x="269" y="409" width="36" height="22"/>
+                                </XCUIElementTypeButton>
+                            </XCUIElementTypeOther>
+                        </XCUIElementTypeOther>
+                    </XCUIElementTypeOther>
+                </XCUIElementTypeWindow>
+    """
+    foundSoup = None
+    if queryChainList:
+        chainListLen = len(queryChainList)
+
+        if chainListLen == 1:
+            # last one
+            curLevelFindDict = queryChainList[0]
+            curTag = curLevelFindDict["tag"]
+            curAttrs = curLevelFindDict["attrs"]
+            foundSoup = curLevelSoup.find(curTag, attrs=curAttrs)
+        else:
+            highestLevelFindDict = queryChainList[0]
+            curTag = highestLevelFindDict["tag"]
+            curAttrs = highestLevelFindDict["attrs"]
+            foundSoupList = curLevelSoup.find_all(curTag, attrs=curAttrs)
+            if foundSoupList:
+                childrenChainList = queryChainList[1:]
+                for eachSoup in foundSoupList:
+                    eachSoupResult = bsChainFind(eachSoup, childrenChainList)
+                    if eachSoupResult:
+                        foundSoup = eachSoupResult
+                        break
+
+    return foundSoup
 
 ################################################################################
 # Test
