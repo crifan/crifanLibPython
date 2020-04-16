@@ -168,11 +168,12 @@ def readBinDataFromFile(filePath):
 
     return binaryData
 
-def chmodAddX(someFile):
+def chmodAddX(someFile, isOnlySelf=True):
     """add file executable mode, like chmod +x
 
     Args:
         someFile (str): file full path
+        isOnlySelf (bool): add executable permission, True for only for file owner, False for by everyone
     Returns:
         soup
     Raises:
@@ -181,7 +182,13 @@ def chmodAddX(someFile):
         if os.path.isfile(someFile):
             # add executable
             curState = os.stat(someFile)
-            newState = curState.st_mode | stat.S_IEXEC
+            STAT_OWNER_EXECUTABLE = stat.S_IEXEC
+            STAT_EVERYONE_EXECUTABLE = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+            if isOnlySelf:
+                executableMode = STAT_OWNER_EXECUTABLE
+            else:
+                executableMode = STAT_EVERYONE_EXECUTABLE
+            newState = curState.st_mode | executableMode
             os.chmod(someFile, newState)
 
 ################################################################################

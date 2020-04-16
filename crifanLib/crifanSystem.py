@@ -16,6 +16,7 @@ __license__ = "GPL"
 
 import sys
 import subprocess
+import time
 
 ################################################################################
 # Config
@@ -103,6 +104,57 @@ def getCommandOutput(consoleCommand, consoleOutputEncoding="utf-8"):
     # print("isRunCmdOk=%s, consoleOutput=%s" % (isRunCmdOk, consoleOutput))
     return isRunCmdOk, consoleOutput
 
+
+def launchTerminalRunShellCommand(shellFile, isForceNewInstance=True, isUseiTerm2=False):
+    """in Mac, Launch terminal(Mac Terminal / iTerm2) and execute shell file, which contain command to run
+
+    Args:
+        shellFile (str): shell file full path
+        isUseiTerm2 (bool): True to use iTerm2, False to use Mac builtin Terminal
+        isForceNewInstance (bool): whether pase -n to open, which means: Open a new instance of the application even if one is already running
+    Returns:
+    Raises:
+    """
+    # logging.info("shellFile=%s, isForceNewInstance=%s, isUseiTerm2=%s", shellFile, isForceNewInstance, isUseiTerm2)
+
+    TerminalApp_iTerm2 = '/Applications/iTerm.app'
+    TerminalApp_Terminal = 'Terminal'
+    if isUseiTerm2:
+        terminalApp = TerminalApp_iTerm2
+    else:
+        terminalApp = TerminalApp_Terminal
+
+    cmdList = [
+        "/usr/bin/open",
+    ]
+
+    if isForceNewInstance:
+        cmdList.append("-n")
+
+    extarArgs = shellFile
+    restCmdList = [
+        "-a",
+        terminalApp,
+        '--args',
+        extarArgs,
+    ]
+    cmdList.extend(restCmdList)
+    # logging.info("cmdList=%s" % cmdList)
+
+    curProcess = subprocess.Popen(cmdList, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    # logging.info("curProcess=%s" % curProcess)
+
+    returnCode = None
+    while True:
+        returnCode = curProcess.poll()
+        # logging.info("returnCode=%s", returnCode)
+        if returnCode is not None:
+            # logging.info("subprocess end: returnCode=%s", returnCode)
+            break
+        time.sleep(0.5)
+
+    # logging.info("Final returnCode=%s", returnCode)
+    # logging.info("Complete launch %s and run shell %s", terminalApp, shellFile)
 
 ################################################################################
 # Test
