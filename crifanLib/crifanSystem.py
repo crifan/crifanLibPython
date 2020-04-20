@@ -3,20 +3,22 @@
 """
 Filename: crifanSystem.py
 Function: crifanLib's python system related functions.
-Version: v1.0 20180605
+Version: 20200420
 Note:
 1. latest version and more can found here:
 https://github.com/crifan/crifanLibPython
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v1.0"
-__copyright__ = "Copyright (c) 2019, Crifan Li"
+__version__ = "20200420"
+__copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
+import os
 import sys
 import subprocess
 import time
+import re
 
 ################################################################################
 # Config
@@ -115,7 +117,7 @@ def launchTerminalRunShellCommand(shellFile, isForceNewInstance=True, isUseiTerm
     Returns:
     Raises:
     """
-    # logging.info("shellFile=%s, isForceNewInstance=%s, isUseiTerm2=%s", shellFile, isForceNewInstance, isUseiTerm2)
+    # logging.debug("shellFile=%s, isForceNewInstance=%s, isUseiTerm2=%s", shellFile, isForceNewInstance, isUseiTerm2)
 
     TerminalApp_iTerm2 = '/Applications/iTerm.app'
     TerminalApp_Terminal = 'Terminal'
@@ -139,22 +141,90 @@ def launchTerminalRunShellCommand(shellFile, isForceNewInstance=True, isUseiTerm
         extarArgs,
     ]
     cmdList.extend(restCmdList)
-    # logging.info("cmdList=%s" % cmdList)
+    # logging.debug("cmdList=%s" % cmdList)
 
     curProcess = subprocess.Popen(cmdList, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    # logging.info("curProcess=%s" % curProcess)
+    # logging.debug("curProcess=%s" % curProcess)
 
     returnCode = None
     while True:
         returnCode = curProcess.poll()
-        # logging.info("returnCode=%s", returnCode)
+        # logging.debug("returnCode=%s", returnCode)
         if returnCode is not None:
-            # logging.info("subprocess end: returnCode=%s", returnCode)
+            # logging.debug("subprocess end: returnCode=%s", returnCode)
             break
         time.sleep(0.5)
 
-    # logging.info("Final returnCode=%s", returnCode)
-    # logging.info("Complete launch %s and run shell %s", terminalApp, shellFile)
+    # logging.debug("Final returnCode=%s", returnCode)
+    # logging.debug("Complete launch %s and run shell %s", terminalApp, shellFile)
+
+def killProcess(pid):
+    """Kill process by pid
+
+    Args:
+        pid (id): process ID
+    Returns:
+    Raises:
+    """
+    isKillOk, errCode = False, 0
+    pidInt = int(pid)
+    killCmd = "kill -9 %s" % pidInt
+    returnCode = os.system(killCmd)
+    # logging.debug("Command: %s -> returnCode=%s", killCmd, returnCode)
+    RETURN_CODE_OK = 0
+    if returnCode == RETURN_CODE_OK:
+        isKillOk = True
+    else:
+        errCode = returnCode
+    return isKillOk, errCode
+
+def grepProcessStatus(processFile, singleLinePattern, psCmd="ps aux"):
+    """grep process info status from ps output
+
+    Args:
+        processFile (str): process file name
+        singleLinePattern (str): single process line search pattern
+        psCmd (str): ps command, default: ps aux
+    Returns:
+    Raises:
+    Examples:
+        input: "crawlerStart.py", "^\s*(?P<username>\w+)\s+(?P<pid>\d+)\s+.+?python\s+crawlerStart\.py\s+-task\s+(?P<taskFile>\S+)\s+-id\s+(?P<curDevId>\d+)$"
+        output: [{'username': 'limao', 'pid': '64320', 'taskFile': '/Users/limao/dev/FiboDT/crawler/appAutoCrawler/AppCrawler/task/191115_card_DongKaKongJian/191115_card_DongKaKongJian_wexin.txt', 'curDevId': '1'}]
+    """
+    # logging.debug("processFile=%s, singleLinePattern=%s", processFile, singleLinePattern)
+    isCheckCmdRunOk, isRunning, processInfoList = False, False, []
+
+    groupNameList = re.findall("\(\?P<(\w+)>", singleLinePattern)
+    # logging.debug("groupNameList=%s", groupNameList)
+    # groupNameList=['username', 'pid', 'port', 'scriptFile', 'devId']
+    grepProcessCmd = "%s | grep %s" % (psCmd, processFile)
+    # logging.debug("grepProcessCmd=%s", grepProcessCmd)
+    isCheckCmdRunOk, cmdResult = getCommandOutput(grepProcessCmd)
+    # logging.debug("isCheckCmdRunOk=%s, cmdResult=%s", isCheckCmdRunOk, cmdResult)
+    if isCheckCmdRunOk:
+        # lineSeparator = "\n"
+        lineSeparator = os.linesep
+        resultList = cmdResult.split(lineSeparator)
+        # logging.debug("resultList=%s", resultList)
+        # limao            56562   0.0  0.0  4267948    664 s006  R+    5:53下午   0:00.00 grep mitmdump
+        # limao            56560   0.0  0.0  4268636   1112 s006  S+    5:53下午   0:00.00 /bin/sh -c ps aux | grep mitmdump
+        # limao            55396   0.0  0.1  4381268  11568 s011  S+    5:19下午   0:05.04 /Users/limao/.pyenv/versions/3.8.0/Python.framework/Versions/3.8/Resources/Python.app/Contents/MacOS/Python /Users/limao/.pyenv/versions/3.8.0/bin/mitmdump -p 8081 -s middleware/Save1.py
+        if resultList:
+            for eachLine in resultList:
+                # logging.debug("eachLine=%s", eachLine)
+                foundProcess = re.search(singleLinePattern, eachLine)
+                # logging.debug("foundProcess=%s", foundProcess)
+                if foundProcess:
+                    curProcessInfoDict = {}
+                    for eachKey in groupNameList:
+                        curValue = foundProcess.group(eachKey)
+                        curProcessInfoDict[eachKey] = curValue
+                    # logging.debug("curProcessInfoDict=%s", curProcessInfoDict)
+                    processInfoList.append(curProcessInfoDict)
+
+    isRunning = bool(processInfoList)
+    # logging.debug("isRunning=%s, processInfoList=%s", isRunning, processInfoList)
+    return isCheckCmdRunOk, isRunning, processInfoList
 
 ################################################################################
 # Test
