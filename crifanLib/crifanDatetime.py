@@ -6,7 +6,7 @@ Function: crifanLib's datetime related functions.
 Version: v1.1 20180713
 Note:
 1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython
+https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanDatetime.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
@@ -57,32 +57,6 @@ def convertLocalToGmt(localTime):
     """
     return localTime - timedelta(hours=8)
 
-
-def getCurDatetimeStr(outputFormat="%Y%m%d_%H%M%S"):
-    """
-    get current datetime then format to string
-
-    eg:
-        20171111_220722
-
-    :param outputFormat: datetime output format
-    :return: current datetime formatted string
-    """
-    curDatetime = datetime.now() # 2017-11-11 22:07:22.705101
-    curDatetimeStr = curDatetime.strftime(format=outputFormat) #'20171111_220722'
-    return curDatetimeStr
-
-
-def getCurTimestamp(withMilliseconds=False):
-    """
-    get current time's timestamp
-        (default)not milliseconds -> 10 digits: 1351670162
-        with milliseconds -> 13 digits: 1531464292921
-    """
-    curDatetime = datetime.now()
-    return datetimeToTimestamp(curDatetime, withMilliseconds)
-
-
 def datetimeToTimestamp(datetimeVal, withMilliseconds=False) :
     """
         convert datetime value to timestamp
@@ -107,20 +81,80 @@ def datetimeToTimestamp(datetimeVal, withMilliseconds=False) :
 
     return timestampInt
 
+def getCurTimestamp(withMilliseconds=False):
+    """
+    get current time's timestamp
+        (default)not milliseconds -> 10 digits: 1351670162
+        with milliseconds -> 13 digits: 1531464292921
+    """
+    curDatetime = datetime.now()
+    return datetimeToTimestamp(curDatetime, withMilliseconds)
 
-def timestampToDatetime(timestamp):
+def datetimeToStr(inputDatetime, format="%Y%m%d_%H%M%S"):
+    """Convert datetime to string
+
+    Args:
+        inputDatetime (datetime): datetime value
+    Returns:
+        str
+    Raises:
+    Examples:
+        datetime.datetime(2020, 4, 21, 15, 44, 13, 2000) -> '20200421_154413'
     """
-        convert timestamp to datetime value
-        eg:
-            1149091200 -> "2006-06-01 00:00:00"
-    :param timestamp:
-    :return:
+    datetimeStr = inputDatetime.strftime(format=format)
+    # print("inputDatetime=%s -> datetimeStr=%s" % (inputDatetime, datetimeStr)) # 2020-04-21 15:08:59.787623
+    return datetimeStr
+
+def getCurDatetimeStr(outputFormat="%Y%m%d_%H%M%S"):
     """
-    #print "type(timestamp)=",type(timestamp)
-    #print "timestamp=",timestamp
-    #timestamp = int(timestamp)
-    timestamp = float(timestamp)
-    return datetime.fromtimestamp(timestamp)
+    get current datetime then format to string
+
+    eg:
+        20171111_220722
+
+    :param outputFormat: datetime output format
+    :return: current datetime formatted string
+    """
+    curDatetime = datetime.now() # 2017-11-11 22:07:22.705101
+    # curDatetimeStr = curDatetime.strftime(format=outputFormat) #'20171111_220722'
+    curDatetimeStr = datetimeToStr(curDatetime)
+    return curDatetimeStr
+
+def timestampToDatetime(timestamp, isMillisecond=False):
+    """Convert timestamp to datetime value
+
+    Args:
+        timestamp (float/int): int for timestamp value without millisecond, float for timestamp with millisecond
+        isMillisecond (bool): True for 13 digit with millisecond, False for 10 digit without millisecond
+    Returns:
+        datetime
+    Raises:
+    Examples:
+        1587454927964 -> datetime.datetime(2020, 4, 21, 15, 42, 7, 964000)
+        1587455053.002 -> datetime.datetime(2020, 4, 21, 15, 44, 13, 2000)
+    """
+    timestampFloat = float(timestamp)
+    if isMillisecond:
+        timestampFloat = timestampFloat / 1000
+    convertedDatetime = datetime.fromtimestamp(timestampFloat)
+    return convertedDatetime
+
+def timestampToDatetimeStr(timestamp, isMillisecond=False, format="%Y%m%d_%H%M%S"):
+    """Convert timestamp to datetime string
+
+    Args:
+        timestamp (int): timestamp int value with/without millisecond
+        isMillisecond (bool): True for 13 digit with millisecond, False for 10 digit without millisecond
+        format (str): datetime format
+    Returns:
+        str
+    Raises:
+    Examples:
+        1587454927964 -> 2020-4-21 15:42:07
+    """
+    convertedDatetime = timestampToDatetime(timestamp, isMillisecond=isMillisecond)
+    datetimeStr = datetimeToStr(convertedDatetime, format=format)
+    return datetimeStr
 
 
 def calcTimeStart(uniqueKey):
