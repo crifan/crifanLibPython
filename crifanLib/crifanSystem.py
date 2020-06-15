@@ -189,7 +189,7 @@ def grepProcessStatus(processFile, singleLinePattern, psCmd="ps aux"):
     Raises:
     Examples:
         input: "crawlerStart.py", "^\s*(?P<username>\w+)\s+(?P<pid>\d+)\s+.+?python\s+crawlerStart\.py\s+-task\s+(?P<taskFile>\S+)\s+-id\s+(?P<curDevId>\d+)$"
-        output: [{'username': 'limao', 'pid': '64320', 'taskFile': '/Users/limao/dev/FiboDT/crawler/appAutoCrawler/AppCrawler/task/191115_card_DongKaKongJian/191115_card_DongKaKongJian_wexin.txt', 'curDevId': '1'}]
+        output: [{'username': 'limao', 'pid': '64320', 'taskFile': '/Users/limao/dev/xxx/crawler/appAutoCrawler/AppCrawler/task/191115_card_DongKaKongJian/191115_card_DongKaKongJian_wexin.txt', 'curDevId': '1'}]
     """
     # logging.debug("processFile=%s, singleLinePattern=%s", processFile, singleLinePattern)
     isCheckCmdRunOk, isRunning, processInfoList = False, False, []
