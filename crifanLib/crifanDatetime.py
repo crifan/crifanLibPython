@@ -3,15 +3,15 @@
 """
 Filename: crifanDatetime.py
 Function: crifanLib's datetime related functions.
-Version: v1.1 20180713
+Version: 20200918
 Note:
 1. latest version and more can found here:
 https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanDatetime.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v1.1"
-__copyright__ = "Copyright (c) 2019, Crifan Li"
+__version__ = "20200918"
+__copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
 
@@ -117,7 +117,7 @@ def getCurDatetimeStr(outputFormat="%Y%m%d_%H%M%S"):
     """
     curDatetime = datetime.now() # 2017-11-11 22:07:22.705101
     # curDatetimeStr = curDatetime.strftime(format=outputFormat) #'20171111_220722'
-    curDatetimeStr = datetimeToStr(curDatetime)
+    curDatetimeStr = datetimeToStr(curDatetime, format=outputFormat)
     return curDatetimeStr
 
 def timestampToDatetime(timestamp, isMillisecond=False):
