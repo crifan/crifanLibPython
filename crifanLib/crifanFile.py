@@ -191,6 +191,23 @@ def chmodAddX(someFile, isOnlySelf=True):
             newState = curState.st_mode | executableMode
             os.chmod(someFile, newState)
 
+def isFileExistAndValid(filePath):
+    """check whether a file is existed and valid (size>0)
+
+    Args:
+        filePath (str): file path
+    Returns:
+        bool
+    Raises:
+    """
+    isExistFile = os.path.isfile(filePath)
+    isValidFile = False
+    if isExistFile:
+        curFileSize = os.path.getsize(filePath)
+        isValidFile = curFileSize > 0
+    isExistAndValid = isExistFile and isValidFile
+    return isExistAndValid
+
 ################################################################################
 # Folder Function
 ################################################################################
