@@ -3,14 +3,14 @@
 """
 Filename: crifanFile.py
 Function: crifanLib's file related functions.
-Update: v20200415
+Update: 20201027
 Note:
 1. latest version and more can found here:
 https://github.com/crifan/crifanLibPython
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v20200415"
+__version__ = "20201027"
 __copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
@@ -207,6 +207,24 @@ def isFileExistAndValid(filePath):
         isValidFile = curFileSize > 0
     isExistAndValid = isExistFile and isValidFile
     return isExistAndValid
+
+def createEmptyFile(fullFilePath):
+    """Create a empty file like touch
+
+    Args:
+        fullFilePath (str): full file path
+    Returns:
+        bool
+    Raises:
+    """
+    folderPath = os.path.dirname(fullFilePath)
+    # create folder if not exist
+    if not os.path.exists(folderPath):
+        os.makedirs(folderPath)
+
+    with open(fullFilePath, 'a'):
+        # Note: not use 'w' for maybe conflict for others constantly writing to it
+        os.utime(fullFilePath, None)
 
 ################################################################################
 # Folder Function
