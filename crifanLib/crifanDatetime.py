@@ -235,13 +235,59 @@ def floatSecondsToDatetimeDict(floatSeconds):
     return convertedDict
 
 
-def datetimeDictToStr(datetimeDict, seperatorD=" ", seperatorHms=":", seperatorMilliS="."):
-    formattedStr = "%d%s%02d%s%02d%s%02d%s%03d" % (
-        datetimeDict["days"], seperatorD,
-        datetimeDict["hours"], seperatorHms,
-        datetimeDict["minutes"], seperatorHms,
-        datetimeDict["seconds"], seperatorMilliS,
-        datetimeDict["millseconds"])
+# def datetimeDictToStr(datetimeDict, seperatorD=" ", seperatorHms=":", seperatorMilliS="."):
+#     formattedStr = "%d%s%02d%s%02d%s%02d%s%03d" % (
+#         datetimeDict["days"], seperatorD,
+#         datetimeDict["hours"], seperatorHms,
+#         datetimeDict["minutes"], seperatorHms,
+#         datetimeDict["seconds"], seperatorMilliS,
+#         datetimeDict["millseconds"])
+#     return formattedStr
+def datetimeDictToStr(datetimeDict,
+        seperatorD=" ",
+        seperatorHms=":",
+        seperatorMilliS=".",
+        isShowZeroDayStr=False,
+        isShowMilliSecPart=True,
+    ):
+    """Convert date time dict into date time string
+    
+    Args:
+        datetimeDict (dict): date time dict
+        seperatorD (str): day seperator
+        seperatorHms (str): hour/minute/second seperator
+        seperatorMilliS (str): milli seconds seperator
+        isShowZeroDayStr (bool): whether show days string when days=0
+        isShowMilliSecPart (bool): whether show milli seconds part
+    Returns:
+        str
+    Raises:
+    Examples:
+        input: 
+            {'days': 0, 'hours': 0, 'microseconds': 986, 'millseconds': 804, 'minutes': 3, 'seconds': 38}
+            {'hours': 0, minutes': 3, 'seconds': 38}
+        output:
+            '0 00:03:38.804'
+            '00:03:38'
+    """
+    dayStr = ""
+    hasDays = "days" in datetimeDict
+    if hasDays:
+        days = datetimeDict["days"]
+        if (not isShowZeroDayStr) and (days == 0):
+            dayStr = ""
+        else:
+            dayStr = "%d%s" % (days, seperatorD)
+    
+    hmsStr = "%02d%s%02d%s%02d" % (datetimeDict["hours"], seperatorHms, datetimeDict["minutes"], seperatorHms, datetimeDict["seconds"]) # '00:03:12'
+
+    milliSecStr = ""
+    hasMilliSec = "millseconds" in datetimeDict
+    if hasMilliSec:
+        if isShowMilliSecPart:
+            milliSecStr = "%s%03d" % (seperatorMilliS, datetimeDict["millseconds"])
+
+    formattedStr = "%s%s%s" % (dayStr, hmsStr, milliSecStr) # '00:03:12'
     return formattedStr
 
 ################################################################################
