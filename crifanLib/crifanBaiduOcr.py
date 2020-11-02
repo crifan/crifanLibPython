@@ -21,6 +21,7 @@ import requests
 import time
 import logging
 from collections import OrderedDict
+from difflib import SequenceMatcher
 
 try:
     from PIL import Image, ImageDraw
@@ -468,6 +469,342 @@ class BaiduOCR():
 		screenImgPath = self.getCurScreen()
 		wordsResultJson = self.baiduImageToWords(screenImgPath)
 		return wordsResultJson
+
+	def checkIncludeExcludeInScreen(self,
+			imgPath=None,
+			includeMandatoryStrList=[],
+			includeMandatoryMinMatchCount=0,
+			includeOptionalStrList=[],
+			includeOptionalMinMatchCount=1,
+			excludeStrList=[],
+			isRespFullInfo=False
+		):
+		"""Check include mandatory/optional str in and exclude str not in current screen
+
+		Args:
+			imgPath (str): current screen image file path; default=None; if None, will auto get current scrren image
+			includeMandatoryStrList (list): mandatory str, at least match `includeMandatoryMinMatchCount`, or all must match if `mandatoryMinMatchCount`=0
+			includeMandatoryMinMatchCount (int): minimal match count for mandatory list
+			includeOptionalStrList (list): optional str, some may match
+			includeOptionalMinMatchCount (int): for `includeOptionalStrList`, the minimal match count, consider to match or not
+			excludeStrList (list): excluded str list, means should not found these str
+			isRespFullInfo (bool): return full info or not, full info means match location result and imgPath
+		Returns:
+			matched result, type=bool/tuple, depends on `isRespFullInfo`
+		Raises:
+		"""
+		isFinalMatch = False
+		isIncludeMatch=False
+		isExcludeMatch = False
+		includeMatchResult = None
+		excludeMatchResult = None
+
+		if not imgPath:
+			imgPath = self.getCurScreenshot()
+		logging.debug("imgPath=%s", imgPath)
+
+		wordsResultJson = self.baiduImageToWords(imgPath)
+
+		# first check exclude str list
+		isRespShortInfo = not isRespFullInfo
+
+		# # for debug
+		# excludeStr = excludeStrList[0]
+		# excludeResult = self.isWordsInCurScreen(excludeStr, imgPath=imgPath, wordsResultJson=wordsResultJson, isRespShortInfo=isRespShortInfo)
+		excludeResult = self.isWordsInCurScreen(excludeStrList, imgPath=imgPath, wordsResultJson=wordsResultJson, isRespShortInfo=isRespShortInfo)
+
+		if isRespFullInfo:
+			excludeResultDict, imgPath = excludeResult
+			excludeMatchResult = OrderedDict()
+			for eachStr, (isFoundCur, curResultList) in excludeResultDict.items():
+				if eachStr in excludeStrList:
+					if isFoundCur:
+						isExcludeMatch = True
+						excludeMatchResult[eachStr] = curResultList
+
+			if isExcludeMatch:
+				isFinalMatch = False
+				return isFinalMatch, includeMatchResult, excludeMatchResult, imgPath, wordsResultJson
+		else:
+			if isinstance(excludeResult, list):
+				for eachFound in excludeResult:
+					if eachFound:
+						isExcludeMatch = True
+						break
+			elif isinstance(excludeResult, bool):
+				isExcludeMatch = excludeResult
+
+			if isExcludeMatch:
+				isFinalMatch = False
+				return isFinalMatch
+
+		# then check mandatory and optional str list
+		includeResult = self.checkExistInScreen(
+			imgPath=imgPath,
+			wordsResultJson=wordsResultJson,
+			mandatoryStrList=includeMandatoryStrList,
+			mandatoryMinMatchCount=includeMandatoryMinMatchCount,
+			optionalStrList=includeOptionalStrList,
+			optionalMinMatchCount=includeOptionalMinMatchCount,
+			isRespFullInfo=isRespFullInfo,
+		)
+		if isRespFullInfo:
+			isIncludeMatch, includeMatchResult, imgPath, wordsResultJson = includeResult
+			return isIncludeMatch, includeMatchResult, excludeMatchResult, imgPath, wordsResultJson
+		else:
+			isIncludeMatch = includeResult
+			return isIncludeMatch
+
+	def checkSameWordsLocation(self, locationDict1, locationDict2):
+		"""Check whether two words location is same
+			logic:
+				>=3 of 4 point value is same
+					same: point value is same or diff <= 2
+
+		Args:
+			locationDict1 (dict): location 1 dict
+			locationDict2 (dict): location 2 dict
+		Returns:
+			bool
+		Raises:
+		Examples:
+			Input:
+				locationDict1: {'height': 38, 'left': 23, 'top': 21, 'width': 37}
+				locationDict2: {'height': 38, 'left': 22, 'top': 21, 'width': 38}
+			Output: True
+		"""
+		MinSamePointNum = 3
+		# MaxPointDiff = 2
+		MaxPointDiff = 3
+
+		isLocationSame = False
+		locationSameNum = 0
+
+		widthDiff = abs(locationDict1["width"] - locationDict2["width"])
+		isWidthSame = widthDiff <= MaxPointDiff
+		if isWidthSame:
+			locationSameNum += 1
+
+		topDiff = abs(locationDict1["top"] - locationDict2["top"])
+		isTopSame = topDiff <= MaxPointDiff
+		if isTopSame:
+			locationSameNum += 1
+
+		leftDiff = abs(locationDict1["left"] - locationDict2["left"])
+		isLeftSame = leftDiff <= MaxPointDiff
+		if isLeftSame:
+			locationSameNum += 1
+
+		heightDiff = abs(locationDict1["height"] - locationDict2["height"])
+		isHeightSame = heightDiff <= MaxPointDiff
+		if isHeightSame:
+			locationSameNum += 1
+
+		if locationSameNum >= MinSamePointNum:
+			# at least 3 dimension of location is same, consider as item is same
+			isLocationSame = True
+
+		return isLocationSame
+
+	def checkStrSimilarRatio(self, str1, str2):
+		"""Check two str similar ratio
+
+		Args:
+			str1 (str): str 1
+			str2 (str): str 2
+		Returns:
+			float
+		Raises:
+		Examples:
+			1
+				Input: 'XP:8400134506246', 'eP:840013450624'
+				Output: 0.9032258064516129
+			1
+				Input: '60/660', '1370/1370'
+				Output: 0.4
+		"""
+		matcher = SequenceMatcher(None, str1, str2)
+		simimarRatio = matcher.ratio()
+		return simimarRatio
+
+	def checkSameWords(self, wordsInfoDict1, wordsInfoDict2):
+		"""Check whether two words is same
+			logic:
+				same str
+				same location
+
+		Args:
+			wordsInfoDict1 (dict): words 1 info dict
+			wordsInfoDict2 (dict): words 1 info dict
+		Returns:
+			bool
+		Raises:
+		Examples:
+			1
+				input:
+					wordsInfoDict1: {'chars': [{...}], 'location': {'height': 38, 'left': 23, 'top': 21, 'width': 37}, 'words': '战'}
+					wordsInfoDict2: {'chars': [{...}], 'location': {'height': 38, 'left': 22, 'top': 21, 'width': 38}, 'words': '战'}
+				output: True
+			2
+				input
+					{'chars': [{...}, {...}, {...}, {...}, {...}, {...}, {...}, {...}, {...}, ...], 'location': {'height': 32, 'left': 812, 'top': 1001, 'width': 674}, 'words': '线情况,请在设直中勾选屏BOSS特效!'}
+					{'chars': [{...}, {...}, {...}, {...}, {...}, {...}, {...}, {...}, {...}, ...], 'location': {'height': 33, 'left': 812, 'top': 1001, 'width': 672}, 'words': '线情况,请在设直中勾选屏敞BOSS特效!'}
+				output: True
+		"""
+		# WordsMinSimilarRatio = 0.8
+		WordsMinSimilarRatio = 0.9
+
+		isStrSame = False
+		isLocationSame = False
+
+		wordsStr1 = wordsInfoDict1['words']
+		wordsStr2 = wordsInfoDict2['words']
+		isStrSame = wordsStr1 == wordsStr2
+		if not isStrSame:
+			simimarRatio = self.checkStrSimilarRatio(wordsStr1, wordsStr2) # 0.9032258064516129
+			isStrSame = simimarRatio >= WordsMinSimilarRatio
+
+		if isStrSame:
+			locationDict1 = wordsInfoDict1['location']
+			locationDict2 = wordsInfoDict2['location']
+			isLocationSame = self.checkSameWordsLocation(locationDict1, locationDict2)
+
+		isWordsSame = isStrSame and isLocationSame
+		return isWordsSame
+
+	def calcPageSimlarity(self,
+			imgPath1=None,
+			wordsResultJson1=None,
+			imgPath2=None,
+			wordsResultJson2=None,
+		):
+		"""Calculate the similarity ratio between page 1 and page 2
+
+		Args:
+			imgPath1 (str): screen image file path for page 1; default=None; if None, try use wordsResultJson1
+			wordsResultJson1 (dict): baidu OCR result dict for page 1; if None, will auto generate from imgPath1
+			imgPath2 (str): screen image file path for page 2; default=None; if None, try use wordsResultJson2
+			wordsResultJson2 (dict): baidu OCR result dict for page 2; if None, will auto generate from imgPath2
+		Returns:
+			float, 0.0~1.0
+		Raises:
+		"""
+		similarityRatio = 0.0
+
+		if not wordsResultJson1:
+			wordsResultJson1 = self.baiduImageToWords(imgPath1)
+
+		if not wordsResultJson2:
+			wordsResultJson2 = self.baiduImageToWords(imgPath2)
+
+		"""
+		{
+			"log_id": 6218587667782385182,
+			"direction": 0,
+			"words_result_num": 32,
+			"words_result": [
+				{
+					"chars": [
+						{
+						"char": "战",
+						"location": { "width": 27, "top": 19, "left": 12, "height": 44 }
+						}
+					],
+					"location": { "width": 44, "top": 19, "left": 12, "height": 44 },
+					"words": "战"
+				},
+				{
+					"chars": [
+						{
+							"char": "攻",
+							"location": { "width": 30, "top": 0, "left": 241, "height": 48 }
+						},
+						{
+							"char": "击",
+							"location": { "width": 29, "top": 0, "left": 301, "height": 48 }
+						},
+						{
+							"char": "力",
+							"location": { "width": 29, "top": 0, "left": 361, "height": 48 }
+						},
+						{
+							"char": ":",
+							"location": { "width": 23, "top": 0, "left": 399, "height": 48 }
+						},
+						{
+							"char": "1",
+							"location": { "width": 23, "top": 0, "left": 430, "height": 48 }
+						},
+						{
+							"char": "8",
+							"location": { "width": 25, "top": 0, "left": 474, "height": 48 }
+						},
+						{
+							"char": "8",
+							"location": { "width": 25, "top": 0, "left": 519, "height": 48 }
+						}
+					],
+					"location": { "width": 311, "top": 0, "left": 241, "height": 48 },
+					"words": "攻击力:188"
+				},
+
+				...
+
+				],
+				"location": { "width": 314, "top": 1050, "left": 1011, "height": 28 },
+				"words": "EXP:840013450624"
+				}
+			]
+		}
+		"""
+
+		wordsResultDictList1 = wordsResultJson1['words_result']
+		wordsResultDictList2 = wordsResultJson2['words_result']
+
+		totalNum = 0
+		sameNum = 0
+
+		for eachWordsInfoDict1 in wordsResultDictList1:
+			for eachWordsInfoDict2 in wordsResultDictList2:
+				isWordsSame = self.checkSameWords(eachWordsInfoDict1, eachWordsInfoDict2)
+				if isWordsSame:
+					sameNum += 1
+					break
+
+			totalNum += 1
+
+		if totalNum > 0:
+			similarityRatio = sameNum / totalNum
+
+		return similarityRatio
+
+	def checkSamePage(self,
+			imgPath1=None,
+			wordsResultJson1=None,
+			imgPath2=None,
+			wordsResultJson2=None,
+		):
+		"""Check whether page 1 and page 2 is same or not
+
+		Args:
+			imgPath1 (str): screen image file path for page 1; default=None; if None, try use wordsResultJson1
+			wordsResultJson1 (dict): baidu OCR result dict for page 1; if None, will auto generate from imgPath1
+			imgPath2 (str): screen image file path for page 2; default=None; if None, try use wordsResultJson2
+			wordsResultJson2 (dict): baidu OCR result dict for page 2; if None, will auto generate from imgPath2
+		Returns:
+			bool
+		Raises:
+		"""
+		CfgSamePageMinRatio = 0.8 # 80%
+		# CfgSamePageMinRatio = 0.9 # 90%
+
+		isSamePage = False
+
+		similarityRatio = self.calcPageSimlarity(imgPath1, wordsResultJson1, imgPath2, wordsResultJson2)
+		if similarityRatio >= CfgSamePageMinRatio:
+			isSamePage = True
+
+		return isSamePage
 
 	def checkExistInScreen(self,
 			imgPath=None,
