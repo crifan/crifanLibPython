@@ -3,14 +3,14 @@
 """
 Filename: crifanBaiduOcr.py
 Function: crifanLib's python Baidu image OCR related functions
-Version: v20191224
+Version: 20201102
 Note:
 1. latest version and more can found here:
 https://github.com/crifan/crifanLibPython
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v20191224"
+__version__ = "20201102"
 __copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
