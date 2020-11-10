@@ -3,14 +3,14 @@
 """
 Filename: crifanBaiduOcr.py
 Function: crifanLib's python Baidu image OCR related functions
-Version: 20201102
+Version: 20201110
 Note:
 1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython
+https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanBaiduOcr.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20201102"
+__version__ = "20201110"
 __copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
@@ -180,33 +180,33 @@ class BaiduOCR():
 				wordStr="首充"
 				curWordsResult= {
 						"chars": [
-                            {
-                                "char": "寻",
-                                "location": {
-                                    "width": 15,
-                                    "top": 51,
-                                    "left": 725,
-                                    "height": 24
-                                }
+							{
+								"char": "寻",
+								"location": {
+									"width": 15,
+									"top": 51,
+									"left": 725,
+									"height": 24
+								}
 							},
 							...
-                            {
-                                "char": "首",
-                                "location": {
-                                    "width": 15,
-                                    "top": 51,
-                                    "left": 971,
-                                    "height": 24
-                                }
+							{
+								"char": "首",
+								"location": {
+									"width": 15,
+									"top": 51,
+									"left": 971,
+									"height": 24
+								}
 							},
 							{
-                                "char": "充",
-                                "location": {
-                                    "width": 15,
-                                    "top": 51,
-                                    "left": 986,
-                                    "height": 24
-                                }
+								"char": "充",
+								"location": {
+									"width": 15,
+									"top": 51,
+									"left": 986,
+									"height": 24
+								}
 							}
 						],
 						"location": {
@@ -263,6 +263,18 @@ class BaiduOCR():
 			# 	firstLocation = firstCharResult["location"]
 			# if lastCharResult["char"] == lastToMatchChar:
 			# 	lastLocation = lastCharResult["location"]
+
+			# Special:
+			# wordStr = '^(点击)?任意地方继续' 
+			# matchedStr = '点击任意地方继续 Dereloprment Build'
+			# -> firstCharResult is None
+			# add following try to avoid: TypeError: 'NoneType' object is not subscriptable
+			if not firstCharResult:
+				firstCharResult = charResultList[firstMatchedPos]
+
+			if not lastCharResult:
+				lastCharResult = charResultList[lastMatchedPos]
+
 			firstLocation = firstCharResult["location"]
 			lastLocation = lastCharResult["location"]
 
