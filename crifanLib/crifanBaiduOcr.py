@@ -3,14 +3,14 @@
 """
 Filename: crifanBaiduOcr.py
 Function: crifanLib's python Baidu image OCR related functions
-Version: 20201110
+Version: 20201116
 Note:
 1. latest version and more can found here:
 https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanBaiduOcr.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20201110"
+__version__ = "20201116"
 __copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
@@ -122,11 +122,16 @@ class BaiduOCR():
 			"Content-Type": "application/x-www-form-urlencoded"
 		}
 
-		# 参数含义：http://ai.baidu.com/ai-doc/OCR/vk3h7y58v
+		# 参数含义：
+		# 	通用文字识别（标准含位置版）
+		# 		http://ai.baidu.com/ai-doc/OCR/vk3h7y58v
+		#	通用文字识别（高精度含位置版）
+		# 		http://ai.baidu.com/ai-doc/OCR/tk3h7y2aq
 		dataDict = {
 			"image": encodedImgData,
 			"recognize_granularity": "small",
 			# "vertexes_location": "true",
+			"detect_direction": "true", # default: false
 		}
 		resp = requests.post(self.OCR_URL, params=paramDict, headers=headerDict, data=dataDict)
 		respJson = resp.json()
@@ -232,6 +237,7 @@ class BaiduOCR():
 			matchedStrLen = len(matchedStr)
 			charResultList = curWordsResult["chars"]
 			charResultListLen = len(charResultList)
+			charResultListMaxIdx = charResultListLen - 1
 
 			firstCharResult = None
 			lastCharResult = None
@@ -273,7 +279,10 @@ class BaiduOCR():
 				firstCharResult = charResultList[firstMatchedPos]
 
 			if not lastCharResult:
-				lastCharResult = charResultList[lastMatchedPos]
+				if lastMatchedPos <= charResultListMaxIdx:
+					lastCharResult = charResultList[lastMatchedPos]
+				else:
+					lastCharResult = charResultList[-1]
 
 			firstLocation = firstCharResult["location"]
 			lastLocation = lastCharResult["location"]
@@ -350,13 +359,19 @@ class BaiduOCR():
 			orderedMatchedResultDict[curInputWords] = curMatchedResultList
 		return orderedMatchedResultDict
 
-
-	def isWordsInCurScreen(self, wordsOrWordsList, imgPath=None, isMatchMultiple=False, isRespShortInfo=False):
+	def isWordsInCurScreen(self,
+		wordsOrWordsList,
+		imgPath=None,
+		wordsResultJson=None,
+		isMatchMultiple=False,
+		isRespShortInfo=False
+	):
 		"""Found words in current screen
 
 		Args:
 			wordsOrWordsList (str/list): single input str or str list
 			imgPath (str): current screen image file path; default=None; if None, will auto get current scrren image
+			wordsResultJson (dict): baidu OCR result dict; if None, will auto generate from imgPath
 			isMatchMultiple (bool): for each single str, to match multiple output or only match one output; default=False
 			isRespShortInfo (bool): return simple=short=nomarlly bool or list[bool] info or return full info which contain imgPath and full matched result.
 		Returns:
@@ -365,11 +380,12 @@ class BaiduOCR():
 		"""
 		retValue = None
 
-		if not imgPath:
-			# do screenshot
-			imgPath = self.getCurScreen()
+		if not wordsResultJson:
+			if not imgPath:
+				# do screenshot
+				imgPath = self.getCurScreenshot()
 
-		wordsResultJson = self.baiduImageToWords(imgPath)
+			wordsResultJson = self.baiduImageToWords(imgPath)
 
 		isMultipleInput = False
 		inputWords = None
@@ -820,6 +836,7 @@ class BaiduOCR():
 
 	def checkExistInScreen(self,
 			imgPath=None,
+			wordsResultJson=None,
 			mandatoryStrList=[],
 			mandatoryMinMatchCount=0,
 			optionalStrList=[],
@@ -827,22 +844,27 @@ class BaiduOCR():
 			optionalMinMatchCount=1,
 			isRespFullInfo=False
 		):
-		"""Check whether mandatory and optional str list in current screen or not
+		"""Check whether include mandatory/optional str in current screen or not
 
 		Args:
 			imgPath (str): current screen image file path; default=None; if None, will auto get current scrren image
+			wordsResultJson (dict): baidu OCR result dict; if None, will auto generate from imgPath
 			mandatoryStrList (list): mandatory str, at least match `mandatoryMinMatchCount`, or all must match if `mandatoryMinMatchCount`=0
 			mandatoryMinMatchCount (int): minimal match count for mandatory list
 			optionalStrList (list): optional str, some may match
 			optionalMinMatchCount (int): for `optionalStrList`, the minimal match count, consider to match or not
 			isRespFullInfo (bool): return full info or not, full info means match location result and imgPath
 		Returns:
-			matched result, type=bool/tuple, depends on `isRespFullInfo`
+			matched result
+				isRespFullInfo=False -> bool
+				isRespFullInfo=True -> tuple: (isExist, respMatchLocation, imgPath, wordsResultJson)
 		Raises:
 		"""
-		if not imgPath:
-			imgPath = self.getCurScreen()
-		logging.debug("imgPath=%s", imgPath)
+		if not wordsResultJson:
+			if not imgPath:
+				imgPath = self.getCurScreenshot()
+
+			wordsResultJson = self.baiduImageToWords(imgPath)
 
 		isExist = False
 		# Note: use OrderedDict instead dict to keep order, for later get first match result to process
@@ -858,7 +880,7 @@ class BaiduOCR():
 
 		optionalMatchCount = 0
 		mandatoryMatchCount = 0
-		allResultDict, _ = self.isWordsInCurScreen(allStrList, imgPath, isMatchMultiple=True)
+		allResultDict, _ = self.isWordsInCurScreen(allStrList, imgPath=imgPath, wordsResultJson=wordsResultJson, isMatchMultiple=True)
 		for eachStr, (isFoundCur, curResultList) in allResultDict.items():
 			if eachStr in mandatoryStrList:
 				if isFoundCur:
@@ -890,9 +912,10 @@ class BaiduOCR():
 		logging.debug("isMandatoryMatch=%s, isOptionalMatch=%s -> isExist=%s", isMandatoryMatch, isOptionalMatch, isExist)
 
 		if isRespFullInfo:
-			logging.debug("mandatoryStrList=%s, optionalStrList=%s -> isExist=%s, respMatchLocation=%s, imgPath=%s", 
-				mandatoryStrList, optionalStrList, isExist, respMatchLocation, imgPath)
-			return (isExist, respMatchLocation, imgPath)
+			logging.debug("mandatoryStrList=%s, optionalStrList=%s -> isExist=%s, respMatchLocation=%s, imgPath=%s, wordsResultJson=%s", 
+				mandatoryStrList, optionalStrList, isExist, respMatchLocation, imgPath, wordsResultJson)
+			# return (isExist, respMatchLocation, imgPath)
+			return (isExist, respMatchLocation, imgPath, wordsResultJson)
 		else:
 			logging.debug("mandatoryStrList=%s, optionalStrList=%s -> isExist=%s", 
 				mandatoryStrList, optionalStrList, isExist)
@@ -910,7 +933,7 @@ class BaiduOCR():
 		Raises:
 		"""
 		if not imgPath:
-			imgPath = self.getCurScreen()
+			imgPath = self.getCurScreenshot()
 
 		checkResult = self.checkExistInScreen(
 			imgPath=imgPath,
@@ -919,9 +942,9 @@ class BaiduOCR():
 			isRespFullInfo=isRespFullInfo,
 		)
 		if isRespFullInfo:
-			isExistAny, matchResult, imgPath = checkResult
+			isExistAny, matchResult, imgPath, wordsResultJson = checkResult
 			logging.debug("isExistAny=%s, matchResult=%s, imgPath=%s for %s", isExistAny, matchResult, imgPath, strList)
-			return (isExistAny, matchResult, imgPath)
+			return (isExistAny, matchResult, imgPath, wordsResultJson)
 		else:
 			isExistAny = checkResult
 			logging.debug("isExistAny=%s, for %s", isExistAny, strList)
@@ -939,12 +962,12 @@ class BaiduOCR():
 		Raises:
 		"""
 		if not imgPath:
-			imgPath = self.getCurScreen()
+			imgPath = self.getCurScreenshot()
 		checkResult = self.checkExistInScreen(imgPath=imgPath, mandatoryStrList=strList, isRespFullInfo=isRespFullInfo)
 		if isRespFullInfo:
-			isExistAll, matchResult, imgPath = checkResult
+			isExistAll, matchResult, imgPath, wordsResultJson = checkResult
 			logging.debug("isExistAll=%s, matchResult=%s, imgPath=%s for %s", isExistAll, matchResult, imgPath, strList)
-			return (isExistAll, matchResult, imgPath)
+			return (isExistAll, matchResult, imgPath, wordsResultJson)
 		else:
 			isExistAll = checkResult
 			logging.debug("isExistAll=%s, for %s", isExistAll, strList)
