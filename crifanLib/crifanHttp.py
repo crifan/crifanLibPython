@@ -3,14 +3,14 @@
 """
 Filename: crifanHttp.py
 Function: crifanLib's http related functions.
-Version: v20200311
+Version: 20201124
 Note:
 1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython
+https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanHttp.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v20200311"
+__version__ = "20201124"
 __copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
@@ -23,6 +23,8 @@ try:
     import urllib.request as urllib2
 except ImportError:
     import urllib2
+
+import requests
 
 # from . import crifanFile
 import crifanLib.crifanFile
@@ -295,7 +297,7 @@ def getUrlResponse(url, postDict={}, headerDict={}, timeout=0, useGzip=False, po
         'Cache-Control': 'no-cache',
         'Accept': '*/*',
         'Connection': 'Keep-Alive',
-    };
+    }
 
     # add default headers firstly
     for eachDefHd in defHeaderDict.keys():
@@ -402,6 +404,23 @@ def getUrlRespHtml_multiTry(url,
 
     return respHtml
 
+def get302RealUrl(originUrl):
+    """get real url address after 302 move
+
+    Args:
+        originUrl (str): original url
+    Returns:
+        real url(str)
+    Raises:
+    Examples:
+        input: 'http://dl.gamecenter.vivo.com.cn/clientRequest/gameDownload?id=57587&pkgName=com.jiuzun.mxsg.vivo&sourword=%E4%B8%89%E5%9B%BD&page_index=4&dlpos=1&channel=h5'
+        output: 'https://gameapktxdl.vivo.com.cn/appstore/developer/soft/20180206/201802061851104837232.apk'
+    """
+    realUrl = ""
+    resp = requests.get(originUrl, allow_redirects=False)
+    if resp.status_code == 302:
+        realUrl = resp.headers['Location']
+    return realUrl
 
 
 ################################################################################
