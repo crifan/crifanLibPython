@@ -58,13 +58,18 @@ def convertLocalToGmt(localTime):
     return localTime - timedelta(hours=8)
 
 def datetimeToTimestamp(datetimeVal, withMilliseconds=False) :
-    """
-        convert datetime value to timestamp
-        eg:
-            "2006-06-01 00:00:00.123" -> 1149091200
-            if with milliseconds -> 1149091200123
-    :param datetimeVal:
-    :return:
+    """Convert datetime value to timestamp
+
+    Args:
+        datetimeVal (datetime): datetime value
+    Returns:
+        int
+    Raises:
+    Examples:
+        datetime.datetime(2020, 11, 24, 10, 44, 1, 118237) -> 1606185841118
+        "2006-06-01 00:00:00.123"
+            withMilliseconds=False -> 1149091200
+            withMilliseconds=True  -> 1149091200123
     """
     timetupleValue = datetimeVal.timetuple()
     timestampFloat = time.mktime(timetupleValue) # 1531468736.0 -> 10 digits
