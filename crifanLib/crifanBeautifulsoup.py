@@ -3,14 +3,14 @@
 """
 Filename: crifanBeautifulSoup.py
 Function: crifanLib's BeautifulSoup related functions.
-Version: 20200603
+Version: 20201126
 Note:
 1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython
+https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanBeautifulsoup.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20200603"
+__version__ = "20201126"
 __copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
@@ -272,6 +272,18 @@ def xmlToSoup(xmlStr):
     soup = BeautifulSoup(xmlStr, curParser)
     return soup
 
+def soupToHtml(soup):
+    """Convert soup to html string
+
+    Args:
+        soup (Soup): BeautifulSoup soup
+    Returns:
+        html (str)
+    Raises:
+    """
+    curHtml = soup.prettify()
+    # curHtml = str(soup)
+    return curHtml
 
 def bsChainFind(curLevelSoup, queryChainList):
     """BeautifulSoup find with query chain
