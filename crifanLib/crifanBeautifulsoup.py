@@ -452,12 +452,89 @@ def isContainSpecificSoup(soupList, elementName, isSizeValidCallback, matchNum=1
 
     return isFound
 
+def findEmAferSpan(parentSoup, spanStr):
+    """Find em soup after span
+
+    Args:
+        parentSoup (soup): parent BeautifulSoup node
+        spanStr (str): span node string
+    Returns:
+        em soup / em soup list
+    Raises:
+    Examples:
+        (1) 
+            input:
+                <span>平台：</span>
+                <em>
+                    <span class="aBtn" title="安卓版"></span>
+                    <span class="iBtn" title="苹果版"></span>
+                </em>
+            output:
+                <em>
+                    <span class="aBtn" title="安卓版"></span>
+                    <span class="iBtn" title="苹果版"></span>
+                </em>
+        (2) 
+            input:
+                <span>类型：</span>
+                <em>角色</em>
+                <em>横版</em>
+                <em>动作</em>
+                <em>历史</em>
+            output:
+                <em>角色</em>
+                <em>横版</em>
+                <em>动作</em>
+                <em>历史</em>
+        (3) 
+            input: <span>状态：</span><em>公测</em>
+            output: <em>公测</em>
+    """
+    respEm = None
+
+    foundSpanSoup = None
+    spanSoupList = parentSoup.find_all("span")
+    for curSpanSoup in spanSoupList:
+        if curSpanSoup == '\n':
+            # special node is: \n
+            continue
+
+        curSpanStr = curSpanSoup.string
+        if curSpanStr:
+            curSpanStr = curSpanStr.strip()
+
+        if curSpanStr == spanStr:
+            foundSpanSoup = curSpanSoup
+            break
+
+    emSoupList = []
+    if curSpanSoup:
+        nextSiblingSoupList = curSpanSoup.next_siblings
+        for nextSiblingSoup in nextSiblingSoupList:
+            if nextSiblingSoup == '\n':
+                # special node is: \n
+                continue
+
+            curSoupName = nextSiblingSoup.name
+            if curSoupName == "em":
+                emSoupList.append(nextSiblingSoup)
+            else:
+                break
+
+    if emSoupList:
+        emSoupListLen = len(emSoupList)
+        if emSoupListLen == 1:
+            respEm = emSoupList[0]
+        elif emSoupListLen > 1:
+            respEm = emSoupList
+    else:
+        respEm = None
+
+    return respEm
 
 ################################################################################
 # Test
 ################################################################################
-
-
 
 if __name__ == '__main__':
     print("[crifanLib-%s] %s" % (CURRENT_LIB_FILENAME, __version__))

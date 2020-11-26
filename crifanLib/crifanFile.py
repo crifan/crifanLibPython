@@ -3,14 +3,12 @@
 """
 Filename: crifanFile.py
 Function: crifanLib's file related functions.
-Update: v20200415
-Note:
-1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython
+Update: 20201029
+Latest version: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanFile.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v20200415"
+__version__ = "20201029"
 __copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
@@ -191,6 +189,41 @@ def chmodAddX(someFile, isOnlySelf=True):
             newState = curState.st_mode | executableMode
             os.chmod(someFile, newState)
 
+def isFileExistAndValid(filePath):
+    """check whether a file is existed and valid (size>0)
+
+    Args:
+        filePath (str): file path
+    Returns:
+        bool
+    Raises:
+    """
+    isExistFile = os.path.isfile(filePath)
+    isValidFile = False
+    if isExistFile:
+        curFileSize = os.path.getsize(filePath)
+        isValidFile = curFileSize > 0
+    isExistAndValid = isExistFile and isValidFile
+    return isExistAndValid
+
+def createEmptyFile(fullFilePath):
+    """Create a empty file like touch
+
+    Args:
+        fullFilePath (str): full file path
+    Returns:
+        bool
+    Raises:
+    """
+    folderPath = os.path.dirname(fullFilePath)
+    # create folder if not exist
+    if not os.path.exists(folderPath):
+        os.makedirs(folderPath)
+
+    with open(fullFilePath, 'a'):
+        # Note: not use 'w' for maybe conflict for others constantly writing to it
+        os.utime(fullFilePath, None)
+
 ################################################################################
 # Folder Function
 ################################################################################
@@ -216,73 +249,79 @@ def createFolder(folderFullPath):
 ################################################################################
 
 def getFileFolderSize(fileOrFolderPath):
-  """get size for file or folder"""
-  totalSize = 0
+    """get size for file or folder"""
+    totalSize = 0
 
-  if not os.path.exists(fileOrFolderPath):
-    return totalSize
+    if not os.path.exists(fileOrFolderPath):
+        return totalSize
 
-  if os.path.isfile(fileOrFolderPath):
-    totalSize = os.path.getsize(fileOrFolderPath) # 5041481
-    return totalSize
+    if os.path.isfile(fileOrFolderPath):
+        totalSize = os.path.getsize(fileOrFolderPath) # 5041481
+        return totalSize
 
-  if os.path.isdir(fileOrFolderPath):
-    with os.scandir(fileOrFolderPath) as dirEntryList:
-      for curSubEntry in dirEntryList:
-        curSubEntryFullPath = os.path.join(fileOrFolderPath, curSubEntry.name)
-        if curSubEntry.is_dir():
-          curSubFolderSize = getFileFolderSize(curSubEntryFullPath) # 5800007
-          totalSize += curSubFolderSize
-        elif curSubEntry.is_file():
-          curSubFileSize = os.path.getsize(curSubEntryFullPath) # 1891
-          totalSize += curSubFileSize
+    if os.path.isdir(fileOrFolderPath):
+        with os.scandir(fileOrFolderPath) as dirEntryList:
+            for curSubEntry in dirEntryList:
+                curSubEntryFullPath = os.path.join(fileOrFolderPath, curSubEntry.name)
+                if curSubEntry.is_dir():
+                    curSubFolderSize = getFileFolderSize(curSubEntryFullPath) # 5800007
+                    totalSize += curSubFolderSize
+                elif curSubEntry.is_file():
+                    curSubFileSize = os.path.getsize(curSubEntryFullPath) # 1891
+                    totalSize += curSubFileSize
 
-      return totalSize
+        return totalSize
 
 
 def formatSize(sizeInBytes, decimalNum=1, isUnitWithI=False, sizeUnitSeperator=""):
-  """
-    format size to human readable string
+    """Format size number to human readable string
+        refer:
+            https://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
 
-    example:
-      3746 -> 3.7KB
-      87533 -> 85.5KiB
-      98654 -> 96.3 KB
-      352 -> 352.0B
-      76383285 -> 72.84MB
-      763832854988542 -> 694.70TB
-      763832854988542665 -> 678.4199PB
+    Args:
+        sizeInBytes (int): size in bytes
+        decimalNum (int): decimal part digit number
+        isUnitWithI (bool): the unit suffix is include i or not, such as 'KB' or 'KiB'
+        sizeUnitSeperator (str): seperator between size number part and uint part, such as '3.7KB' or '3.7 KB'
+    Returns:
+        str
+    Raises:
+    Examples:
+        3746 -> 3.7KB
+        87533 -> 85.5KiB
+        98654 -> 96.3 KB
+        352 -> 352.0B
+        76383285 -> 72.84MB
+        763832854988542 -> 694.70TB
+        763832854988542665 -> 678.4199PB
+    """
+    # https://en.wikipedia.org/wiki/Binary_prefix#Specific_units_of_IEC_60027-2_A.2_and_ISO.2FIEC_80000
+    # K=kilo, M=mega, G=giga, T=tera, P=peta, E=exa, Z=zetta, Y=yotta
+    sizeUnitList = ['','K','M','G','T','P','E','Z']
+    largestUnit = 'Y'
 
-    refer:
-      https://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
-  """
-  # https://en.wikipedia.org/wiki/Binary_prefix#Specific_units_of_IEC_60027-2_A.2_and_ISO.2FIEC_80000
-  # K=kilo, M=mega, G=giga, T=tera, P=peta, E=exa, Z=zetta, Y=yotta
-  sizeUnitList = ['','K','M','G','T','P','E','Z']
-  largestUnit = 'Y'
+    if isUnitWithI:
+        sizeUnitListWithI = []
+        for curIdx, eachUnit in enumerate(sizeUnitList):
+            unitWithI = eachUnit
+            if curIdx >= 1:
+                unitWithI += 'i'
+            sizeUnitListWithI.append(unitWithI)
 
-  if isUnitWithI:
-    sizeUnitListWithI = []
-    for curIdx, eachUnit in enumerate(sizeUnitList):
-      unitWithI = eachUnit
-      if curIdx >= 1:
-        unitWithI += 'i'
-      sizeUnitListWithI.append(unitWithI)
+        # sizeUnitListWithI = ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']
+        sizeUnitList = sizeUnitListWithI
 
-    # sizeUnitListWithI = ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']
-    sizeUnitList = sizeUnitListWithI
+        largestUnit += 'i'
 
-    largestUnit += 'i'
-
-  suffix = "B"
-  decimalFormat = "." + str(decimalNum) + "f" # ".1f"
-  finalFormat = "%" + decimalFormat + sizeUnitSeperator + "%s%s" # "%.1f%s%s"
-  sizeNum = sizeInBytes
-  for sizeUnit in sizeUnitList:
-      if abs(sizeNum) < 1024.0:
-        return finalFormat % (sizeNum, sizeUnit, suffix)
-      sizeNum /= 1024.0
-  return finalFormat % (sizeNum, largestUnit, suffix)
+    suffix = "B"
+    decimalFormat = "." + str(decimalNum) + "f" # ".1f"
+    finalFormat = "%" + decimalFormat + sizeUnitSeperator + "%s%s" # "%.1f%s%s"
+    sizeNum = sizeInBytes
+    for sizeUnit in sizeUnitList:
+        if abs(sizeNum) < 1024.0:
+            return finalFormat % (sizeNum, sizeUnit, suffix)
+        sizeNum /= 1024.0
+    return finalFormat % (sizeNum, largestUnit, suffix)
 
 
 ################################################################################
