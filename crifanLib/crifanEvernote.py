@@ -1,6 +1,6 @@
 # Function: Evernote related functions
 # Author: Crifan Li
-# Update: 20201126
+# Update: 20201128
 # Online: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanEvernote.py
 
 import sys
@@ -129,7 +129,7 @@ class crifanEvernote(object):
                 image/png
             """
             isImage = True
-        logging.info("curResMime=%s -> isImage=%s", curResMime, isImage)
+        logging.debug("curResMime=%s -> isImage=%s", curResMime, isImage)
         return isImage
 
     def initClient(self):
@@ -282,17 +282,19 @@ class crifanEvernote(object):
         """
         newResList = []
         originResList = noteDetail.resources
-        for curIdx, eachResource in enumerate(originResList):
+        originResNum = len(originResList)
+        for curResIdx, eachResource in enumerate(originResList):
+            curResNum = curResIdx + 1
             if crifanEvernote.isImageResource(eachResource):
                 imgFilename = eachResource.attributes.fileName
-                logging.info("[%d] imgFilename=%s", curIdx, imgFilename)
+                logging.info("[%d/%d] imgFilename=%s", curResNum, originResNum, imgFilename)
 
                 resBytes = eachResource.data.body
-                resizedImgBytes, imgFormat = utils.resizeSingleImage(resBytes)
+                resizedImgBytes, imgFormat, newSize = utils.resizeSingleImage(resBytes)
 
                 resizedImgLen = len(resizedImgBytes) # 38578
                 resizedImgLenStr = utils.formatSize(resizedImgLen) # '37.7KB'
-                logging.info("resized to fmt=%s, len=%s", imgFormat, resizedImgLenStr)
+                logging.info("resized to fmt=%s, len=%s, size=%sx%s", imgFormat, resizedImgLenStr, newSize[0], newSize[1])
 
                 resizedImgMd5Bytes = utils.calcMd5(resizedImgBytes, isRespBytes=True) # '3110e1e7994dc119ff92439c5758e465'
                 newMime = utils.ImageFormatToMime[imgFormat] # 'image/jpeg'
@@ -374,6 +376,7 @@ class crifanEvernote(object):
             updated note detail
         Raises:
         """
+        validNewResList = []
         originResList = noteDetail.resources
         originContent = noteDetail.content
         soup = BeautifulSoup(originContent, 'html.parser')
@@ -381,6 +384,7 @@ class crifanEvernote(object):
             foundMediaNode = crifanEvernote.findResourceSoup(soup, curRes)
             if foundMediaNode:
                 newRes = newResList[curIdx] # 'image/jpeg'
+                validNewResList.append(newRes)
                 newMime = newRes.mime
                 # newHashBytes = newRes.data.bodyHash # b'\xb8\xe8\xbb\xcc\xca\xc1\xdf&J\xbeV\xe2`\xa6K\xb7'
                 newResBytes = newRes.data.body
@@ -391,6 +395,10 @@ class crifanEvernote(object):
                 noteAttrs = foundMediaNode.attrs
                 # {'hash': '3da990710b87fcd56a84...44202b12c2', 'type': 'image/jpeg'}
                 # {'hash': 'f9fc018211046ccc0eb6...5f67d0c8d6', 'type': 'image/jpeg', 'width': '385'}
+                # special: 
+                #   <en-media hash="0bbf1712d4e9afe725dd51e701c7fae6" style="width: 788px; height: auto;" type="image/jpeg"></en-media>
+                #   ->
+                #   {'hash': '0bbf1712d4e9afe725dd51e701c7fae6', 'type': 'image/jpeg', 'width': '788', 'height': 'auto'} ?
                 hasWidthAttr = "width" in noteAttrs
                 hasHeightAttr = "height" in noteAttrs
                 if hasWidthAttr or hasHeightAttr:
@@ -399,24 +407,36 @@ class crifanEvernote(object):
                     # newImgHeight = newImg.height
                     newImgWidth, newImgHeight = newImg.size
                     if hasWidthAttr:
-                        curWidth = int(noteAttrs["width"])
-                        if curWidth >= newImgWidth:
-                            # old size is bigger than resized image size, so need remove old size
-                            del foundMediaNode["width"]
+                        attrWidthStr = noteAttrs["width"]
+                        if attrWidthStr.isdigit():
+                            curWidth = int(attrWidthStr)
+                            if curWidth >= newImgWidth:
+                                # old size is bigger than resized image size, so need remove old size
+                                del foundMediaNode["width"]
+                        else:
+                            # is 'auto' ? -> keep not changed ?
+                            logging.warning("not support ? img width value: %s", attrWidthStr)
 
                     if hasHeightAttr:
-                        curHeight = int(noteAttrs["height"])
-                        if curHeight >= newImgHeight:
-                            # old size is bigger than resized image size, so need remove old size
-                            del foundMediaNode["height"]
+                        attrHeightStr = noteAttrs["height"]
+                        if attrHeightStr.isdigit():
+                            curHeight = int(attrHeightStr)
+                            if curHeight >= newImgHeight:
+                                # old size is bigger than resized image size, so need remove old size
+                                del foundMediaNode["height"]
+                        else:
+                            # is 'auto' ? -> keep not changed ?
+                            logging.warning("not support ? img height value: %s", attrHeightStr)
             else:
                 # logging.warning("Not found resource: type=%s, hash=%s", curMime, curHashStr)
-                logging.warning("Not found resource %s", curRes)
+                logging.warning("Not found resource: guid=%s, mime=%s", curRes.guid, curRes.mime)
+                # not add to validNewResList
 
         # newContent = soup.prettify()
         newContent = str(soup)
         noteDetail.content = newContent
 
-        noteDetail.resources = newResList
+        # noteDetail.resources = newResList
+        noteDetail.resources = validNewResList
 
         return noteDetail

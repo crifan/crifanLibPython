@@ -1,6 +1,6 @@
 # Function: Wordpress related functions
 # Author: Crifan Li
-# Update: 20201126
+# Update: 20201128
 # Online: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanWordpress.py
 
 # import sys
@@ -43,7 +43,7 @@ class crifanWordpress(object):
 
         if resp.ok:
             respJson = resp.json()
-            logging.info("respJson=%s", respJson)
+            logging.debug("respJson=%s", respJson)
             """
             for /wp-json/wp/v2/media
                 {
@@ -134,7 +134,7 @@ class crifanWordpress(object):
             "Accept": "application/json",
             'Content-Disposition': 'attachment; filename=%s' % filename,
         }
-        logging.info("curHeaders=%s", curHeaders)
+        logging.debug("curHeaders=%s", curHeaders)
         # curHeaders={'Authorization': 'Bearer eyJ0xxxyyy.zzzB4', 'Content-Type': 'image/png', 'Content-Disposition': 'attachment; filename=f6956c30ef0b475fa2b99c2f49622e35.png'}
         createMediaUrl = self.apiMedia
         resp = requests.post(
