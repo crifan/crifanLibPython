@@ -3,7 +3,7 @@
 """
 Filename: crifanBeautifulSoup.py
 Function: crifanLib's BeautifulSoup related functions.
-Version: 20201126
+Version: 20201129
 Note:
 1. latest version and more can found here:
 https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanBeautifulsoup.py
@@ -270,6 +270,18 @@ def xmlToSoup(xmlStr):
     XmlParser = 'lxml-xml'
     curParser = XmlParser
     soup = BeautifulSoup(xmlStr, curParser)
+    return soup
+
+def htmlToSoup(curHtml):
+    """convert html to soup
+
+    Args:
+        curHtml (str): html str
+    Returns:
+        soup
+    Raises:
+    """
+    soup = BeautifulSoup(curHtml, 'html.parser')
     return soup
 
 def soupToHtml(soup):
