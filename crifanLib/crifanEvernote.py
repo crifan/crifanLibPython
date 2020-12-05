@@ -1,7 +1,7 @@
 # Function: Evernote related functions
 # Author: Crifan Li
-# Update: 20201128
-# Online: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanEvernote.py
+# Update: 20201205
+# Latest: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanEvernote.py
 
 import sys
 import re
@@ -10,7 +10,6 @@ from bs4 import BeautifulSoup
 
 sys.path.append("lib")
 sys.path.append("libs/evernote-sdk-python3/lib")
-
 from libs.crifan import utils
 
 # import evernote.edam.userstore.constants as UserStoreConstants
@@ -62,6 +61,10 @@ class crifanEvernote(object):
         NoteStore URL: https://sandbox.yinxiang.com/shard/s1/notestore
     """
 
+    ################################################################################
+    # Class Method
+    ################################################################################
+
     def __init__(self, authToken, isSandbox=False, isChina=True):
         self.searchPageSize = 5000
 
@@ -89,48 +92,6 @@ class crifanEvernote(object):
 
         self.noteStore = self.client.get_note_store()
         logging.info("self.noteStore=%s", self.noteStore)
-
-    @staticmethod
-    def getHost(isSandbox=False, isChina=True):
-        # logging.debug("isSandbox=%s, isChina=%s", isSandbox, isChina)
-        evernoteHost = ""
-        if isChina:
-            if isSandbox:
-                evernoteHost = "sandbox.yinxiang.com"
-            else:
-                evernoteHost = "app.yinxiang.com"
-        else:
-            if isSandbox:
-                evernoteHost = "sandbox.evernote.com"
-            else:
-                evernoteHost = "app.evernote.com"
-
-        return evernoteHost
-
-    @staticmethod
-    def isImageResource(curResource):
-        """check is image media or not
-
-        Args:
-            curMedia (Resource): Evernote Resouce instance
-        Returns:
-            bool
-        Raises:
-        """
-        isImage = False
-        curResMime = curResource.mime # 'image/png' 'image/jpeg'
-        # libs/evernote-sdk-python3/lib/evernote/edam/limits/constants.py
-        matchImage = re.match("^image/", curResMime)
-        logging.debug("matchImage=%s", matchImage)
-        if matchImage:
-            """
-                image/gif
-                image/jpeg
-                image/png
-            """
-            isImage = True
-        logging.debug("curResMime=%s -> isImage=%s", curResMime, isImage)
-        return isImage
 
     def initClient(self):
         client = EvernoteClient(
@@ -248,12 +209,7 @@ class crifanEvernote(object):
 
         # sync following
         if newContent:
-            # special:
-            # (1) </en-media> will cause error, so need process:
-            #   <en-media hash="7c54d8d29cccfcfe2b48dd9f952b715b" type="image/png"></en-media>
-            #   ->
-            #   <en-media hash="7c54d8d29cccfcfe2b48dd9f952b715b" type="image/png" />
-            newContent = re.sub("(?P<enMedia><en-media\s+[^<>]+)>\s*</en-media>", "\g<enMedia> />", newContent, flags=re.S)
+            newContent = crifanEvernote.convertToClosedEnMediaTag(newContent)
             logging.debug("newContent=%s", newContent)
             newNote.content = newContent
 
@@ -270,6 +226,74 @@ class crifanEvernote(object):
         updatedNote = self.noteStore.updateNote(newNote)
         return updatedNote
 
+    def getTagNameList(self, curNote):
+        """get note tag name list
+
+        Args:
+            curNote (Note): Evernote Note
+        Returns:
+            tag name list(list)
+        Raises:
+        """
+        curTagList = []
+        tagGuidList = curNote.tagGuids
+        logging.debug("tagGuidList=%s", tagGuidList)
+        # tagGuidList=['1dda873b-310e-46be-b59e-02a1f8c95720', '6ff65876-aab4-406b-b52b-4c1105638450', '38f11450-1a7a-4f54-ba17-b78889c1567a', '46258420-3d2e-443c-b63d-c5431e061aab', '52b7babc-d6ea-4390-b405-79c21da5188e']
+        for eachTagGuid in tagGuidList:
+            tagInfo = self.noteStore.getTag(eachTagGuid)
+            logging.debug("tagInfo=%s", tagInfo)
+            curTagStr = tagInfo.name
+            curTagList.append(curTagStr)
+        logging.info("curTagList=%s", curTagList)
+        # curTagList=['Mac', '切换', 'GPU', 'pmset', '显卡模式']
+        return curTagList
+
+    ################################################################################
+    # Static Method
+    ################################################################################
+
+    @staticmethod
+    def getHost(isSandbox=False, isChina=True):
+        # logging.debug("isSandbox=%s, isChina=%s", isSandbox, isChina)
+        evernoteHost = ""
+        if isChina:
+            if isSandbox:
+                evernoteHost = "sandbox.yinxiang.com"
+            else:
+                evernoteHost = "app.yinxiang.com"
+        else:
+            if isSandbox:
+                evernoteHost = "sandbox.evernote.com"
+            else:
+                evernoteHost = "app.evernote.com"
+
+        return evernoteHost
+
+    @staticmethod
+    def isImageResource(curResource):
+        """check is image media or not
+
+        Args:
+            curMedia (Resource): Evernote Resouce instance
+        Returns:
+            bool
+        Raises:
+        """
+        isImage = False
+        curResMime = curResource.mime # 'image/png' 'image/jpeg'
+        # libs/evernote-sdk-python3/lib/evernote/edam/limits/constants.py
+        matchImage = re.match("^image/", curResMime)
+        logging.debug("matchImage=%s", matchImage)
+        if matchImage:
+            """
+                image/gif
+                image/jpeg
+                image/png
+            """
+            isImage = True
+        logging.debug("curResMime=%s -> isImage=%s", curResMime, isImage)
+        return isImage
+
     @staticmethod
     def resizeNoteImage(noteDetail):
         """Resize note each media image and update note content
@@ -282,6 +306,10 @@ class crifanEvernote(object):
         """
         newResList = []
         originResList = noteDetail.resources
+        if not originResList:
+            # is None
+            return newResList
+
         originResNum = len(originResList)
         for curResIdx, eachResource in enumerate(originResList):
             curResNum = curResIdx + 1
@@ -335,7 +363,8 @@ class crifanEvernote(object):
             Raises:
         """
         newResList = crifanEvernote.resizeNoteImage(noteDetail)
-        noteDetail = crifanEvernote.updateNoteResouces(noteDetail, newResList)
+        if newResList:
+            noteDetail = crifanEvernote.updateNoteResouces(noteDetail, newResList)
         return noteDetail
 
     @staticmethod
@@ -440,3 +469,101 @@ class crifanEvernote(object):
         noteDetail.resources = validNewResList
 
         return noteDetail
+
+    @staticmethod
+    def getNoteContentHtml(curNote):
+        """Get evernote Note content html
+
+        Args:
+            curNote (Note): evernote Note
+        Returns:
+            html (str)
+        Raises:
+        """
+        noteHtml = curNote.content
+
+        # '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">\n
+        # remove fisrt line
+        # <!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">
+        # noteHtml = re.sub('<!DOCTYPE en-note SYSTEM "http://xml\.evernote\.com/pub/enml2\.dtd"\s+>', "", noteHtml)
+        noteHtml = re.sub('<!DOCTYPE en-note SYSTEM "http://xml\.evernote\.com/pub/enml2\.dtd">\s+', "", noteHtml)
+
+        # convert <en-note>...</en-note> to <html>...</html>
+        noteHtml = re.sub('<en-note>(?P<contentBody>.+)</en-note>', "<html>\g<contentBody></html>", noteHtml, flags=re.S)
+
+        return noteHtml
+
+    @staticmethod
+    def noteContentToSoup(curNote):
+        """Convert Evernote Note content to BeautifulSoup Soup
+
+        Args:
+            curNote (Note): Evernote Note
+        Returns:
+            Soup
+        Raises:
+        """
+
+        # noteHtml = curNote.content
+        # # '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">\n
+        # # remove fisrt line
+        # # <!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">
+        # # noteHtml = re.sub('<!DOCTYPE en-note SYSTEM "http://xml\.evernote\.com/pub/enml2\.dtd"\s+>', "", noteHtml)
+        # noteHtml = re.sub('<!DOCTYPE en-note SYSTEM "http://xml\.evernote\.com/pub/enml2\.dtd">\s+', "", noteHtml)
+
+        noteHtml = crifanEvernote.getNoteContentHtml(curNote)
+
+        soup = utils.htmlToSoup(noteHtml)
+        # now top node is: html, not en-note
+
+        # for debug
+        # if soup.name != "html":
+        if soup.name != "[document]":
+            logging.info("soup.name=%s", soup.name)
+
+        return soup
+
+    @staticmethod
+    def soupToNoteContent(soup):
+        """Convert BeautifulSoup Soup to Evernote Note content
+
+        Args:
+            soup (Soup): BeautifulSoup Soup
+        Returns:
+            Evernote Note content html(str)
+        Raises:
+        """
+
+        # for debug
+        # if soup.name != "html":
+        if soup.name != "[document]":
+            logging.info("soup.name=%s", soup.name)
+
+        # soup.name = "en-note" # not work
+        noteContentHtml = utils.soupToHtml(soup)
+
+        # convert <html>...</html> back to <en-note>...</en-note>
+        noteContentHtml = re.sub('<html>(?P<contentBody>.+)</html>', "<en-note>\g<contentBody></en-note>", noteContentHtml, flags=re.S)
+
+        noteContentHtml = crifanEvernote.convertToClosedEnMediaTag(noteContentHtml)
+
+        # add first line
+        # <!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">
+        noteContentHtml = '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">\n' + noteContentHtml
+
+        return noteContentHtml
+
+    @staticmethod
+    def convertToClosedEnMediaTag(noteHtml):
+        """Process note content html, for special </en-media> will cause error, so need convert:
+                <en-media hash="7c54d8d29cccfcfe2b48dd9f952b715b" type="image/png"></en-media>
+            to closed en-media tag:
+                <en-media hash="7c54d8d29cccfcfe2b48dd9f952b715b" type="image/png" />
+        Args:
+            noteHtml (str): Note content html
+        Returns:
+            note content html with closed en-media tag (str)
+        Raises:
+        """
+        noteHtml = re.sub("(?P<enMedia><en-media\s+[^<>]+)>\s*</en-media>", "\g<enMedia> />", noteHtml, flags=re.S)
+        return noteHtml

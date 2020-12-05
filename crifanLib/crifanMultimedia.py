@@ -3,20 +3,19 @@
 """
 Filename: crifanMultimedia.py
 Function: crifanLib's python multimedia (audio, video, image) related functions
-Version: v20200225
-Note:
-1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython
+Version: 20201205
+Latest: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanMultimedia.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v20200225"
+__version__ = "20201205"
 __copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
 import os
 import io
 import re
+import copy
 import base64
 import requests
 import logging
@@ -35,8 +34,9 @@ except:
     print("need audioread if use crifanMultimedia audio functions")
 
 from crifanLib.crifanSystem import runCommand, getCommandOutput
-from crifanLib.crifanFile  import isFileObject, readBinDataFromFile, findNextNumberFilename
+from crifanLib.crifanFile  import isFileObject, readBinDataFromFile, findNextNumberFilename, formatSize
 from crifanLib.crifanDatetime  import getCurDatetimeStr
+
 
 ################################################################################
 # Config
@@ -501,6 +501,134 @@ def imageDrawRectangle(inputImgOrImgPath,
         inputImg.save(newImgPath)
 
     return inputImg
+
+def bytesToImage(imgBytes):
+    """generate Pillow Image from binary bytes
+
+    Args:
+        imgBytes (bytes): image binary bytes
+    Returns:
+        pillow(PIL) Image
+    Raises:
+    """
+    imgBytesIO = io.BytesIO(imgBytes)
+    curImg = Image.open(imgBytesIO)
+    return curImg
+
+def imageToBytes(imgObj, isUseOriginObj=False):
+    """Get binary data bytes from Image.Image instance
+
+    Args:
+        imgObj (Image): the Pillow Image instance
+        isUseOriginObj (bool): use orgin Image object (call save() will modify orgin object) or copy out temp Image object
+    Returns:
+        bytes, binary data of Image
+    Raises:
+    """
+    if isUseOriginObj:
+        curImgObj = imgObj
+    else:
+        curImgObj = copy.deepcopy(imgObj)
+    imgBytesIO = io.BytesIO()
+    curImgObj.save(imgBytesIO, curImgObj.format) # 'TiffImageFile' object has no attribute 'use_load_libtiff'
+
+    imgBytes = imgBytesIO.getvalue()
+    imgBytesIO.close()
+    return imgBytes
+
+def resizeSingleImage(imgBytes, newSize=None):
+    """Draw a rectangle for image (and a small circle), and show it,
+
+    Args:
+        imgBytes (bytes): input image binary bytes
+        newSize (tuple): resized to max size (width, height)
+    Returns:
+        minResizedImgBytes(bytes), resizedImgFormat(str), newSize(tuple)
+    Raises:
+    """
+    defaulMaxWidth = 1024
+    # defaultMaxHeight = 768
+    defaultMaxHeight = 1024
+
+    # for some fixed size, resize to smaller fixed size
+    fixedSizeDict = {
+        # Xiaomi9 screenshot size
+        (1080, 2340): (360, 780),
+        (2340, 1080): (780, 360),
+        # Xiaomi9 camera orgin size
+        (4000, 3000): (1024, 768),
+        (3000, 4000): (768, 1024),
+        # Smartisian M1L screenshot size
+        (1080, 1920): (360, 640),
+        (1920, 1080): (640, 360),
+    }
+
+    curImg = bytesToImage(imgBytes)
+    curImgFormat = curImg.format
+    curSize = (curImg.width, curImg.height) # 1080, 2340
+
+    # # for debug
+    # curImg.show()
+
+    if not newSize:
+        if curSize in fixedSizeDict.keys():
+            newSize = fixedSizeDict[curSize]
+        else:
+            newSize = defaulMaxWidth, defaultMaxHeight
+
+    if curImgFormat == "PNG":
+        anotherImgFormat = "JPEG"
+    elif curImgFormat == "JPEG":
+        anotherImgFormat = "PNG"
+    else:
+        # anotherImgFormat = "PNG"
+        anotherImgFormat = "JPEG"
+
+    resizedCurImgBytes = resizeImage(imgBytes, newSize, outputFormat=curImgFormat)
+    curResizeRatio = calcResizeRatio(resizedCurImgBytes, curImg)
+
+    resizedAnotherImgBytes = resizeImage(imgBytes, newSize, outputFormat=anotherImgFormat)
+    anotherResizeRatio = calcResizeRatio(resizedAnotherImgBytes, curImg)
+
+    minResizedImgBytes = None
+    resizedImgFormat = None
+    if curResizeRatio < anotherResizeRatio:
+        minResizedImgBytes = resizedCurImgBytes
+        resizedImgFormat = curImgFormat
+    else:
+        minResizedImgBytes = resizedAnotherImgBytes
+        resizedImgFormat = anotherImgFormat
+
+    return minResizedImgBytes, resizedImgFormat, newSize
+
+def calcResizeRatio(resizedImgBytes, originImg):
+    """Calculate imgage resize ratio
+
+    Args:
+        resizedImgBytes (bytes): resized image binary bytes
+        originImg (Image): original image Object
+    Returns:
+        resize ratio (float)
+    Raises:
+    """
+    originSize = originImg.width, originImg.height
+    originBytes = imageToBytes(originImg)
+
+    resizedImg = bytesToImage(resizedImgBytes)
+    resizedSize = resizedImg.width, resizedImg.height
+
+    originLen = len(originBytes)
+    resizedLen = len(resizedImgBytes)
+    resizeRatio = float(resizedLen) / float(originLen)
+    resizeRatioPercent = int(resizeRatio * 100)
+    printStr = "\t-> Compress ratio=%d%%, from [fmt=%s, size=%sx%s, len=%s] to [fmt=%s, size=%sx%s, len=%s]" %  (
+        resizeRatioPercent, 
+            originImg.format, originSize[0], originSize[1], formatSize(originLen),
+            resizedImg.format, resizedSize[0], resizedSize[1], formatSize(resizedLen)
+    )
+    print(printStr)
+    # logging.debug(printStr)
+    return resizeRatio
 
 ################################################################################
 # Test
