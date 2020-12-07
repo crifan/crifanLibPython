@@ -2,16 +2,14 @@
 # -*- coding: utf-8 -*-
 """
 Filename: crifanDict.py
-Function: crifanLib's dict related functions.
-Version: v1.0 20180614
-Note:
-1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython
+Function: crifanLib's dict related functions
+Version: 20201207
+Latest: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanDict.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v1.0"
-__copyright__ = "Copyright (c) 2019, Crifan Li"
+__version__ = "20201207"
+__copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
 
@@ -160,6 +158,36 @@ def sortDictByKey(originDict):
     sortedOriginItems = sorted(originItems)
     sortedOrderedDict = OrderedDict(sortedOriginItems)
     return sortedOrderedDict
+
+def insertKeyValueAfterDictKey(curDict, afterKey, newKey, newValue):
+    """Insert new key and new value after specific key
+
+    Args:
+        afterKey (str): name of after the key in dict
+        newKey (str): new key to insert
+        newValue (Any?): new value to insert
+    Returns:
+    Raises:
+    """
+    # keyList = curDict.keys()
+    keyList = list(curDict.keys())
+    keyMaxNum = len(keyList)
+    keyMaxIdx = keyMaxNum - 1
+    # valuesList = curDict.values()
+    valuesList = list(curDict.values())
+    afterKeyIndex = keyList.index(afterKey) # 6
+    if afterKeyIndex < keyMaxIdx:
+        toInsertIndex = afterKeyIndex + 1
+        keyList.insert(toInsertIndex, newKey)
+        valuesList.insert(toInsertIndex, newValue)
+    else:
+        keyList.append(newKey)
+        valuesList.append(newValue)
+    updatedDict = {}
+    for keyIdx, eachKey in enumerate(keyList):
+        eachValue = valuesList[keyIdx]
+        updatedDict[eachKey] = eachValue
+    return updatedDict
 
 ################################################################################
 # Test
