@@ -332,6 +332,25 @@ def detectAudioMetaInfo(audioFullPath):
 # Image
 #----------------------------------------
 
+def saveImage(pillowImage, outputImageFile):
+    """Save pillow/PIL Image to file, while convert image mode to avoid exception
+
+    Args:
+        pillowImage (Image): pillow(PIL) Image
+        outputImageFile (str): output image filename
+    Returns:
+    Raises:
+    """
+    foundJpeg = re.search("\.jpe?g$", outputImageFile, re.I) # <re.Match object; span=(66, 70), match='.jpg'>
+    isSaveJpeg = bool(foundJpeg) # True
+    if isSaveJpeg:
+        if pillowImage.mode in ("RGBA", "P"): # 'RGBA'
+            # JPEG not support 'Alpha' transparency, so need convert to RGB, before save RGBA/P to jpeg
+            pillowImage = pillowImage.convert("RGB")
+            # <PIL.Image.Image image mode=RGB size=1600x720 at 0x107E5DAF0>
+    # 'debug/Android/app/游戏app/screenshot/20201208_142621_drawRect_154x42.jpg'
+    pillowImage.save(outputImageFile)
+
 def resizeImage(inputImage,
                 newSize,
                 resample=cfgDefaultImageResample,
@@ -370,7 +389,8 @@ def resizeImage(inputImage,
     imageFile.thumbnail(newSize, resample)
     if outputImageFile:
         # save to file
-        imageFile.save(outputImageFile)
+        # imageFile.save(outputImageFile)
+        saveImage(imageFile, outputImageFile)
         imageFile.close()
     else:
         # save and return binary byte
@@ -498,7 +518,8 @@ def imageDrawRectangle(inputImgOrImgPath,
             imgPathRoot = os.getcwd()
             newImgPath = os.path.join(imgPathRoot, newImgFilename)
 
-        inputImg.save(newImgPath)
+        # inputImg.save(newImgPath)
+        saveImage(inputImg, newImgPath)
 
     return inputImg
 
