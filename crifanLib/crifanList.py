@@ -3,15 +3,15 @@
 """
 Filename: crifanList.py
 Function: crifanLib's list related functions.
-Version: v1.1 20180615
+Version: 20201211
 Note:
 1. latest version and more can found here:
 https://github.com/crifan/crifanLibPython
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v1.1"
-__copyright__ = "Copyright (c) 2019, Crifan Li"
+__version__ = "20201211"
+__copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
 
@@ -53,12 +53,14 @@ gConst = {
 ################################################################################
 
 
-def uniqueList(old_list):
+def uniqueList(oldList):
     """remove overlapped item in the list"""
-    newList = []
-    for x in old_list:
-        if x not in newList:
-            newList.append(x)
+    # newList = []
+    # for x in oldList:
+    #     if x not in newList:
+    #         newList.append(x)
+    newSet = set(oldList)
+    newList = list(newSet)
     return newList
 
 def genListStr(listValue, encForUniVal="UTF-8", isRetainLastComma=False, delimiter=","):
