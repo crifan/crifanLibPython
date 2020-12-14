@@ -3,14 +3,12 @@
 """
 Filename: crifanDatetime.py
 Function: crifanLib's datetime related functions.
-Version: 20200918
-Note:
-1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanDatetime.py
+Version: 20201214
+Latest: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanDatetime.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20200918"
+__version__ = "20201214"
 __copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
@@ -240,14 +238,6 @@ def floatSecondsToDatetimeDict(floatSeconds):
     return convertedDict
 
 
-# def datetimeDictToStr(datetimeDict, seperatorD=" ", seperatorHms=":", seperatorMilliS="."):
-#     formattedStr = "%d%s%02d%s%02d%s%02d%s%03d" % (
-#         datetimeDict["days"], seperatorD,
-#         datetimeDict["hours"], seperatorHms,
-#         datetimeDict["minutes"], seperatorHms,
-#         datetimeDict["seconds"], seperatorMilliS,
-#         datetimeDict["millseconds"])
-#     return formattedStr
 def datetimeDictToStr(datetimeDict,
         seperatorD=" ",
         seperatorHms=":",
@@ -294,6 +284,30 @@ def datetimeDictToStr(datetimeDict,
 
     formattedStr = "%s%s%s" % (dayStr, hmsStr, milliSecStr) # '00:03:12'
     return formattedStr
+
+def floatSecondsToDatetimeStr(
+        floatSeconds,
+        isShowZeroDayStr=False,
+        isShowMilliSecPart=False,
+    ):
+    """Convert float seconds(time delta) to datetime str
+
+    Args:
+        floatSeconds (float): date time delta float
+        isShowZeroDayStr (bool): whether show days string when days=0
+        isShowMilliSecPart (bool): whether show milli seconds part
+    Returns:
+        date time str
+    Raises:
+    Examples:
+        96400.3765293 -> '1 02:46:40.376'
+    """
+    # 259.60212874412537
+    datetimeDict = floatSecondsToDatetimeDict(floatSeconds)
+    # {'days': 0, 'hours': 0, 'microseconds': 231, 'millseconds': 96, 'minutes': 0, 'seconds': 10}
+    datetimeStr = datetimeDictToStr(datetimeDict, isShowZeroDayStr=isShowZeroDayStr, isShowMilliSecPart=isShowMilliSecPart)
+    # '00:00:10'
+    return datetimeStr
 
 ################################################################################
 # Test
