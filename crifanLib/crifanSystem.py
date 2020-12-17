@@ -3,14 +3,12 @@
 """
 Filename: crifanSystem.py
 Function: crifanLib's python system related functions.
-Version: 20200420
-Note:
-1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython
+Version: 20201217
+Latest: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanSystem.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20200420"
+__version__ = "20201217"
 __copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
@@ -78,9 +76,16 @@ def runCommand(consoleCommand):
     return isRunCmdOk, errMsg
 
 
-def getCommandOutput(consoleCommand, consoleOutputEncoding="utf-8"):
-    """
-        get command output from terminal
+def getCommandOutput(consoleCommand, consoleOutputEncoding="utf-8", timeout=2):
+    """get command output from terminal
+
+    Args:
+        consoleCommand (str): console/terminal command string
+        consoleOutputEncoding (str): console output encoding, default is utf-8
+        timeout (int): wait max timeout for run console command
+    Returns:
+        console output (str)
+    Raises:
     """
     # print("getCommandOutput: consoleCommand=%s" % consoleCommand)
     isRunCmdOk = False
@@ -88,7 +93,7 @@ def getCommandOutput(consoleCommand, consoleOutputEncoding="utf-8"):
     try:
         # consoleOutputByte = subprocess.check_output(consoleCommand)
 
-        consoleOutputByte = subprocess.check_output(consoleCommand, shell=True)
+        consoleOutputByte = subprocess.check_output(consoleCommand, shell=True, timeout=timeout)
 
         # commandPartList = consoleCommand.split(" ")
         # print("commandPartList=%s" % commandPartList)
