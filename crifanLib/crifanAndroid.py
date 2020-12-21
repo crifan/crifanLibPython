@@ -49,7 +49,7 @@ def getAndroidDeviceList(self, isGetDetail=False):
     Raises:
     Examples:
         output: 
-            False -> ["2e2a0cb1", "orga4pmzee4ts47t", "192.168.31.84:5555"]
+            False -> ['2e2a0cb1', 'orga4pmzee4ts47t', '192.168.31.84:5555']
             True -> [{'2e2a0cb1': {'usb': '338952192X', 'product': 'PD2065', 'model': 'V2065A', 'device': 'PD2065', 'transport_id': '4'}}, {'orga4pmzee4ts47t': {'usb': '338886656X', 'product': 'atom', 'model': 'M2004J7AC', 'device': 'atom', 'transport_id': '24'}}, {'192.168.31.84:5555': {'product': 'PD2065', 'model': 'V2065A', 'device': 'PD2065', 'transport_id': '5'}}]
     """
     deviceList = []
@@ -57,14 +57,13 @@ def getAndroidDeviceList(self, isGetDetail=False):
     getDevicesCmd = 'adb devices'
     if isGetDetail:
         getDevicesCmd += " -l"
-    logging.info("getDevicesCmd=%s", getDevicesCmd)
+    logging.debug("getDevicesCmd=%s", getDevicesCmd)
 
-    isRunCmdOk, cmdOutput = getCommandOutput(getDevicesCmd)
-    logging.info("isRunCmdOk=%s, cmdOutput=%s", cmdOutput, cmdOutput)
-    if not isRunCmdOk:
+    isRunOk, deviceLines = getCommandOutput(getDevicesCmd)
+    logging.debug("isRunOk=%s, deviceLines=%s", isRunOk, deviceLines)
+    # ['List of devices attached', '2e2a0cb1\tdevice', 'orga4pmzee4ts47t\tdevice', '192.168.31.84:5555\tdevice', '']
+    if not isRunOk:
         return deviceList
-
-    deviceLines = cmdOutput.splitlines()
 
     """
     adb devices :
@@ -89,32 +88,32 @@ def getAndroidDeviceList(self, isGetDetail=False):
         if "devices attached" in eachLine:
             continue
 
-        foundDevice = re.search("(?P<devSerial>[\w\.\:]+)\s+device\s*(?P<devDetail>[\w\: ]+)", eachLine)
-        logging.info("foundDevice=%s", foundDevice)
+        foundDevice = re.search("(?P<devSerial>[\w\.\:]+)\s+device\s*(?P<devDetail>[\w\: ]+)?", eachLine)
+        logging.debug("foundDevice=%s", foundDevice)
         # foundDevice=<re.Match object; span=(0, 101), match='2e2a0cb1               device usb:338952192X prod>
         if foundDevice:
             devSerial = foundDevice.group("devSerial")
-            logging.info("devSerial=%s", devSerial)
+            logging.debug("devSerial=%s", devSerial)
             # devSerial=2e2a0cb1
             if isGetDetail:
                 devDetail = foundDevice.group("devDetail")
-                logging.info("devDetail=%s", devDetail)
+                logging.debug("devDetail=%s", devDetail)
                 # devDetail=usb:338952192X product:PD2065 model:V2065A device:PD2065 transport_id:4
                 keyValueIter = re.finditer("(?P<key>\w+):(?P<value>\w+)", devDetail) # <callable_iterator object at 0x10baa3a60>
                 keyValueMatchList = list(keyValueIter)
-                logging.info("keyValueMatchList=%s", keyValueMatchList)
+                logging.debug("keyValueMatchList=%s", keyValueMatchList)
                 # keyValueMatchList=[<re.Match object; span=(0, 14), match='usb:338952192X'>, <re.Match object; span=(15, 29), match='product:PD2065'>, <re.Match object; span=(30, 42), match='model:V2065A'>, <re.Match object; span=(43, 56), match='device:PD2065'>, <re.Match object; span=(57, 71), match='transport_id:4'>]
                 detailInfoDict = {}
                 for eachMatch in keyValueMatchList:
                     eachKey = eachMatch.group("key")
                     eachValue = eachMatch.group("value")
                     detailInfoDict[eachKey] = eachValue
-                logging.info("detailInfoDict=%s", detailInfoDict)
+                logging.debug("detailInfoDict=%s", detailInfoDict)
                 # detailInfoDict={'usb': '338952192X', 'product': 'PD2065', 'model': 'V2065A', 'device': 'PD2065', 'transport_id': '4'}
                 curDevDetailDict = {
                     devSerial: detailInfoDict
                 }
-                logging.info("curDevDetailDict=%s", curDevDetailDict)
+                logging.debug("curDevDetailDict=%s", curDevDetailDict)
                 # curDevDetailDict={'2e2a0cb1': {'usb': '338952192X', 'product': 'PD2065', 'model': 'V2065A', 'device': 'PD2065', 'transport_id': '4'}}
                 deviceList.append(curDevDetailDict)
             else:
@@ -122,6 +121,7 @@ def getAndroidDeviceList(self, isGetDetail=False):
 
     logging.info("deviceList=%s", deviceList)
     # deviceList=[{'2e2a0cb1': {'usb': '338952192X', 'product': 'PD2065', 'model': 'V2065A', 'device': 'PD2065', 'transport_id': '4'}}, {'orga4pmzee4ts47t': {'usb': '338886656X', 'product': 'atom', 'model': 'M2004J7AC', 'device': 'atom', 'transport_id': '24'}}, {'192.168.31.84:5555': {'product': 'PD2065', 'model': 'V2065A', 'device': 'PD2065', 'transport_id': '5'}}]
+    # ['2e2a0cb1', 'orga4pmzee4ts47t', '192.168.31.84:5555']
     return deviceList
 
 def isAndroidUsbConnected(self, deviceSerialId):
