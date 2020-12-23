@@ -3,15 +3,13 @@
 """
 Filename: crifanCsv.py
 Function: crifanLib's csv related functions.
-Version: v1.0 20190425
-Note:
-1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython
+Version: 20201222
+Latest: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanCsv.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v1.0"
-__copyright__ = "Copyright (c) 2019, Crifan Li"
+__version__ = "20201222"
+__copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
 
@@ -41,6 +39,47 @@ CURRENT_LIB_FILENAME = "crifanCsv"
 # Cookie Function
 ################################################################################
 
+def loadCsvFromFile(csvFilePath, fileEncoding="utf-8", isReturnDictList=True):
+    """read data from csv file
+
+    Args:
+        csvFilePath (str): full csv file path
+        fileEncoding (str): file encoding, default to 'utf-8'
+        isReturnDictList (bool): return data is row dict list or tuple(header list, row list list)
+    Returns:
+        isReturnDictList=True  -> csv row dict list
+        isReturnDictList=False -> (csv header list, csv row data list)
+    Raises:
+    """
+    csvDictList = []
+
+    csvHeaderList = []
+    csvRowListList = []
+
+    with codecs.open(csvFilePath, "r", encoding=fileEncoding) as csvFp:
+        csvReader = csv.reader(csvFp)
+        csvHeaderList = next(csvReader)
+        print("csvHeaderList=%s" % csvHeaderList)
+        # <class 'list'>: ['url', '品牌', '子品牌', '车型', '车系']
+        # ['appName', 'pkgName', 'authorName', 'categoryName', 'appDownCount', 'apkUrl', 'detailUrl', 'searchKeyword']
+        for eachRowList in csvReader:
+            # print("eachRowList=%s" % eachRowList)
+            # eachRowList=['https://car.autohome.com.cn/pic/series-s19501/3548.html#pvareaid=2042220', 'Elemental', 'Elemental', '2014款 基本型', 'Elemental RP1']
+            # eachRowList=['传奇世界手游', 'com.tencent.cqsj', '盛大游戏', '网络游戏', '2577672', 'https://imtt.dd.qq.com/16891/apk/6B6261E845EB53DF06F6DFBE884B61C8.apk?fsname=com.tencent.cqsj_3.6.1.20_3006.apk&csr=1bbd', 'https://sj.qq.com/myapp/detail.htm?apkName=com.tencent.cqsj', '传奇']
+            csvRowListList.append(eachRowList)
+
+    if isReturnDictList:
+        for eachRowList in csvRowListList:
+            curRowDict = {}
+            for curIdx, curHeader in enumerate(csvHeaderList):
+                curRowValue = eachRowList[curIdx]
+                curRowDict[curHeader] = curRowValue
+
+            csvDictList.append(curRowDict)
+
+        return csvDictList
+    else:
+        return csvHeaderList, csvRowListList
 
 def saveToCsvByDictList(csvDictList, outputFilePath):
     # generate csv headers from dict list
