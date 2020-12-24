@@ -3,12 +3,12 @@
 """
 Filename: crifanMultimedia.py
 Function: crifanLib's python multimedia (audio, video, image) related functions
-Version: 20201208
+Version: 20201224
 Latest: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanMultimedia.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20201208"
+__version__ = "20201224"
 __copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
@@ -17,7 +17,6 @@ import io
 import re
 import copy
 import base64
-import requests
 import logging
 
 cfgDefaultImageResample = None

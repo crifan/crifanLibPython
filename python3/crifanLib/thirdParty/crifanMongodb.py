@@ -3,15 +3,13 @@
 """
 Filename: crifanMongodb.py
 Function: crifanLib's Mongodb related functions.
-Version: v20181224
-Note:
-1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython
+Version: 20201224
+Latest: https://github.com/crifan/crifanLibPython
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v20181224"
-__copyright__ = "Copyright (c) 2019, Crifan Li"
+__version__ = "20201224"
+__copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
 from urllib.parse import quote_plus

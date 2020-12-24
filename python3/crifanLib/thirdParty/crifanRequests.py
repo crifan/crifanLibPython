@@ -36,6 +36,24 @@ CURRENT_LIB_FILENAME = "crifanRequests"
 # Internal Function
 ################################################################################
 
+def get302RealUrl(originUrl):
+    """get real url address after 302 move
+
+    Args:
+        originUrl (str): original url
+    Returns:
+        real url(str)
+    Raises:
+    Examples:
+        input: 'http://dl.gamecenter.vivo.com.cn/clientRequest/gameDownload?id=57587&pkgName=com.jiuzun.mxsg.vivo&sourword=%E4%B8%89%E5%9B%BD&page_index=4&dlpos=1&channel=h5'
+        output: 'https://gameapktxdl.vivo.com.cn/appstore/developer/soft/20180206/201802061851104837232.apk'
+    """
+    realUrl = ""
+    resp = requests.get(originUrl, allow_redirects=False)
+    if resp.status_code == 302:
+        realUrl = resp.headers['Location']
+    return realUrl
+
 
 def streamingDownloadFile(
         url,

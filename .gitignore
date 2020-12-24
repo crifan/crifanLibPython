@@ -2,7 +2,7 @@ __pycache__/
 *.pyc
 .vscode/
 
-crifanLib/demo/output/
+# crifanLib/demo/output/
 .DS_Store
 
 *.log

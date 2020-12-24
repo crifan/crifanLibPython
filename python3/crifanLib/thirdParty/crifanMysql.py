@@ -3,21 +3,19 @@
 """
 Filename: crifanMysql.py
 Function: crifanLib's mysql related functions.
-Version: v20181229
+Version: 20201224
+Latest: https://github.com/crifan/crifanLibPython
 Note:
-1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython
-
-  If you want to modify to your mysql and table, you need:
-  (1) change change MysqlDb config to your mysql config
-  (2) change CurrentTableName to your table name
-  (3) change CreateTableSqlTemplate to your sql to create new mysql table fields
-  (4) if your table field contain more type, edit insert to add more type for "TODO: add more type formatting if necessary"
+    If you want to modify to your mysql and table, you need:
+        (1) change change MysqlDb config to your mysql config
+        (2) change CurrentTableName to your table name
+        (3) change CreateTableSqlTemplate to your sql to create new mysql table fields
+        (4) if your table field contain more type, edit insert to add more type for "TODO: add more type formatting if necessary"
 """
 
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v20181229"
+__version__ = "20201224"
 __copyright__ = "Copyright (c) 2019, Crifan Li"
 __license__ = "GPL"
 
