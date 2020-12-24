@@ -1,5 +1,0 @@
-单词,重复频率,来源列表
-a,0.5,"['NewConcept', 'FamilyAndFriends']"
-about,0.75,"['NewConcept', 'YLE', 'EverybodyUp']"
-above,0.5,"['NewConcept', 'YLE']"
-abroad,0.25,['NewConcept']

@@ -4,7 +4,7 @@
 Filename: crifanFile.py
 Function: crifanLib's file related functions.
 Update: 20201029
-Latest version: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanFile.py
+Latest: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanFile.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
