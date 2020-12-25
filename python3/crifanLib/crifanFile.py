@@ -3,8 +3,8 @@
 """
 Filename: crifanFile.py
 Function: crifanLib's file related functions.
-Update: 20201029
-Latest: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanFile.py
+Update: 20201225
+Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanFile.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
@@ -189,20 +189,25 @@ def chmodAddX(someFile, isOnlySelf=True):
             newState = curState.st_mode | executableMode
             os.chmod(someFile, newState)
 
-def isFileExistAndValid(filePath):
-    """check whether a file is existed and valid (size>0)
+def isFileExistAndValid(filePath, fullFileSize=None):
+    """Check file exist and valid or not
 
     Args:
         filePath (str): file path
+        fullFileSize (int): full file size
     Returns:
-        bool
+        existed and valid (bool)
     Raises:
+    Examples:
     """
     isExistFile = os.path.isfile(filePath)
     isValidFile = False
     if isExistFile:
-        curFileSize = os.path.getsize(filePath)
-        isValidFile = curFileSize > 0
+        curFileSize = os.path.getsize(filePath) # 260900226
+        if fullFileSize:
+            isValidFile = curFileSize == fullFileSize
+        else:
+            isValidFile = curFileSize > 0
     isExistAndValid = isExistFile and isValidFile
     return isExistAndValid
 

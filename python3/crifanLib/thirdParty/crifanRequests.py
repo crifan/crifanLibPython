@@ -3,8 +3,8 @@
 """
 Filename: crifanRequests.py
 Function: crifanLib's Requests related functions
-Version: 20201212
-Latest: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanRequests.py
+Version: 20201225
+Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanRequests.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
@@ -14,9 +14,10 @@ __license__ = "GPL"
 
 import os
 import time
+import re
 import requests
 
-from crifanLib.crifanFile import formatSize
+from crifanLib.crifanFile import formatSize, getFileSizeFromUrl
 from crifanLib.crifanDatetime import floatSecondsToDatetimeDict, datetimeDictToStr
 
 ################################################################################
@@ -47,12 +48,245 @@ def get302RealUrl(originUrl):
     Examples:
         input: 'http://dl.gamecenter.vivo.com.cn/clientRequest/gameDownload?id=57587&pkgName=com.jiuzun.mxsg.vivo&sourword=%E4%B8%89%E5%9B%BD&page_index=4&dlpos=1&channel=h5'
         output: 'https://gameapktxdl.vivo.com.cn/appstore/developer/soft/20180206/201802061851104837232.apk'
+
+        input: 'https://appdlc-drcn.hispace.hicloud.com/dl/appdl/application/apk/db/dbd3fbf4bb7c4e199e27169b83054afd/com.zsbf.rxsc.2010151906.rpk?sign=f9001091ej1001042000000000000100000000000500100101010@21BD93C47A224B178DE4FCDEAC296E3F&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100450321&hcrId=21BD93C47A224B178DE4FCDEAC296E3F&maple=0&distOpEntity=HWSW'
+        output: 'https://appdl-1-drcn.dbankcdn.com/dl/appdl/application/apk/db/dbd3fbf4bb7c4e199e27169b83054afd/com.zsbf.rxsc.2010151906.rpk?sign=f9001091ej1001042000000000000100000000000500100101010@21BD93C47A224B178DE4FCDEAC296E3F&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100450321&hcrId=21BD93C47A224B178DE4FCDEAC296E3F&maple=0&distOpEntity=HWSW'
     """
     realUrl = ""
     resp = requests.get(originUrl, allow_redirects=False)
+
     if resp.status_code == 302:
         realUrl = resp.headers['Location']
+
     return realUrl
+
+def getRespHeadersFromUrl(curUrl, proxies=None):
+    """Get response headers from url
+
+    Args:
+        curUrl (str): current url
+        proxies (dict): requests proxies
+    Returns:
+        headers(dict) or None
+    Raises:
+    Examples:
+        1
+            input: https://gameapktxdl.vivo.com.cn/appstore/developer/soft/20201020/202010201805243ed5v.apk
+            output: {'Date': 'Thu, 10 Dec 2020 05:27:10 GMT', 'Content-Type': 'application/vnd.android.package-archive', 'Content-Length': '154551625', 'Connection': 'keep-alive', 'Server': 'NWS_TCloud_static_msoc1_xz', 'Cache-Control': 'max-age=600', 'Expires': 'Thu, 10 Dec 2020 05:37:09 GMT', 'Last-Modified': 'Thu, 09 Jan 2020 11:21:35 GMT', 'X-NWS-UUID-VERIFY': '94db2d14f135898d924fb249b13a0964', 'X-Verify-Code': '2871bd7acf67c7e298e9c8d8c865e27d', 'X-NWS-LOG-UUID': 'a83536f2-ab83-465d-ba09-0e19a15cc706', 'X-Cache-Lookup': 'Hit From Disktank3, Hit From Inner Cluster', 'Accept-Ranges': 'bytes', 'ETag': '"46C50A5CADB6BEE339236477BB6DDC14"', 'X-Daa-Tunnel': 'hop_count=2'}
+        2
+            output: {'Server': 'Tengine', 'Date': 'Fri, 11 Dec 2020 14:11:00 GMT', 'Content-Type': 'application/pdf', 'Content-Length': '24422168', 'Last-Modified': 'Fri, 18 Sep 2020 09:56:15 GMT', 'Connection': 'keep-alive', 'ETag': '"5f64843f-174a718"', 'Strict-Transport-Security': 'max-age=15768000', 'Accept-Ranges': 'bytes'}
+        3
+            output: {'Date': 'Thu, 24 Dec 2020 08:57:18 GMT', 'Content-Type': 'application/vnd.android.package-archive', 'Content-Length': '190814345', 'Connection': 'keep-alive', 'Server': 'openresty', 'Last-Modified': 'Mon, 14 Dec 2020 12:32:50 GMT', 'Expires': 'Mon, 14 Dec 2020 12:32:50 GMT', 'Content-Disposition': 'attachment; filename="com.tanwan.yscqlyzf.huawei.2012141704.apk"', 'Via': 'CHN-JSsuqian-CT3-CACHE7[8],CHN-JSsuqian-CT3-CACHE3[0,TCP_HIT,6],CHN-JSwuxi-GLOBAL2-CACHE63[5],CHN-JSwuxi-GLOBAL2-CACHE74[0,TCP_HIT,2],CHN-SH-GLOBAL1-CACHE92[589],CHN-SH-GLOBAL1-CACHE152[555,TCP_MISS,588],CHN-HElangfang-GLOBAL2-CACHE41[493],CHN-HElangfang-GLOBAL2-CACHE24[487,TCP_MISS,491]', 'X-Hcs-Proxy-Type': '1', 'X-Ccdn-Cachettl': '31536000', 'X-Ccdn-Expires': '30684021', 'Nginx-Hit': '1', 'Cache-Control': 'max-age=7200', 'Age': '851993', 'Lct-Pos-Percent': '0.19', 'Lct-Hot-Series': '1056964608', 'Accept-Ranges': 'bytes', 'dl-from': 'hwcdn'}
+    """
+    respHeaderDict = None
+
+    try:
+        resp = requests.get(curUrl, stream=True, proxies=proxies)
+        respHeaderDict = resp.headers
+        # {'Date': 'Thu, 10 Dec 2020 05:27:10 GMT', 'Content-Type': 'application/vnd.android.package-archive', 'Content-Length': '154551625', 'Connection': 'keep-alive', 'Server': 'NWS_TCloud_static_msoc1_xz', 'Cache-Control': 'max-age=600', 'Expires': 'Thu, 10 Dec 2020 05:37:09 GMT', 'Last-Modified': 'Thu, 09 Jan 2020 11:21:35 GMT', 'X-NWS-UUID-VERIFY': '94db2d14f135898d924fb249b13a0964', 'X-Verify-Code': '2871bd7acf67c7e298e9c8d8c865e27d', 'X-NWS-LOG-UUID': 'a83536f2-ab83-465d-ba09-0e19a15cc706', 'X-Cache-Lookup': 'Hit From Disktank3, Hit From Inner Cluster', 'Accept-Ranges': 'bytes', 'ETag': '"46C50A5CADB6BEE339236477BB6DDC14"', 'X-Daa-Tunnel': 'hop_count=2'}
+        # {'Server': 'Tengine', 'Date': 'Fri, 11 Dec 2020 14:11:00 GMT', 'Content-Type': 'application/pdf', 'Content-Length': '24422168', 'Last-Modified': 'Fri, 18 Sep 2020 09:56:15 GMT', 'Connection': 'keep-alive', 'ETag': '"5f64843f-174a718"', 'Strict-Transport-Security': 'max-age=15768000', 'Accept-Ranges': 'bytes'}
+        # {'Date': 'Thu, 24 Dec 2020 09:19:58 GMT', 'Content-Type': 'application/vnd.android.package-archive', 'Content-Length': '190814345', 'Connection': 'keep-alive', 'Server': 'openresty', 'Age': '859494', 'Cache-Control': 'max-age=7200', 'Content-Disposition': 'attachment; filename="com.tanwan.yscqlyzf.huawei.2012141704.apk"', 'Expires': 'Mon, 14 Dec 2020 12:32:50 GMT', 'Last-Modified': 'Mon, 14 Dec 2020 12:32:50 GMT', 'Lct-Hot-Series': '12582912', 'Lct-Pos-Percent': '0.25', 'Nginx-Hit': '1', 'Via': 'CHN-JSwuxi-AREACT1-CACHE33[4],CHN-JSwuxi-AREACT1-CACHE43[0,TCP_HIT,2],CHN-JSwuxi-GLOBAL2-CACHE110[2],CHN-JSwuxi-GLOBAL2-CACHE74[0,TCP_HIT,0],CHN-SH-GLOBAL1-CACHE92[589],CHN-SH-GLOBAL1-CACHE152[555,TCP_MISS,588],CHN-HElangfang-GLOBAL2-CACHE41[493],CHN-HElangfang-GLOBAL2-CACHE24[487,TCP_MISS,491]', 'X-Ccdn-Cachettl': '31536000', 'X-Ccdn-Expires': '30676539', 'X-Hcs-Proxy-Type': '1', 'Accept-Ranges': 'bytes', 'dl-from': 'hwcdn'}
+        # {'Date': 'Thu, 24 Dec 2020 09:22:05 GMT', 'Content-Type': 'application/octet-stream', 'Content-Length': '249455788', 'Connection': 'keep-alive', 'Accept-Ranges': 'bytes', 'ETag': '"2a0205efc29db9ee555d8cd429a5d723"', 'Last-Modified': 'Tue, 22 Dec 2020 13:38:42 GMT', 'Ohc-Cache-HIT': 'czix102 [2]', 'Ohc-File-Size': '249455788', 'Ohc-Upstream-Trace': '58.216.2.102', 'Timing-Allow-Origin': '*', 'dl-from': 'bdcdn', 'x-obs-id-2': '32AAAQAAEAABAAAQAAEAABAAAQAAEAABCSteDob3rAnYCgC3AxdwUWM4S8xxD0WH', 'x-obs-request-id': '000001768AAD97CB980AA58ADE5C652D', 'Age': '122819', 'Via': 'HIT by 61.183.53.37, HIT by 180.97.190.116', 'Server': 'Tengine/2.2.3'}
+    except:
+        respHeaderDict = None
+
+    return respHeaderDict
+
+def getFileSizeFromHeaders(respHeaderDict):
+    """Get file size from url response headers
+
+    Args:
+        respHeaderDict (dict): requests response headers
+    Returns:
+        file size or 0 mean fail to get
+    Raises:
+    Examples:
+        input: {'Date': 'Fri, 25 Dec 2020 01:18:18 GMT', 'Content-Type': 'application/octet-stream', 'Content-Length': '190814345', 'Connection': 'keep-alive', 'Server': 'openresty', 'Age': '915891', 'Last-Modified': 'Mon, 14 Dec 2020 10:32:43 GMT', 'Lct-Hot-Series': '1006632960', 'Lct-Pos-Percent': '0.12', 'Nginx-Hit': '1', 'Via': 'CHN-JSsuqian-CUCC2-CACHE3[21],CHN-JSsuqian-CUCC2-CACHE3[0,TCP_HIT,10],CHN-HElangfang-GLOBAL2-CACHE49[18],CHN-HElangfang-GLOBAL2-CACHE24[0,TCP_HIT,18]', 'X-Ccdn-Cachettl': '31536000', 'X-Ccdn-Expires': '30620162', 'X-Hcs-Proxy-Type': '1', 'X-Obs-Id-2': '32AAAQAAEAABAAAQAAEAABAAAQAAEAABCSiVxBzkAhQ9rf3Mu0HzMB2FV2QN61NS', 'X-Obs-Request-Id': '0000017660D50FAF940B2445365906B1', 'Accept-Ranges': 'bytes', 'dl-from': 'hwcdn'}
+        output: 190814345
+    """
+    totalFileSize = None
+
+    if respHeaderDict:
+        contentLengthStr = respHeaderDict['Content-Length'] # '154551625', '24422168', '190814345'
+        contentLengthInt = int(contentLengthStr) # 154551625, 24422168, 190814345
+        totalFileSize = contentLengthInt
+
+    return totalFileSize
+
+def getFileSizeFromUrl(fileUrl, proxies=None):
+    """Get file size from file url
+
+    Args:
+        fileUrl (str): file url
+        proxies (dict): requests proxies
+    Returns:
+        file size（int) or None
+    Raises:
+    Examples:
+        input: https://gameapktxdl.vivo.com.cn/appstore/developer/soft/20201020/202010201805243ed5v.apk
+        output: 154551625
+    """
+    respHeaderDict = getRespHeadersFromUrl(fileUrl, proxies=proxies)
+    totalFileSize = getFileSizeFromHeaders(respHeaderDict)
+    return totalFileSize # 154551625
+
+def getContentTypeFromHeaders(respHeaderDict):
+    """Get content type from url response headers
+
+    Args:
+        respHeaderDict (dict): requests response headers
+    Returns:
+        content type(str) or None
+    Raises:
+    Examples:
+        input: {'Date': 'Thu, 10 Dec 2020 05:27:10 GMT', 'Content-Type': 'application/vnd.android.package-archive', 'Content-Length': '154551625', 'Connection': 'keep-alive', 'Server': 'NWS_TCloud_static_msoc1_xz', 'Cache-Control': 'max-age=600', 'Expires': 'Thu, 10 Dec 2020 05:37:09 GMT', 'Last-Modified': 'Thu, 09 Jan 2020 11:21:35 GMT', 'X-NWS-UUID-VERIFY': '94db2d14f135898d924fb249b13a0964', 'X-Verify-Code': '2871bd7acf67c7e298e9c8d8c865e27d', 'X-NWS-LOG-UUID': 'a83536f2-ab83-465d-ba09-0e19a15cc706', 'X-Cache-Lookup': 'Hit From Disktank3, Hit From Inner Cluster', 'Accept-Ranges': 'bytes', 'ETag': '"46C50A5CADB6BEE339236477BB6DDC14"', 'X-Daa-Tunnel': 'hop_count=2'}
+        output: 'application/vnd.android.package-archive'
+
+        input: {'Date': 'Fri, 25 Dec 2020 01:47:31 GMT', 'Content-Type': 'text/html; charset=UTF-8', 'Transfer-Encoding': 'chunked', 'Connection': 'keep-alive', 'Cache-Control': 'no-cache', 'Content-Language': 'en-US', 'Expires': 'Thu, 01 Dec 1994 16:00:00 GMT', 'Set-Cookie': 'JSESSIONID=aaaIXrniUxnxU8Rh-8fzx; path=/', 'Content-Encoding': 'gzip'}
+        output: 'text/html; charset=UTF-8'
+    """
+    contentTypeStr = None
+
+    if respHeaderDict:
+        contentTypeStr = respHeaderDict['Content-Type']
+        # 'Content-Type': 'application/vnd.android.package-archive'
+        # 'Content-Type': 'application/pdf'
+
+    # 'application/vnd.android.package-archive'
+    # 'application/pdf'
+    return contentTypeStr
+
+def getContentTypeFromUrl(curUrl, proxies=None):
+    """Get content type from url
+
+    Args:
+        curUrl (str): current url
+        proxies (dict): requests proxies
+    Returns:
+        content type(str) or None
+    Raises:
+    Examples:
+        input: https://gameapktxdl.vivo.com.cn/appstore/developer/soft/20201020/202010201805243ed5v.apk
+        output: 'application/vnd.android.package-archive'
+
+        output: 'application/pdf'
+    """
+    respHeaderDict = getRespHeadersFromUrl(curUrl, proxies=proxies)
+    contentTypeStr = getContentTypeFromHeaders(respHeaderDict)
+    return contentTypeStr
+
+def isAndroidApkUrl(curApkUrl, proxies=None):
+    """Check whether is android apk url
+
+    Args:
+        curApkUrl (str): current apk url
+        proxies (dict): requests proxies
+    Returns:
+        (bool, int/str)
+            True, apk file size
+            False, error message
+    Raises:
+    Examples:
+        input: https://gameapktxdl.vivo.com.cn/appstore/developer/soft/20201020/202010201805243ed5v.apk
+        output: True, 154551625
+
+        input: 'https://appdlc-drcn.hispace.hicloud.com/dl/appdl/application/apk/47/4795a70deeac4103a8e6182b257ec4a9/com.shenghe.wzcq.huawei.2012221953.apk?sign=f9001091ej1001032000000000000100000000000500100101010@CC0A6D3E117D430483B55B08162FB0F4&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100005003&hcrId=CC0A6D3E117D430483B55B08162FB0F4&maple=0&distOpEntity=HWSW'
+        output: True, 249455788
+
+        input: http://appstore.vivo.com.cn/appinfo/downloadApkFile?id=1676650&app_version=100.0
+        output: True, 164494719
+
+        input: https://appdlc-drcn.hispace.hicloud.com/dl/appdl/application/apk/db/dbd3fbf4bb7c4e199e27169b83054afd/com.zsbf.rxsc.2010151906.rpk?sign=f9001091ej1001042000000000000100000000000500100101010@21BD93C47A224B178DE4FCDEAC296E3F&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100450321&hcrId=21BD93C47A224B178DE4FCDEAC296E3F&maple=0&distOpEntity=HWSW
+        output: False, 'Content Type is octet-stream but no .apk in url https://appdlc-drcn.hispace.hicloud.com/dl/appdl/application/apk/db/dbd3fbf4bb7c4e199e27169b83054afd/com.zsbf.rxsc.2010151906.rpk?sign=f9001091ej1001042000000000000100000000000500100101010@21BD93C47A224B178DE4FCDEAC296E3F&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100450321&hcrId=21BD93C47A224B178DE4FCDEAC296E3F&maple=0&distOpEntity=HWSW'
+    """
+    isAllValid = False
+    errMsg = "Unknown"
+    apkFileSize = 0
+
+    isValidApkUrl = False
+    respHeaderDict = getRespHeadersFromUrl(curApkUrl, proxies=proxies)
+
+    contentTypeStr = getContentTypeFromHeaders(respHeaderDict)
+    if contentTypeStr:
+        # contentTypeStr = contentTypeStr.lower()
+
+        # ContentType_Android = 'application/vnd.android.package-archive'
+        # isAndroidType = contentTypeStr == ContentType_Android
+        # isValidApkUrl = "android" in contentTypeStr
+        foundApplicationAndroid = re.search("application/.*android", contentTypeStr, re.I)
+        isAndroidType = bool(foundApplicationAndroid)
+
+        if isAndroidType:
+            isValidApkUrl = True
+            errMsg = ""
+        else:
+            errMsg = "Content type %s is NOT android for url %s" % (contentTypeStr, curApkUrl)
+            # 'Content type text/html; charset=UTF-8 is NOT android for url http://app.mi.com/details?id=com.cqzzdlq.mi'
+
+        # continue to check other possibility
+        if not isValidApkUrl:
+            # 'https://appdlc-drcn.hispace.hicloud.com/dl/appdl/application/apk/47/4795a70deeac4103a8e6182b257ec4a9/com.shenghe.wzcq.huawei.2012221953.apk?sign=f9001091ej1001032000000000000100000000000500100101010@CC0A6D3E117D430483B55B08162FB0F4&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100005003&hcrId=CC0A6D3E117D430483B55B08162FB0F4&maple=0&distOpEntity=HWSW'
+            # "Content-Type": "application/octet-stream",
+            isOctetStreamType = "octet-stream" in contentTypeStr # True
+            if isOctetStreamType:
+                foundApkInUrl = re.search("[^/]+\.apk", curApkUrl, re.I) # <re.Match object; span=(101, 142), match='com.tanwan.yscqlyzf.huawei.2012141704.apk'>
+                isApkInUrl = bool(foundApkInUrl) # True
+                if isApkInUrl:
+                    isValidApkUrl = True
+                    errMsg = ""
+                else:
+                    isValidApkUrl = False
+                    errMsg = "Content Type is octet-stream but no .apk in url %s" % curApkUrl
+                    # 'Content Type is octet-stream but no .apk in url https://appdlc-drcn.hispace.hicloud.com/dl/appdl/application/apk/db/dbd3fbf4bb7c4e199e27169b83054afd/com.zsbf.rxsc.2010151906.rpk?sign=f9001091ej1001042000000000000100000000000500100101010@21BD93C47A224B178DE4FCDEAC296E3F&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100450321&hcrId=21BD93C47A224B178DE4FCDEAC296E3F&maple=0&distOpEntity=HWSW'
+
+                    # continue check for get redirected 302 real url
+                    redirectedRealUrl = get302RealUrl(curApkUrl)
+                    if redirectedRealUrl != curApkUrl:
+                        # Special:
+                        # 'https://appdlc-drcn.hispace.hicloud.com/dl/appdl/application/apk/db/dbd3fbf4bb7c4e199e27169b83054afd/com.zsbf.rxsc.2010151906.rpk?sign=f9001091ej1001042000000000000100000000000500100101010@21BD93C47A224B178DE4FCDEAC296E3F&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100450321&hcrId=21BD93C47A224B178DE4FCDEAC296E3F&maple=0&distOpEntity=HWSW'
+                        # ->
+                        # 'https://appdl-1-drcn.dbankcdn.com/dl/appdl/application/apk/db/dbd3fbf4bb7c4e199e27169b83054afd/com.zsbf.rxsc.2010151906.rpk?sign=f9001091ej1001042000000000000100000000000500100101010@21BD93C47A224B178DE4FCDEAC296E3F&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100450321&hcrId=21BD93C47A224B178DE4FCDEAC296E3F&maple=0&distOpEntity=HWSW'
+                        # but still invalid
+
+                        curApkUrl = redirectedRealUrl
+                        # Normal Expected:
+                        # (1) http://appstore.vivo.com.cn/appinfo/downloadApkFile?id=1676650&app_version=100.0
+                        #     ->
+                        #     http://apkgamedefbddl.vivo.com.cn/appstore/developer/soft/201612/201612061417371446252.apk
+                        # (2) 'https://app.mi.com/download/610735?id=com.mobileuncle.toolhero&ref=appstore.mobile_download&nonce=-2797954111430111294%3A26814339&appClientId=2882303761517485445&appSignature=oxBvxJhrGBuUBck5cgFqasC7gI5rLez99KZ24VMiRpA'
+                        #     ->
+                        #     'https://fga1.market.xiaomi.com/download/AppStore/03367f59ffcbc4719185da0d550a3b407f50cfb62/com.mobileuncle.toolhero.apk'
+                        foundApkInUrl = re.search("[^/]+\.apk", curApkUrl, re.I)
+                        isApkInUrl = bool(foundApkInUrl) # True
+                        if isApkInUrl:
+                            isValidApkUrl = True
+                            errMsg = ""
+                        else:
+                            isValidApkUrl = False
+                            errMsg = "Content Type is octet-stream but no .apk in redirected url %s" % curApkUrl
+                            # 'Content Type is octet-stream but no .apk in redirected url https://appdl-1-drcn.dbankcdn.com/dl/appdl/application/apk/db/dbd3fbf4bb7c4e199e27169b83054afd/com.zsbf.rxsc.2010151906.rpk?sign=f9001091ej1001042000000000000100000000000500100101010@21BD93C47A224B178DE4FCDEAC296E3F&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100450321&hcrId=21BD93C47A224B178DE4FCDEAC296E3F&maple=0&distOpEntity=HWSW'
+                            # 
+    else:
+        isValidApkUrl = False
+        errMsg = "Failed to get content type for url %s" % curApkUrl
+        # 
+
+    if isValidApkUrl:
+        gotApkFileSize = getFileSizeFromHeaders(respHeaderDict) # 190814345
+        if gotApkFileSize:
+            apkFileSize = gotApkFileSize
+            isAllValid = True
+        else:
+            isAllValid = False
+            errMsg = "Failed to get android apk file size from url %s" % curApkUrl
+            # 
+    else:
+        isAllValid = False
+
+    if isAllValid:
+        return isAllValid, apkFileSize
+    else:
+        return isAllValid, errMsg
 
 
 def streamingDownloadFile(
@@ -214,57 +448,6 @@ def downloadFile(url,
         print("Exception %s when download %s to %s" % (curException, url, fileToSave))
 
     return isDownloadOk
-
-def getFileSizeFromUrl(fileUrl, proxies=None):
-    """Get file size from file url
-
-    Args:
-        fileUrl (str): file url
-        proxies (dict): requests proxies
-    Returns:
-        file size or 0 mean fail to get
-    Raises:
-    Examples:
-        input: https://gameapktxdl.vivo.com.cn/appstore/developer/soft/20201020/202010201805243ed5v.apk
-        output: 154551625
-    """
-    totalFileSize = None
-
-    try:
-        resp = requests.get(fileUrl, stream=True, proxies=proxies)
-        respHeaders = resp.headers
-        # {'Date': 'Thu, 10 Dec 2020 05:27:10 GMT', 'Content-Type': 'application/vnd.android.package-archive', 'Content-Length': '154551625', 'Connection': 'keep-alive', 'Server': 'NWS_TCloud_static_msoc1_xz', 'Cache-Control': 'max-age=600', 'Expires': 'Thu, 10 Dec 2020 05:37:09 GMT', 'Last-Modified': 'Thu, 09 Jan 2020 11:21:35 GMT', 'X-NWS-UUID-VERIFY': '94db2d14f135898d924fb249b13a0964', 'X-Verify-Code': '2871bd7acf67c7e298e9c8d8c865e27d', 'X-NWS-LOG-UUID': 'a83536f2-ab83-465d-ba09-0e19a15cc706', 'X-Cache-Lookup': 'Hit From Disktank3, Hit From Inner Cluster', 'Accept-Ranges': 'bytes', 'ETag': '"46C50A5CADB6BEE339236477BB6DDC14"', 'X-Daa-Tunnel': 'hop_count=2'}
-        # {'Server': 'Tengine', 'Date': 'Fri, 11 Dec 2020 14:11:00 GMT', 'Content-Type': 'application/pdf', 'Content-Length': '24422168', 'Last-Modified': 'Fri, 18 Sep 2020 09:56:15 GMT', 'Connection': 'keep-alive', 'ETag': '"5f64843f-174a718"', 'Strict-Transport-Security': 'max-age=15768000', 'Accept-Ranges': 'bytes'}
-        contentLengthStr = respHeaders['Content-Length'] # '154551625', '24422168'
-        contentLengthInt = int(contentLengthStr) # 154551625, 24422168
-        totalFileSize = contentLengthInt
-    except:
-        totalFileSize = None
-
-    return totalFileSize # 154551625
-
-def isFileExistAndValid(filePath, fullFileSize=None):
-    """Check file exist and valid or not
-
-
-    Args:
-        filePath (str): file path
-        fullFileSize (int): full file size
-    Returns:
-        existed and valid (bool)
-    Raises:
-    Examples:
-    """
-    isExistFile = os.path.isfile(filePath)
-    isValidFile = False
-    if isExistFile:
-        curFileSize = os.path.getsize(filePath) # 260900226
-        if fullFileSize:
-            isValidFile = curFileSize == fullFileSize
-        else:
-            isValidFile = curFileSize > 0
-    isExistAndValid = isExistFile and isValidFile
-    return isExistAndValid
 
 ################################################################################
 # Test
