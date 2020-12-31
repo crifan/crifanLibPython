@@ -3,7 +3,7 @@
 """
 Filename: crifanFile.py
 Function: crifanLib's file related functions.
-Update: 20201225
+Update: 20201231
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanFile.py
 """
 
@@ -223,7 +223,8 @@ def createEmptyFile(fullFilePath):
     folderPath = os.path.dirname(fullFilePath)
     # create folder if not exist
     if not os.path.exists(folderPath):
-        os.makedirs(folderPath)
+        # os.makedirs(folderPath, exist_ok=True)
+        createFolder(folderPath)
 
     with open(fullFilePath, 'a'):
         # Note: not use 'w' for maybe conflict for others constantly writing to it
