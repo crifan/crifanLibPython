@@ -1,7 +1,7 @@
 # Function: Evernote to Wordpress related functions
 # Author: Crifan Li
-# Update: 20201205
-# Latest: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanEvernoteToWordpress.py
+# Update: 20210103
+# Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanEvernoteToWordpress.py
 
 import sys
 import logging
@@ -37,10 +37,10 @@ class crifanEvernoteToWordpress(object):
         imgDataSize = imgData.size
         # guid:'f6956c30-ef0b-475f-a2b9-9c2f49622e35'
         imgGuid = imgResource.guid
-        logging.info("imgGuid=%s, imgDataSize=%s", imgGuid, imgDataSize)
+        logging.debug("imgGuid=%s, imgDataSize=%s", imgGuid, imgDataSize)
 
         curImg = utils.bytesToImage(imgBytes)
-        logging.info("curImg=%s", curImg)
+        logging.debug("curImg=%s", curImg)
 
         # # for debug
         # curImg.show()
@@ -54,49 +54,60 @@ class crifanEvernoteToWordpress(object):
         imgeFilename = "%s.%s" % (processedGuid, imgSuffix) # 'f6956c30ef0b475fa2b99c2f49622e35.png'
 
         isUploadImgOk, respInfo = self.wordpress.createMedia(imgMime, imgeFilename, imgBytes)
+        logging.info("%s to upload resource %s to wordpress", isUploadImgOk, imgGuid)
         return isUploadImgOk, respInfo
 
-    def syncNoteImage(self, curNoteDetail, curResource, uploadedImgUrl):
+    def syncNoteImage(self, curNoteDetail, curResource, uploadedImgUrl, curResList=None):
         """Sync uploaded image url into Evernote Note content, replace en-media to img
 
         Args:
             curNoteDetail (Note): evernote Note
             curResource (Resource): evernote Note Resource
             uploadedImgUrl (str): uploaded imge url, previously is Evernote Resource
+            curResList (list): evernote Note Resource list
         Returns:
             updated note detail
         Raises:
         """
-        curContent = curNoteDetail.content
-        logging.debug("curContent=%s", curContent)
-        soup = BeautifulSoup(curContent, 'html.parser')
-        """
-            <en-media hash="7c54d8d29cccfcfe2b48dd9f952b715b" type="image/png" />
-        """
-        # imgeTypeP = re.compile("image/\w+")
-        # mediaNodeList = soup.find_all("en-media", attrs={"type": imgeTypeP})
-        # mediaNodeList = soup.find("en-media", attrs={"hash": })
-        curEnMediaSoup = crifanEvernote.findResourceSoup(soup, curResource)
-        logging.info("curEnMediaSoup=%s", curEnMediaSoup)
+        if not curResList:
+            curResList = curNoteDetail.resources
+
+        soup = crifanEvernote.noteContentToSoup(curNoteDetail)
+        curEnMediaSoup = crifanEvernote.findResourceSoup(curResource, soup=soup)
+        logging.debug("curEnMediaSoup=%s", curEnMediaSoup)
         # curEnMediaSoup=<en-media hash="0bbf1712d4e9afe725dd51e701c7fae6" style="width: 788px; height: auto;" type="image/jpeg"></en-media>
 
-        curImgSoup = curEnMediaSoup
-        curImgSoup.name = "img"
-        curImgSoup.attrs = {"src": uploadedImgUrl}
-        logging.info("curImgSoup=%s", curImgSoup)
-        # curImgSoup=<img src="https://www.crifan.com/files/pic/uploads/2020/11/c8b16cafe6484131943d80267d390485.jpg"></img>
-        # new content string
-        updatedContent = utils.soupToHtml(soup)
-        logging.debug("updatedContent=%s", updatedContent)
-        curNoteDetail.content = updatedContent
+        if curEnMediaSoup:
+            curImgSoup = curEnMediaSoup
+            curImgSoup.name = "img"
+            curImgSoup.attrs = {"src": uploadedImgUrl}
+            logging.debug("curImgSoup=%s", curImgSoup)
+            # curImgSoup=<img src="https://www.crifan.com/files/pic/uploads/2020/11/c8b16cafe6484131943d80267d390485.jpg"></img>
+            # new content string
+            updatedContent = crifanEvernote.soupToNoteContent(soup)
+            logging.debug("updatedContent=%s", updatedContent)
+            curNoteDetail.content = updatedContent
+        else:
+            logging.warning("Not found en-media node for guid=%s, mime=%s, fileName=%s", curResource.guid, curResource.mime, curResource.attributes.fileName)
+            # here even not found, still consider as processed, later will remove it
 
         # remove resource from resource list
         # oldResList = curNoteDetail.resources
         # Note: avoid side-effect: alter pass in curNoteDetail object's resources list
         # which will cause caller curNoteDetail.resources loop terminated earlier than expected !
-        oldResList = copy.deepcopy(curNoteDetail.resources)
-        oldResList.remove(curResource) # workable
-        newResList = oldResList
+        # oldResList = copy.deepcopy(curNoteDetail.resources)
+        # oldResList.remove(curResource) # workable
+        # newResList = oldResList
+        # Note 20201206: has update above loop, so should directly update curNoteDetail.resources
+        # curNoteDetail.resources.remove(curResource)
+        # newResList = curNoteDetail.resources
+
+        curResList.remove(curResource)
+        newResList = curResList
+
+        # # for debug
+        # if not newResList:
+        #     logging.info("empty resources list")
 
         syncParamDict = {
             # mandatory
@@ -111,33 +122,43 @@ class crifanEvernoteToWordpress(object):
 
         return respNote
 
-    def uploadNoteImageToWordpress(self, curNoteDetail, curResource):
+    def uploadNoteImageToWordpress(self, curNoteDetail, curResource, curResList=None):
         """Upload note single imges to wordpress, and sync to note (replace en-media to img) 
 
         Args:
             curNote (Note): evernote Note
             curResource (Resource): evernote Note Resource
+            curResList (list): evernote Note Resource list
         Returns:
             upload image url(str)
         Raises:
         """
+        if not curResList:
+            curResList = curNoteDetail.resources
+
         uploadedImgUrl = ""
+
+        curResInfoStr = crifanEvernote.genResourceInfoStr(curResource)
 
         isImg = self.evernote.isImageResource(curResource)
         if not isImg:
-            logging.warning("Not upload resource %s to wordpress for Not Image", curResource)
+            logging.warning("Not upload resource for NOT image for %s", curResInfoStr)
+            return uploadedImgUrl
+
+        foundResEnMediaSoup = crifanEvernote.findResourceSoup(curResource, curNoteDetail=curNoteDetail)
+        if not foundResEnMediaSoup:
+            logging.warning("Not need upload for not found related <en-media> node for %s", curResInfoStr)
             return uploadedImgUrl
 
         isUploadOk, respInfo = self.uploadImageToWordpress(curResource)
-        logging.info("%s to upload resource %s to wordpress", isUploadOk, curResource.guid)
         if isUploadOk:
             # {'id': 70491, 'url': 'https://www.crifan.com/files/pic/uploads/2020/11/c8b16cafe6484131943d80267d390485.jpg', 'slug': 'c8b16cafe6484131943d80267d390485', 'link': 'https://www.crifan.com/c8b16cafe6484131943d80267d390485/', 'title': 'c8b16cafe6484131943d80267d390485'}
             uploadedImgUrl = respInfo["url"]
             logging.info("uploaded url %s", uploadedImgUrl)
             # "https://www.crifan.com/files/pic/uploads/2020/03/f6956c30ef0b475fa2b99c2f49622e35.png"
             # relace en-media to img
-            respNote = self.syncNoteImage(curNoteDetail, curResource, uploadedImgUrl)
-            logging.info("Complete sync image %s to note %s", uploadedImgUrl, respNote.title)
+            respNote = self.syncNoteImage(curNoteDetail, curResource, uploadedImgUrl, curResList)
+            # logging.info("Complete sync image %s to note %s", uploadedImgUrl, respNote.title)
         else:
             logging.warning("Failed to upload image resource %s to wordpress", curResource)
 
@@ -170,9 +191,11 @@ class crifanEvernoteToWordpress(object):
         # content html
         # contentHtml = curNote.content
         # '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">\n<en-note>\n <div>\n  折腾：\n </div>\n <div>\n  【已解决】Mac Pro 2018款发热量大很烫非常烫\n </div>。。。。。。high performance graphic cards\n    </li>\n   </ul>\n  </ul>\n </ul>\n <div>\n  <br/>\n </div>\n</en-note>'
-        contentHtml = crifanEvernote.getNoteContentHtml(curNote)
-        logging.debug("contentHtml=%s", contentHtml)
+        # contentHtml = crifanEvernote.getNoteContentHtml(curNote)
         # '<html>\n <div>\n  折腾：\n </div>\n <div>\n  【已解决】Mac Pro 2018款发热量大很烫非常烫\n </div>\n <div>\n  期间， ... graphic cards\n    </li>\n   </ul>\n  </ul>\n </ul>\n <div>\n  <br/>\n </div>\n</html>'
+        contentHtml = crifanEvernote.getNoteContentHtml(curNote, isKeepTopHtml=False)
+        logging.debug("contentHtml=%s", contentHtml)
+        # '<div>\n  折腾：\n </div>\n <div>\n  【已解决】Mac Pro 2018款发热量大很烫非常烫\n </div>\n <div>\n  期间， ... graphic cards\n    </li>\n   </ul>\n  </ul>\n </ul>\n <div>\n  <br/>\n </div>'
 
         # # for debug
         # utils.dbgSaveHtml(contentHtml, "%s_处理后" % curNote.title)
@@ -190,15 +213,16 @@ class crifanEvernoteToWordpress(object):
         logging.debug("postDatetimeStr=%s", postDatetimeStr)
 
         tagNameList = self.evernote.getTagNameList(curNote)
-        logging.info("tagNameList=%s", tagNameList)
         # tagNameList=['Mac', '切换', 'GPU', 'pmset', '显卡模式']
 
         curCategoryList = []
         if tagNameList:
-            firstTag = tagNameList.pop(0) # 'Mac', tagNameList=['切换', 'GPU', 'pmset', '显卡模式']
+            firstTag = tagNameList.pop(0) # 'Mac'
             curCategoryList.append(firstTag)
         logging.info("curCategoryList=%s", curCategoryList)
         # curCategoryList=['Mac']
+        logging.info("tagNameList=%s", tagNameList)
+        # tagNameList=['切换', 'GPU', 'pmset', '显卡模式']
 
         logging.info("Uploading note %s to wordpress post", curNote.title)
         isUploadOk, respInfo = self.wordpress.createPost(
@@ -226,7 +250,7 @@ class crifanEvernoteToWordpress(object):
         Raises:
         """
         sourceURL = curNote.attributes.sourceURL
-        logging.info("sourceURL=%s", sourceURL)
+        logging.debug("sourceURL=%s", sourceURL)
 
         if sourceURL:
             foundInvalidChar = re.search("\W+", sourceURL)
@@ -236,13 +260,13 @@ class crifanEvernoteToWordpress(object):
                 return curNote
 
         curZhcnTitle = curNote.title
-        logging.info("curZhcnTitle=%s", curZhcnTitle)
+        logging.debug("curZhcnTitle=%s", curZhcnTitle)
         # filter special: 【xx解决】 【记录】
         filteredTitle = re.sub("^【.+?】", "", curZhcnTitle)
         # 【已解决】Mac中给pip更换源以加速下载 -> Mac中给pip更换源以加速下载
-        logging.info("filteredTitle=%s", filteredTitle)
+        logging.debug("filteredTitle=%s", filteredTitle)
         isOk, respInfo = utils.translateZhcnToEn(filteredTitle)
-        logging.info("isOk=%s, respInfo=%s", isOk, respInfo)
+        logging.debug("isOk=%s, respInfo=%s", isOk, respInfo)
         if isOk:
             enTitle = respInfo
             slug = crifanWordpress.generateSlug(enTitle)

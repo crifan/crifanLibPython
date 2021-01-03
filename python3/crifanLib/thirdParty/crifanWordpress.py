@@ -1,7 +1,7 @@
 # Function: Wordpress related functions
 # Author: Crifan Li
-# Update: 20201205
-# Latest: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanWordpress.py
+# Update: 20210103
+# Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanWordpress.py
 
 import logging
 import re
@@ -68,7 +68,7 @@ class crifanWordpress(object):
             headers=curHeaders,
             data=mediaBytes,
         )
-        logging.info("resp=%s", resp)
+        logging.debug("resp=%s", resp)
 
         isUploadOk, respInfo = crifanWordpress.processCommonResponse(resp)
         return isUploadOk, respInfo
@@ -325,24 +325,48 @@ class crifanWordpress(object):
         if not slug:
             return slug
 
+        slug = slug.lower()
+        # 'Xiaomi Sport uses and sets the Mi Band 4' -> 'xiaomi sport uses and sets the mi band 4'
+
         # special: 
-        # (1) don't, can't, it's,there're
+        # (1) xxx'yyy -> xxxyyy
+        # don't, can't, it's,there're
+        # ->
+        # dont, cant, its, therere
         slug = re.sub("(\w+)'(\w+)", "\1\2", slug)
-        # (2) remove the to a 
-        # slug = re.sub("((\s+the\s+)|(\s+to\s+)|(\s+a\s+))", " ", slug, flags=re.I)
+
+        # (2) remove speical word: the to a is and ...
         # 'Give the PIP replacement source to the Mac to speed up the download'
         # -> 
         # 'Give PIP replacement source the Mac speed up download'
-        removeWordList = ["to", "the", "a"]
+        # 
+        # 'xiaomi sport uses and sets the mi band 4'
+        # ->
+        # 'xiaomi sport uses sets mi band 4'
+        removeWordList = ["to", "the", "a", "are", "is", "and", "of"]
         for eachWord in removeWordList:
-            removeP = "\s+%s\s+" % eachWord # '\\s+to\\s+'
-            slug = re.sub(removeP, " ", slug, flags=re.I)
+            removeInsideP = "\s+%s\s+" % eachWord # '\\s+to\\s+'
+            slug = re.sub(removeInsideP, " ", slug, flags=re.I)
+            # special: 'the road of water suzhou qingyuan huayan water concerns public number binding door number'
+            removeStartP = "^%s\s+" % eachWord
+            slug = re.sub(removeStartP, "", slug, flags=re.I)
+            removeEndP = "%s$" % eachWord
+            slug = re.sub(removeEndP, "", slug, flags=re.I)
 
+        # remove other special char
         slug = re.sub("[^\w]", "_", slug)
+        # 'xiaomi_sport_uses_sets_mi_band_4'
+        # '__' -> '_'
         slug = re.sub("_+", "_", slug)
-        slug = slug.lower()
 
         logging.info("slug: %s -> %s", enTitle, slug)
+        # 'Xiaomi Sport uses and sets the Mi Band 4' -> 'xiaomi_sport_uses_sets_mi_band_4'
+        # 'The road of water Suzhou Qingyuan Huayan water concerns the public number and the binding door number' -> 'road_water_suzhou_qingyuan_huayan_water_concerns_public_number_binding_door_number'
+
+        # for debug
+        if not re.match("\w+", slug):
+            logging.warning("Not valid slug: %s", slug)
+
         return slug
 
     @staticmethod
@@ -560,7 +584,7 @@ class crifanWordpress(object):
                 newId = respJson["id"]
                 newSlug = respJson["slug"]
                 newLink = respJson["link"]
-                logging.info("newId=%s, newSlug=%s, newLink=%s", newId, newSlug, newLink) # newId=13224, newSlug=gpu, newLink=https://www.crifan.com/tag/gpu/
+                logging.debug("newId=%s, newSlug=%s, newLink=%s", newId, newSlug, newLink) # newId=13224, newSlug=gpu, newLink=https://www.crifan.com/tag/gpu/
                 respInfo = {
                     "id": newId, # 70393
                     "slug": newSlug, # f6956c30ef0b475fa2b99c2f49622e35
@@ -574,18 +598,20 @@ class crifanWordpress(object):
                         # "url": newUrl, # https://www.crifan.com/files/pic/uploads/2020/03/f6956c30ef0b475fa2b99c2f49622e35.png
                         respInfo["title"] = respJson["title"]["rendered"]
                         # "title": newTitle, # f6956c30ef0b475fa2b99c2f49622e35
-                        logging.info("url=%s, title=%s", respInfo["url"], respInfo["title"])
+                        logging.debug("url=%s, title=%s", respInfo["url"], respInfo["title"])
 
                 if "taxonomy" in respJson:
                     curTaxonomy = respJson["taxonomy"]
                     # common for category/post_tag
                     respInfo["name"] = respJson["name"]
                     respInfo["description"] = respJson["description"]
-                    logging.info("name=%s, description=%s", respInfo["name"], respInfo["description"])
+                    logging.debug("name=%s, description=%s", respInfo["name"], respInfo["description"])
 
                     if curTaxonomy == "category":
                         respInfo["parent"] = respJson["parent"]
-                        logging.info("parent=%s", respInfo["parent"])
+                        logging.debug("parent=%s", respInfo["parent"])
+
+                logging.info("respInfo=%s", respInfo)
             elif isinstance(respJson, list):
                 isOk = True
                 respInfo = respJson

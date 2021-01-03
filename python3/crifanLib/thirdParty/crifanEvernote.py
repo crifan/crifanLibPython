@@ -1,7 +1,7 @@
 # Function: Evernote related functions
 # Author: Crifan Li
-# Update: 20201205
-# Latest: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanEvernote.py
+# Update: 20210103
+# Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanEvernote.py
 
 import sys
 import re
@@ -25,6 +25,7 @@ from evernote.edam.notestore.NoteStore import *
 from evernote.edam.userstore import *
 
 import evernote.edam.type.ttypes as Types
+import evernote.edam.error.ttypes as EDAMUserException
 
 # from evernote.edam.notestore.ttypes import *
 from evernote.edam.notestore.ttypes import NotesMetadataResultSpec
@@ -90,8 +91,11 @@ class crifanEvernote(object):
         else:
             logging.warning("Evernote API version is NOT latest -> need update")
 
-        self.noteStore = self.client.get_note_store()
-        logging.info("self.noteStore=%s", self.noteStore)
+        try:
+            self.noteStore = self.client.get_note_store()
+            logging.info("self.noteStore=%s", self.noteStore)
+        except BaseException as curException:
+            logging.error("init noteStore exception: %s -> possible reason is token expired -> need refresh Evernote token", curException)
 
     def initClient(self):
         client = EvernoteClient(
@@ -117,7 +121,7 @@ class crifanEvernote(object):
             Note list
         Raises:
         """
-        logging.info("notebookId=%s", notebookId)
+        logging.debug("notebookId=%s", notebookId)
         # find all notes in notebook
         searchOffset = 0
         # searchPageSize = 1000
@@ -153,7 +157,7 @@ class crifanEvernote(object):
         )
         logging.debug("foundNoteResult=%s", foundNoteResult)
         totalNotes = foundNoteResult.totalNotes
-        logging.info("totalNotes=%s", totalNotes)
+        logging.info("Total %d notes for notebook of guid=%s", totalNotes, notebookId)
         foundNoteList = foundNoteResult.notes
         return foundNoteList
 
@@ -226,6 +230,38 @@ class crifanEvernote(object):
         updatedNote = self.noteStore.updateNote(newNote)
         return updatedNote
 
+    def moveToNoteBook(self, curNote, newNotebookGuid):
+        """Move Note to new notebook
+
+        Args:
+            curNote (Note): Evernote Note
+            newNotebookGuid (ste): new Notebook guid
+        Returns:
+            moved ok (bool)
+        Raises:
+        """
+        isMoveOk = False
+
+        curNotebookGuid = curNote.notebookGuid
+        if curNotebookGuid == newNotebookGuid:
+            isMoveOk = True
+            logging.info("Already in notebook %s for note %s", curNotebookGuid, curNote.title)
+            return isMoveOk
+
+        # Sync to Evernote
+        syncParamDict = {
+            # mandatory
+            "noteGuid": curNote.guid,
+            "noteTitle": curNote.title,
+            # optional
+            "notebookGuid": newNotebookGuid,
+        }
+
+        respNote = self.syncNote(**syncParamDict)
+        logging.debug("respNote=%s", respNote)
+        isMoveOk = True
+        return isMoveOk
+
     def getTagNameList(self, curNote):
         """get note tag name list
 
@@ -238,12 +274,17 @@ class crifanEvernote(object):
         curTagList = []
         tagGuidList = curNote.tagGuids
         logging.debug("tagGuidList=%s", tagGuidList)
-        # tagGuidList=['1dda873b-310e-46be-b59e-02a1f8c95720', '6ff65876-aab4-406b-b52b-4c1105638450', '38f11450-1a7a-4f54-ba17-b78889c1567a', '46258420-3d2e-443c-b63d-c5431e061aab', '52b7babc-d6ea-4390-b405-79c21da5188e']
-        for eachTagGuid in tagGuidList:
-            tagInfo = self.noteStore.getTag(eachTagGuid)
-            logging.debug("tagInfo=%s", tagInfo)
-            curTagStr = tagInfo.name
-            curTagList.append(curTagStr)
+        
+        if tagGuidList:
+            # tagGuidList=['1dda873b-310e-46be-b59e-02a1f8c95720', '6ff65876-aab4-406b-b52b-4c1105638450', '38f11450-1a7a-4f54-ba17-b78889c1567a', '46258420-3d2e-443c-b63d-c5431e061aab', '52b7babc-d6ea-4390-b405-79c21da5188e']
+            for eachTagGuid in tagGuidList:
+                tagInfo = self.noteStore.getTag(eachTagGuid)
+                logging.debug("tagInfo=%s", tagInfo)
+                curTagStr = tagInfo.name
+                curTagList.append(curTagStr)
+        else:
+            logging.warning("No tags for note %s", curNote.title)
+
         logging.info("curTagList=%s", curTagList)
         # curTagList=['Mac', '切换', 'GPU', 'pmset', '显卡模式']
         return curTagList
@@ -268,6 +309,21 @@ class crifanEvernote(object):
                 evernoteHost = "app.evernote.com"
 
         return evernoteHost
+
+    @staticmethod
+    def genResourceInfoStr(curResource):
+        """Generate resource info str, use for debug print
+
+        Args:
+            curResource (Resource): Evernote Resouce
+        Returns:
+            resource info(str)
+        Raises:
+        Examples:
+            output: 'Resource(name=1E4CC2E2-581D-4B18-B0EB-E016B2245A1C.png,mime=image/jpeg,guid=27e8b7d0-3fc5-4b05-8b1a-ab8c09423a96)'
+        """
+        resInfoStr = "Resource(name=%s,mime=%s,guid=%s)" % (curResource.attributes.fileName, curResource.mime, curResource.guid)
+        return resInfoStr
 
     @staticmethod
     def isImageResource(curResource):
@@ -368,16 +424,20 @@ class crifanEvernote(object):
         return noteDetail
 
     @staticmethod
-    def findResourceSoup(soup, curResource):
-        """find related BeautifulSoup soup from Evernote Resource
+    def findResourceSoup(curResource, soup=None, curNoteDetail=None):
+        """Find related <en-media> BeautifulSoup soup from Evernote Resource
 
         Args:
-            soup (Soup): BeautifulSoup soup
             curResource (Resource): Evernote Resource
+            soup (Soup): BeautifulSoup soup of note content
+            curNoteDetail (Note): Evernote note, with detail content
         Returns:
             soup node
         Raises:
         """
+        if not soup:
+            soup = crifanEvernote.noteContentToSoup(curNoteDetail)
+
         curMime = curResource.mime # 'image/png'
         logging.debug("curMime=%s", curMime)
         # # method 1: calc again
@@ -407,10 +467,13 @@ class crifanEvernote(object):
         """
         validNewResList = []
         originResList = noteDetail.resources
-        originContent = noteDetail.content
-        soup = BeautifulSoup(originContent, 'html.parser')
+
+        # originContent = noteDetail.content
+        # soup = BeautifulSoup(originContent, 'html.parser')
+        soup = crifanEvernote.noteContentToSoup(noteDetail)
+
         for curIdx, curRes in enumerate(originResList):
-            foundMediaNode = crifanEvernote.findResourceSoup(soup, curRes)
+            foundMediaNode = crifanEvernote.findResourceSoup(curRes, soup=soup)
             if foundMediaNode:
                 newRes = newResList[curIdx] # 'image/jpeg'
                 validNewResList.append(newRes)
@@ -462,59 +525,77 @@ class crifanEvernote(object):
                 # not add to validNewResList
 
         # newContent = soup.prettify()
-        newContent = str(soup)
+        # newContent = str(soup)
+        newContent = crifanEvernote.soupToNoteContent(soup)
         noteDetail.content = newContent
 
         # noteDetail.resources = newResList
         noteDetail.resources = validNewResList
 
         return noteDetail
-
+    
     @staticmethod
-    def getNoteContentHtml(curNote):
-        """Get evernote Note content html
+    def noteContentToHtml(noteContent, isKeepTopHtml=True):
+        """convert Evernote Note content to pure html
 
         Args:
-            curNote (Note): evernote Note
+            isKeepTopHtml (bookl): whether keep top html. Ture to <html>xxx<html>, False to xxx
         Returns:
             html (str)
         Raises:
         """
-        noteHtml = curNote.content
+        # Special:
+        # '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">\n<en-note>
+        # -> remove: <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+        noteHtml = re.sub('<\?xml version="1.0" encoding="UTF-8" standalone="no"\?>\s*', "", noteContent)
 
-        # '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">\n
         # remove fisrt line
         # <!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">
-        # noteHtml = re.sub('<!DOCTYPE en-note SYSTEM "http://xml\.evernote\.com/pub/enml2\.dtd"\s+>', "", noteHtml)
-        noteHtml = re.sub('<!DOCTYPE en-note SYSTEM "http://xml\.evernote\.com/pub/enml2\.dtd">\s+', "", noteHtml)
+        # '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">\n
+        # <!DOCTYPE en-note SYSTEM 'http://xml.evernote.com/pub/enml2.dtd'>
+        noteHtml = re.sub("""<!DOCTYPE en-note SYSTEM ((")|('))http://xml\.evernote\.com/pub/enml2\.dtd((")|('))>\s*""", "", noteHtml)
 
-        # convert <en-note>...</en-note> to <html>...</html>
-        noteHtml = re.sub('<en-note>(?P<contentBody>.+)</en-note>', "<html>\g<contentBody></html>", noteHtml, flags=re.S)
+        if isKeepTopHtml:
+            # convert <en-note>...</en-note> to <html>...</html>
+            replacedP = "<html>\g<contentBody></html>"
+        else:
+            # convert <en-note>...</en-note> to ...
+            replacedP = "\g<contentBody>"
+        noteHtml = re.sub('<en-note>(?P<contentBody>.+)</en-note>', replacedP, noteHtml, flags=re.S)
 
+        noteHtml = noteHtml.strip()
         return noteHtml
 
     @staticmethod
-    def noteContentToSoup(curNote):
+    def getNoteContentHtml(curNote, isKeepTopHtml=True):
+        """Get evernote Note content html
+
+        Args:
+            curNote (Note): evernote Note
+            isKeepTopHtml (bookl): whether keep top html. Ture to <html>xxx<html>, False to xxx
+        Returns:
+            html (str)
+        Raises:
+        """
+        noteHtml = crifanEvernote.noteContentToHtml(curNote.content, isKeepTopHtml)
+        return noteHtml
+
+    @staticmethod
+    def noteContentToSoup(curNote, isKeepTopHtml=True):
         """Convert Evernote Note content to BeautifulSoup Soup
 
         Args:
             curNote (Note): Evernote Note
+            isKeepTopHtml (bookl): whether keep top html. Ture to <html>xxx<html>, False to xxx
         Returns:
             Soup
         Raises:
         """
-
-        # noteHtml = curNote.content
-        # # '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">\n
-        # # remove fisrt line
-        # # <!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">
-        # # noteHtml = re.sub('<!DOCTYPE en-note SYSTEM "http://xml\.evernote\.com/pub/enml2\.dtd"\s+>', "", noteHtml)
-        # noteHtml = re.sub('<!DOCTYPE en-note SYSTEM "http://xml\.evernote\.com/pub/enml2\.dtd">\s+', "", noteHtml)
-
-        noteHtml = crifanEvernote.getNoteContentHtml(curNote)
+        noteHtml = crifanEvernote.getNoteContentHtml(curNote, isKeepTopHtml)
 
         soup = utils.htmlToSoup(noteHtml)
-        # now top node is: html, not en-note
+        # Note: now top node is <html>, not <en-note>
+        #       but top node name is '[document]' not 'html'
 
         # for debug
         # if soup.name != "html":
@@ -522,6 +603,32 @@ class crifanEvernote(object):
             logging.info("soup.name=%s", soup.name)
 
         return soup
+
+    @staticmethod
+    def htmlToNoteContent(noteHtml):
+        """Convert html (with or without <html>) to Evernote Note content
+
+        Args:
+            html (str): current html
+        Returns:
+            Evernote Note content html(str)
+        Raises:
+        """
+        # convert <html>...</html> back to <en-note>...</en-note>
+        # noteContent = re.sub('<html>(?P<contentBody>.+)</html>', "<en-note>\g<contentBody></en-note>", noteHtml, flags=re.S)
+        # Special: some time, here is removed top html -> so need add top <html>...</html> back
+        # noteContent = re.sub('(<html>)?(?P<contentBody>.+)(</html>)?', "<en-note>\g<contentBody></en-note>", noteHtml, flags=re.S)
+        # support both xxx and <html>xxx</html>
+        pureHtmlBody = re.sub('<html>(?P<contentBody>.+)</html>', "\g<contentBody>", noteHtml, flags=re.S)
+        noteContent = "<en-note>%s</en-note>" % pureHtmlBody
+
+        noteContent = crifanEvernote.convertToClosedEnMediaTag(noteContent)
+
+        # add first line
+        # <!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">
+        noteContent = '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">\n' + noteContent
+
+        return noteContent
 
     @staticmethod
     def soupToNoteContent(soup):
@@ -540,18 +647,14 @@ class crifanEvernote(object):
             logging.info("soup.name=%s", soup.name)
 
         # soup.name = "en-note" # not work
-        noteContentHtml = utils.soupToHtml(soup)
+        noteContent = utils.soupToHtml(soup, isFormat=False)
+        # Note: here not use formated html, to avoid
+        # speical case:
+        # some special part title is url, then format will split part url and title
+        # so here not use format
 
-        # convert <html>...</html> back to <en-note>...</en-note>
-        noteContentHtml = re.sub('<html>(?P<contentBody>.+)</html>', "<en-note>\g<contentBody></en-note>", noteContentHtml, flags=re.S)
-
-        noteContentHtml = crifanEvernote.convertToClosedEnMediaTag(noteContentHtml)
-
-        # add first line
-        # <!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">
-        noteContentHtml = '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">\n' + noteContentHtml
-
-        return noteContentHtml
+        noteHtml = crifanEvernote.htmlToNoteContent(noteContent)
+        return noteHtml
 
     @staticmethod
     def convertToClosedEnMediaTag(noteHtml):
