@@ -3,12 +3,12 @@
 """
 Filename: crifanSystem.py
 Function: crifanLib's python system related functions.
-Version: 20201217
-Latest: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanSystem.py
+Version: 20201231
+Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanSystem.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20201217"
+__version__ = "20201231"
 __copyright__ = "Copyright (c) 2020, Crifan Li"
 __license__ = "GPL"
 
