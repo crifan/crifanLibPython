@@ -4,9 +4,7 @@
 Filename: crifanBeautifulSoup.py
 Function: crifanLib's BeautifulSoup related functions.
 Version: 20210106
-Note:
-1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanBeautifulsoup.py
+Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanBeautifulsoup.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
