@@ -3,15 +3,15 @@
 """
 Filename: crifanBeautifulSoup.py
 Function: crifanLib's BeautifulSoup related functions.
-Version: 20201206
+Version: 20210106
 Note:
 1. latest version and more can found here:
 https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanBeautifulsoup.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20201206"
-__copyright__ = "Copyright (c) 2020, Crifan Li"
+__version__ = "20210106"
+__copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
 import copy
@@ -299,6 +299,35 @@ def soupToHtml(soup, isFormat=True):
     else:
         curHtml = str(soup) # not formatted html
     return curHtml
+
+
+def getAllContents(curNode, isStripped=False):
+    """Get all contents of current and children nodes
+
+    Args:
+        curNode (soup node): current Beautifulsoup node
+        isStripped (bool): return stripped string or not
+    Returns:
+        str
+    Raises:
+    """
+    # codeSnippetStr = curNode.prettify()
+    # codeSnippetStr = curNode.string
+    # codeSnippetStr = curNode.contents
+    codeSnippetStr = ""
+    stringList = []
+    if isStripped:
+        stringGenerator = curNode.stripped_strings
+    else:
+        stringGenerator = curNode.strings
+
+    # stringGenerator = curNode.strings
+    for eachStr in stringGenerator:
+        # logging.debug("eachStr=%s", eachStr)
+        stringList.append(eachStr)
+    codeSnippetStr = "\n".join(stringList)
+    # logging.debug("codeSnippetStr=%s", codeSnippetStr)
+    return codeSnippetStr
 
 def bsChainFind(curLevelSoup, queryChainList):
     """BeautifulSoup find with query chain
