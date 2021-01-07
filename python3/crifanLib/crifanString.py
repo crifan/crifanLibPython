@@ -905,7 +905,12 @@ def isPythonLanguage(codeStr):
         "\w+(?:\.\w+)?\s*=\s*[\.\w]+(?:\(.*\))?",
 
         # up_filename = r'F:/aikanmeizi/' + prow[3] + "/" + prow[0]
-        """r['"][^"']+['"]""",
+        # """r['"][^"']+['"]""",
+        # avoid wrong match:
+        # soup = BeautifulSoup(noteContent, 'html.parser')
+        # 
+        # soup = mergePostTitleAndUrl(soup)
+        """r['"][^"'\n]+['"]""", # internal NOT contain new line
 
         # >>> post = WordPressPost()
         # "^>>>\s*\w+",
@@ -920,10 +925,10 @@ def isPythonLanguage(codeStr):
         curRuleFoundList = re.findall(eachOtherSingleRule, codeStr, re.I|re.M)
         curRuleFoundNum = len(curRuleFoundList)
 
-        # for debug
-        if curRuleFoundNum > 0:
-            logging.debug("%s -> %s", eachOtherSingleRule, curRuleFoundList)
-            logging.debug("")
+        # # for debug
+        # if curRuleFoundNum > 0:
+        #     logging.debug("%s -> %s", eachOtherSingleRule, curRuleFoundList)
+        #     logging.debug("")
 
         otherRuleTotalNum += curRuleFoundNum
     curValidNum += otherRuleTotalNum
