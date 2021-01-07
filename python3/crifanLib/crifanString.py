@@ -2,18 +2,15 @@
 # -*- coding: utf-8 -*-
 """
 Filename: crifanString.py
-Function: crifanLib's string related functions.
-Version: v1.2 20180615
-Note:
-1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython
+Function: crifanLib's string related functions
+Version: 20210107
+Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanString.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v1.2"
-__copyright__ = "Copyright (c) 2019, Crifan Li"
+__version__ = "20210107"
+__copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
-
 
 import re
 import json
@@ -563,10 +560,424 @@ def detectLanguageType(inputString, possibilityRatioThreshold = 0.7):
     return lanType, lanPossibilityRatio
 
 ################################################################################
-# Test
+# Program Language Detection
 ################################################################################
 
+def isHtmlXmlLanguage(codeStr):
+    """Detect code str is html/xml programming language or not
 
+    Args:
+        codeStr (str): input string of code
+    Returns:
+        is html/xml language (bool), the language name: 'html'/'xml'(str)
+    Raises:
+    """
+    ValidHtmlMinTagNum = 2
+
+    # HTML Tags Ordered Alphabetically
+    # https://www.w3schools.com/TAGS/default.asp
+    HtmlTagList = [
+        "a",
+        "abbr",
+        "acronym",
+        "address",
+        "applet",
+        "area",
+        "article",
+        "aside",
+        "audio",
+        "b",
+        "base",
+        "basefont",
+        "bdi",
+        "bdo",
+        "big",
+        "blockquote",
+        "body",
+        "br",
+        "button",
+        "canvas",
+        "caption",
+        "center",
+        "cite",
+        "code",
+        "col",
+        "colgroup",
+        "data",
+        "datalist",
+        "dd",
+        "del",
+        "details",
+        "dfn",
+        "dialog",
+        "dir",
+        "div",
+        "dl",
+        "dt",
+        "em",
+        "embed",
+        "fieldset",
+        "figcaption",
+        "figure",
+        "font",
+        "footer",
+        "form",
+        "frame",
+        "frameset",
+        "h1",
+        "head",
+        "header",
+        "hr",
+        "html",
+        "i",
+        "iframe",
+        "img",
+        "input",
+        "ins",
+        "kbd",
+        "label",
+        "legend",
+        "li",
+        "link",
+        "main",
+        "map",
+        "mark",
+        "meta",
+        "meter",
+        "nav",
+        "noframes",
+        "noscript",
+        "object",
+        "ol",
+        "optgroup",
+        "option",
+        "output",
+        "p",
+        "param",
+        "picture",
+        "pre",
+        "progress",
+        "q",
+        "rp",
+        "rt",
+        "ruby",
+        "s",
+        "samp",
+        "script",
+        "section",
+        "select",
+        "small",
+        "source",
+        "span",
+        "strike",
+        "strong",
+        "style",
+        "sub",
+        "summary",
+        "sup",
+        "svg",
+        "table",
+        "tbody",
+        "td",
+        "template",
+        "textarea",
+        "tfoot",
+        "th",
+        "thead",
+        "time",
+        "title",
+        "tr",
+        "track",
+        "tt",
+        "u",
+        "ul",
+        "var",
+        "video",
+        "wbr",
+    ]
+
+    isXmlLang = False
+    isHtmlLang = False
+    isValidLang = False
+    langName = ""
+
+    tagNameList = []
+
+    """
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
+    """
+    # normalTagMatchIter = re.finditer("<(?P<normalTagName>\w+)>[^<>]+<(?P=normalTagName)>", codeStr)
+    """
+        <ul>
+            <li>
+        <div>豆瓣：http://pypi.douban.com</div></li>
+            <li>
+        <div>阿里云：http://mirrors.aliyun.com/pypi/simple</div></li>
+            <li>
+        <div>清华大学：https://pypi.tuna.tsinghua.edu.cn/simple</div></li>
+        </ul>
+    """
+    normalTagMatchIter = re.finditer("<(?P<normalTagName>\w+)>[^<>]*(</(?P=normalTagName)>)?", codeStr, re.M)
+    normalTagMatchList = list(normalTagMatchIter)
+    if normalTagMatchList:
+        isXmlLang = True
+        for eachNormalTagMatch in normalTagMatchList:
+            normalTagName = eachNormalTagMatch.group("normalTagName")
+            if normalTagName not in tagNameList:
+                tagNameList.append(normalTagName)
+
+    selfCloseTagMatchIter = re.finditer("<(?P<selfCloseTagName>\w+)\s*/>", codeStr)
+    selfCloseTagMatchList = list(selfCloseTagMatchIter)
+    if selfCloseTagMatchList:
+        isXmlLang = True
+        for eachSelfCloseTagMatch in selfCloseTagMatchList:
+            selfCloseTagName = eachSelfCloseTagMatch.group("selfCloseTagName")
+            if selfCloseTagName not in tagNameList:
+                tagNameList.append(selfCloseTagName)
+
+    if tagNameList:
+        # ['ul', 'li', 'div']
+        curHtmlTagNum = 0
+        for eachTagName in tagNameList:
+            if eachTagName in HtmlTagList:
+                curHtmlTagNum += 1
+
+        if curHtmlTagNum >= ValidHtmlMinTagNum:
+            isHtmlLang = True
+            isXmlLang = False
+
+    isValidLang = isXmlLang or isHtmlLang
+    if isValidLang:
+        if isHtmlLang:
+            langName = "html"
+        elif isXmlLang:
+            langName = "xml"
+
+    # True, 'xml'
+    return isValidLang, langName
+
+def isJavascriptLanguage(codeStr):
+    """Detect code str is javascript/json programming language or not
+
+    Args:
+        codeStr (str): input string of code
+    Returns:
+        is javascript language (bool), the language name: 'javascript'(str)
+    Raises:
+    """
+    ValidJsMinKeyValueNum = 1
+
+    isJsLang = False
+
+    # is {xxx}
+    # isMatchJson = re.match("^\{.+\}$", codeStr, re.S)
+    """
+        {
+            "id": 70410,
+            ...
+    """
+    isMatchJson = re.match("^\{.+\}?$", codeStr, re.S)
+    if not isMatchJson:
+        # or is [xxx]
+        # isMatchJson = re.match("^\[.+\]$", codeStr, re.S)
+        isMatchJson = re.match("^\[.+\]?$", codeStr, re.S)
+
+    if isMatchJson:
+        keyValueLineNum = 0
+        allKeyValueList = []
+        allDoubleQuoteKeyValueLine = re.findall('"\w+"\s*:\s*"?[^"]+"?,?$', codeStr, re.M)
+        allKeyValueList.extend(allDoubleQuoteKeyValueLine)
+        allSingleQuoteKeyValueLine = re.findall("'\w+'\s*:\s*'?[^']+'?,?$", codeStr, re.M)
+        allKeyValueList.extend(allSingleQuoteKeyValueLine)
+        keyValueLineNum = len(allKeyValueList)
+
+        if keyValueLineNum >= ValidJsMinKeyValueNum:
+            isJsLang = True
+
+    return isJsLang
+
+def isPythonLanguage(codeStr):
+    """Detect code str is python programming language or not
+
+    Args:
+        codeStr (str): input string of code
+    Returns:
+        is python language (bool), the language name: 'python'(str)
+    Raises:
+    """
+    ValidPythonMinRuleNum = 2
+
+    isPyLang = False
+
+    curValidNum = 0
+
+    # import logging
+    # import evernote.edam.type.ttypes as Types
+    # # import evernote.edam.userstore.constants as UserStoreConstants
+    # allImport = re.findall("import\s+[\w\.]+(\s+as\w+)?", codeStr, re.I)
+    allImport = re.findall("import\s+[\w\.]+(?:\s+as\w+)?", codeStr, re.I)
+    importNum = len(allImport)
+    curValidNum += importNum
+
+    # from libs.crifan import utils
+    # # from evernote.api.client import EvernoteClient
+    # from evernote import *
+    allFromImport = re.findall("from\s+[\w\.]+\s+import\s+[\w\*]+", codeStr, re.I)
+    fromImportNum = len(allFromImport)
+    curValidNum += fromImportNum
+
+    # class Evernote(object):
+    allClassDef = re.findall("class\s+\w+(?:\([^\(\)]+\))?", codeStr, re.I)
+    classDefNum = len(allClassDef)
+    curValidNum += classDefNum
+
+    specialKeyNum = 0
+    #   def __init__(self, authToken, isSandbox=False, isChina=True):
+    # if __name__ == "__main__":
+    SpecialKeyList = [
+        "__init__",
+        "__main__",
+        "__name__",
+        "@staticmethod",
+    ]
+    for curSpecialKey in SpecialKeyList:
+        allCurSpecialKey = re.findall(curSpecialKey, codeStr, re.I)
+        curSpecialNum = len(allCurSpecialKey)
+        specialKeyNum += curSpecialNum
+    curValidNum += specialKeyNum
+
+    # def getHost(isSandbox=False, isChina=True):
+    # def initClient(self):
+    # def findNotes(self, notebookId):
+    # def createPost(self,
+    allFunctionDef = re.findall("def\s+\w+\(\w+", codeStr, re.I)
+    functionDefNum = len(allFunctionDef)
+    curValidNum += functionDefNum
+
+    # sys.path.append("lib")
+    # sys.path.append("libs/evernote-sdk-python3/lib")
+    # logging.debug(
+    # logging.warning(
+    # logging.error(
+    # logging.exception(
+    commonFuncNum = 0
+    CommonFunctionPList = [
+        "logging\.(?:(?:debug)|(?:info)|(?:warning)|(?:warn)|(?:error)|(?:critical)|(?:exception)|(?:log))",
+        "sys\.path\.(?:(?:clear)|(?:copy)|(?:append)|(?:extend)|(?:pop)|(?:index)|(?:count)|(?:insert)|(?:remove)|(?:reverse)|(?:sort))",
+        "os\.path\.(?:(?:abspath)|(?:basename)|(?:commonpath)|(?:commonprefix)|(?:dirname)|(?:exists)|(?:lexists)|(?:expanduser)|(?:expandvars)|(?:getatime)|(?:getmtime)|(?:getctime)|(?:getsize)|(?:isabs)|(?:isfile)|(?:isdir)|(?:islink)|(?:ismount)|(?:join)|(?:normcase)|(?:normpath)|(?:realpath)|(?:relpath)|(?:samefile)|(?:sameopenfile)|(?:samestat)|(?:split)|(?:splitdrive)|(?:splitext)|(?:supports_unicode_filenames))",
+    ]
+    for curCommonFuncP in CommonFunctionPList:
+        allCommonFunc = re.findall(curCommonFuncP, codeStr, re.I)
+        curCommonFuncNum = len(allCommonFunc)
+        commonFuncNum += curCommonFuncNum
+    curValidNum += commonFuncNum
+
+    # mutiple line string:
+    # (1) """xxx"""
+    allMultileCommentDoubleQuote = re.findall('""".+?"""', codeStr, re.S)
+    multileCommentDoubleQuoteNum = len(allMultileCommentDoubleQuote)
+    curValidNum += multileCommentDoubleQuoteNum
+    # (2) '''xxx'''
+    allMultileCommentSingleQuote = re.findall("'''.+?'''", codeStr, re.S)
+    multileCommentSingleQuoteNum = len(allMultileCommentSingleQuote)
+    curValidNum += multileCommentSingleQuoteNum
+
+    # other single rule
+    OtherSingleRuleList = [
+        # with open(up_filename, 'rb') as img:
+        "with\s+open\(.+?\s+as\s+.+:",
+
+        # attachment_id = response['id']
+        """\w+\s*=\s*\w+\[['"]\w+['"]\]""",
+
+        # post.content = 'This is a wonderful blog post about XML-RPC.'
+        """\w+\.\w+\s*=\s*['"][^']+['"]""",
+
+        # post.thumbnail = attachment_id
+        # post.thumbnail = attachment.id
+        # post = WordPressPost()
+        # post.id = client.call(posts.NewPost(post))
+        # "\w+\.\w+\s*=\s*[\.\w]+",
+        "\w+(?:\.\w+)?\s*=\s*[\.\w]+(?:\(.*\))?",
+
+        # up_filename = r'F:/aikanmeizi/' + prow[3] + "/" + prow[0]
+        """r['"][^"']+['"]""",
+
+        # >>> post = WordPressPost()
+        # "^>>>\s*\w+",
+        "^>>>.*$",
+
+        # # posts == [WordPressPost, WordPressPost, ...]
+        # "^#\s*\w+",
+        "^#.*$",
+    ]
+    otherRuleTotalNum = 0
+    for eachOtherSingleRule in OtherSingleRuleList:
+        curRuleFoundList = re.findall(eachOtherSingleRule, codeStr, re.I|re.M)
+        curRuleFoundNum = len(curRuleFoundList)
+
+        # for debug
+        if curRuleFoundNum > 0:
+            logging.debug("%s -> %s", eachOtherSingleRule, curRuleFoundList)
+            logging.debug("")
+
+        otherRuleTotalNum += curRuleFoundNum
+    curValidNum += otherRuleTotalNum
+
+    if curValidNum >= ValidPythonMinRuleNum:
+        isPyLang = True
+
+    return isPyLang
+
+def detectProgramLanguage(codeSnippet):
+    """Detect code snippet possible programming language
+
+    Args:
+        codeSnippet (str): input string of code snippet
+    Returns:
+        str, programming language
+    Raises:
+    """
+
+    # guessInstance = Guess()
+    # languageName = guessInstance.language_name(codeSnippet)
+    # return languageName
+    # TODO: add re rule to detect python/java/xml/...
+    # return defaultLan
+
+    DefaultLang = "shell"
+
+    curLang = None
+
+    if not curLang:
+        if isPythonLanguage(codeSnippet):
+            curLang = "python"
+
+    if not curLang:
+        if isJavascriptLanguage(codeSnippet):
+            curLang = "javascript"
+
+    if not curLang:
+        isHtmlOrXml, xmlOrHtmlLang = isHtmlXmlLanguage(codeSnippet)
+        if isHtmlOrXml:
+            curLang = xmlOrHtmlLang
+
+    # if not curLang:
+    #     if isJavaLanguage(codeSnippet):
+    #         curLang = "java"
+
+    if not curLang:
+        curLang = DefaultLang
+
+    return curLang
+
+################################################################################
+# Test
+################################################################################
 
 if __name__ == '__main__':
     print("[crifanLib-%s] %s" % (CURRENT_LIB_FILENAME, __version__))
