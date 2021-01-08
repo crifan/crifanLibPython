@@ -3,15 +3,13 @@
 """
 Filename: crifanLogging.py
 Function: crifanLib's logging related functions.
-Version: v20200309
-Note:
-1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython
+Version: 20210108
+Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanLogging.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v20200310"
-__copyright__ = "Copyright (c) 2020, Crifan Li"
+__version__ = "20210108"
+__copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
 import logging
