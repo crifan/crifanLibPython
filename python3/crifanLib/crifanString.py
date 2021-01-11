@@ -3,12 +3,12 @@
 """
 Filename: crifanString.py
 Function: crifanLib's string related functions
-Version: 20210107
+Version: 20210111
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanString.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210107"
+__version__ = "20210111"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
@@ -88,6 +88,376 @@ constYoudaoErrorCode = {
     303: "服务端的其它异常",
     401: "账户已经欠费停"
 }
+
+
+# HTML Tags Ordered Alphabetically
+# https://www.w3schools.com/TAGS/default.asp
+HtmlTagList = [
+    "a",
+    "abbr",
+    "acronym",
+    "address",
+    "applet",
+    "area",
+    "article",
+    "aside",
+    "audio",
+    "b",
+    "base",
+    "basefont",
+    "bdi",
+    "bdo",
+    "big",
+    "blockquote",
+    "body",
+    "br",
+    "button",
+    "canvas",
+    "caption",
+    "center",
+    "cite",
+    "code",
+    "col",
+    "colgroup",
+    "data",
+    "datalist",
+    "dd",
+    "del",
+    "details",
+    "dfn",
+    "dialog",
+    "dir",
+    "div",
+    "dl",
+    "dt",
+    "em",
+    "embed",
+    "fieldset",
+    "figcaption",
+    "figure",
+    "font",
+    "footer",
+    "form",
+    "frame",
+    "frameset",
+    "h1",
+
+    # add missing head
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+
+    "head",
+    "header",
+    "hr",
+    "html",
+    "i",
+    "iframe",
+    "img",
+    "input",
+    "ins",
+    "kbd",
+    "label",
+    "legend",
+    "li",
+    "link",
+    "main",
+    "map",
+    "mark",
+    "meta",
+    "meter",
+    "nav",
+    "noframes",
+    "noscript",
+    "object",
+    "ol",
+    "optgroup",
+    "option",
+    "output",
+    "p",
+    "param",
+    "picture",
+    "pre",
+    "progress",
+    "q",
+    "rp",
+    "rt",
+    "ruby",
+    "s",
+    "samp",
+    "script",
+    "section",
+    "select",
+    "small",
+    "source",
+    "span",
+    "strike",
+    "strong",
+    "style",
+    "sub",
+    "summary",
+    "sup",
+    "svg",
+    "table",
+    "tbody",
+    "td",
+    "template",
+    "textarea",
+    "tfoot",
+    "th",
+    "thead",
+    "time",
+    "title",
+    "tr",
+    "track",
+    "tt",
+    "u",
+    "ul",
+    "var",
+    "video",
+    "wbr",
+]
+
+# CSS Properties
+# https://www.w3schools.com/cssref/
+CssPropertyKeyList = [
+    "align-content",
+    "align-items",
+    "align-self",
+    "all",
+    "animation",
+    "animation-delay",
+    "animation-direction",
+    "animation-duration",
+    "animation-fill-mode",
+    "animation-iteration-count",
+    "animation-name",
+    "animation-play-state",
+    "animation-timing-function",
+    "backface-visibility",
+    "background",
+    "background-attachment",
+    "background-blend-mode",
+    "background-clip",
+    "background-color",
+    "background-image",
+    "background-origin",
+    "background-position",
+    "background-repeat",
+    "background-size",
+    "border",
+    "border-bottom",
+    "border-bottom-color",
+    "border-bottom-left-radius",
+    "border-bottom-right-radius",
+    "border-bottom-style",
+    "border-bottom-width",
+    "border-collapse",
+    "border-color",
+    "border-image",
+    "border-image-outset",
+    "border-image-repeat",
+    "border-image-slice",
+    "border-image-source",
+    "border-image-width",
+    "border-left",
+    "border-left-color",
+    "border-left-style",
+    "border-left-width",
+    "border-radius",
+    "border-right",
+    "border-right-color",
+    "border-right-style",
+    "border-right-width",
+    "border-spacing",
+    "border-style",
+    "border-top",
+    "border-top-color",
+    "border-top-left-radius",
+    "border-top-right-radius",
+    "border-top-style",
+    "border-top-width",
+    "border-width",
+    "bottom",
+    "box-decoration-break",
+    "box-shadow",
+    "box-sizing",
+    "break-after",
+    "break-before",
+    "break-inside",
+    "caption-side",
+    "caret-color",
+    "@charset",
+    "clear",
+    "clip",
+    "color",
+    "column-count",
+    "column-fill",
+    "column-gap",
+    "column-rule",
+    "column-rule-color",
+    "column-rule-style",
+    "column-rule-width",
+    "column-span",
+    "column-width",
+    "columns",
+    "content",
+    "counter-increment",
+    "counter-reset",
+    "cursor",
+    "direction",
+    "display",
+    "empty-cells",
+    "filter",
+    "flex",
+    "flex-basis",
+    "flex-direction",
+    "flex-flow",
+    "flex-grow",
+    "flex-shrink",
+    "flex-wrap",
+    "float",
+    "font",
+    "@font-face",
+    "font-family",
+    "font-feature-settings",
+    "@font-feature-values",
+    "font-kerning",
+    "font-language-override",
+    "font-size",
+    "font-size-adjust",
+    "font-stretch",
+    "font-style",
+    "font-synthesis",
+    "font-variant",
+    "font-variant-alternates",
+    "font-variant-caps",
+    "font-variant-east-asian",
+    "font-variant-ligatures",
+    "font-variant-numeric",
+    "font-variant-position",
+    "font-weight",
+    "grid",
+    "grid-area",
+    "grid-auto-columns",
+    "grid-auto-flow",
+    "grid-auto-rows",
+    "grid-column",
+    "grid-column-end",
+    "grid-column-gap",
+    "grid-column-start",
+    "grid-gap",
+    "grid-row",
+    "grid-row-end",
+    "grid-row-gap",
+    "grid-row-start",
+    "grid-template",
+    "grid-template-areas",
+    "grid-template-columns",
+    "grid-template-rows",
+    "hanging-punctuation",
+    "height",
+    "hyphens",
+    "image-rendering",
+    "@import",
+    "isolation",
+    "justify-content",
+    "@keyframes",
+    "left",
+    "letter-spacing",
+    "line-break",
+    "line-height",
+    "list-style",
+    "list-style-image",
+    "list-style-position",
+    "list-style-type",
+    "margin",
+    "margin-bottom",
+    "margin-left",
+    "margin-right",
+    "margin-top",
+    "mask",
+    "mask-type",
+    "max-height",
+    "max-width",
+    "@media",
+    "min-height",
+    "min-width",
+    "mix-blend-mode",
+    "object-fit",
+    "object-position",
+    "opacity",
+    "order",
+    "orphans",
+    "outline",
+    "outline-color",
+    "outline-offset",
+    "outline-style",
+    "outline-width",
+    "overflow",
+    "overflow-wrap",
+    "overflow-x",
+    "overflow-y",
+    "padding",
+    "padding-bottom",
+    "padding-left",
+    "padding-right",
+    "padding-top",
+    "page-break-after",
+    "page-break-before",
+    "page-break-inside",
+    "perspective",
+    "perspective-origin",
+    "pointer-events",
+    "position",
+    "quotes",
+    "resize",
+    "right",
+
+    # add missing
+    "src",
+
+    "scroll-behavior",
+    "tab-size",
+    "table-layout",
+    "text-align",
+    "text-align-last",
+    "text-combine-upright",
+    "text-decoration",
+    "text-decoration-color",
+    "text-decoration-line",
+    "text-decoration-style",
+    "text-indent",
+    "text-justify",
+    "text-orientation",
+    "text-overflow",
+    "text-shadow",
+    "text-transform",
+    "text-underline-position",
+    "top",
+    "transform",
+    "transform-origin",
+    "transform-style",
+    "transition",
+    "transition-delay",
+    "transition-duration",
+    "transition-property",
+    "transition-timing-function",
+    "unicode-bidi",
+    "user-select",
+    "vertical-align",
+    "visibility",
+    "white-space",
+    "widows",
+    "width",
+    "word-break",
+    "word-spacing",
+    "word-wrap",
+    "writing-mode",
+    "z-index",
+]
 
 ################################################################################
 # Internal Function
@@ -574,128 +944,6 @@ def isHtmlXmlLanguage(codeStr):
     """
     ValidHtmlMinTagNum = 2
 
-    # HTML Tags Ordered Alphabetically
-    # https://www.w3schools.com/TAGS/default.asp
-    HtmlTagList = [
-        "a",
-        "abbr",
-        "acronym",
-        "address",
-        "applet",
-        "area",
-        "article",
-        "aside",
-        "audio",
-        "b",
-        "base",
-        "basefont",
-        "bdi",
-        "bdo",
-        "big",
-        "blockquote",
-        "body",
-        "br",
-        "button",
-        "canvas",
-        "caption",
-        "center",
-        "cite",
-        "code",
-        "col",
-        "colgroup",
-        "data",
-        "datalist",
-        "dd",
-        "del",
-        "details",
-        "dfn",
-        "dialog",
-        "dir",
-        "div",
-        "dl",
-        "dt",
-        "em",
-        "embed",
-        "fieldset",
-        "figcaption",
-        "figure",
-        "font",
-        "footer",
-        "form",
-        "frame",
-        "frameset",
-        "h1",
-        "head",
-        "header",
-        "hr",
-        "html",
-        "i",
-        "iframe",
-        "img",
-        "input",
-        "ins",
-        "kbd",
-        "label",
-        "legend",
-        "li",
-        "link",
-        "main",
-        "map",
-        "mark",
-        "meta",
-        "meter",
-        "nav",
-        "noframes",
-        "noscript",
-        "object",
-        "ol",
-        "optgroup",
-        "option",
-        "output",
-        "p",
-        "param",
-        "picture",
-        "pre",
-        "progress",
-        "q",
-        "rp",
-        "rt",
-        "ruby",
-        "s",
-        "samp",
-        "script",
-        "section",
-        "select",
-        "small",
-        "source",
-        "span",
-        "strike",
-        "strong",
-        "style",
-        "sub",
-        "summary",
-        "sup",
-        "svg",
-        "table",
-        "tbody",
-        "td",
-        "template",
-        "textarea",
-        "tfoot",
-        "th",
-        "thead",
-        "time",
-        "title",
-        "tr",
-        "track",
-        "tt",
-        "u",
-        "ul",
-        "var",
-        "video",
-        "wbr",
-    ]
-
     isXmlLang = False
     isHtmlLang = False
     isValidLang = False
@@ -759,6 +1007,71 @@ def isHtmlXmlLanguage(codeStr):
 
     # True, 'xml'
     return isValidLang, langName
+
+
+def isCssLanguage(codeStr):
+    """Detect code str is css programming language or not
+
+    Args:
+        codeStr (str): input string of code
+    Returns:
+        True/False(bool)
+    Raises:
+    """
+    ValidCssMinElementKeyNum = 1
+    ValidCssMinPropKeyValueNum = 1
+
+    isCssLang = False
+
+    """
+    button  {
+        background-color: peachpuff;
+        border-radius: 3px;
+        border: 1px solid peachpuff;
+    }
+
+    div.menu-bar li:hover > ul {
+        display: block;
+    }
+    """
+
+    foundWholeCss = re.search("(?P<elementKeyStr>[\w\.\-:\> @]+\s*)\{.+\}?", codeStr, re.S)
+    if foundWholeCss:
+        elementKeyStr = foundWholeCss.group("elementKeyStr")
+        elementKeyList = re.findall("(?P<elementKey>[\w@\-]+)(?:[\.:][\w\-]+)?\s+", elementKeyStr)
+        # print("elementKeyList=%s" % elementKeyList)
+        elementKeyNum = 0
+        for eachElementKey in elementKeyList:
+            isHtmlTag = eachElementKey in HtmlTagList
+            isCssKey = eachElementKey in CssPropertyKeyList
+            isValidElement = isHtmlTag or isCssKey
+            if isValidElement:
+                elementKeyNum += 1
+
+        # print("elementKeyNum=%s" % elementKeyNum)
+        if elementKeyNum >= ValidCssMinElementKeyNum:
+            foundAllPropKeyList = []
+
+            # check property key and value
+            allKeyValueMatchIterator = re.finditer("^\s*(?P<propKey>[\w\-]+):\s*[^;]+;$", codeStr, re.M)
+            allKeyValueMatchList = list(allKeyValueMatchIterator)
+            if allKeyValueMatchList:
+                for eachKeyValueMatch in allKeyValueMatchList:
+                    curPropKey = eachKeyValueMatch.group("propKey")
+                    if curPropKey not in foundAllPropKeyList:
+                        foundAllPropKeyList.append(curPropKey)
+            # print("foundAllPropKeyList=%s" % foundAllPropKeyList)
+
+            validPropKeyValueNum = 0
+            for eachPropKey in foundAllPropKeyList:
+                if eachPropKey in CssPropertyKeyList:
+                    validPropKeyValueNum += 1
+
+            # print("validPropKeyValueNum=%s" % validPropKeyValueNum)
+            if validPropKeyValueNum >= ValidCssMinPropKeyValueNum:
+                isCssLang = True
+
+    return isCssLang
 
 def isJavascriptLanguage(codeStr):
     """Detect code str is javascript/json programming language or not
