@@ -3,12 +3,12 @@
 """
 Filename: crifanString.py
 Function: crifanLib's string related functions
-Version: 20210111
+Version: 20210112
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanString.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210111"
+__version__ = "20210112"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
@@ -1008,7 +1008,6 @@ def isHtmlXmlLanguage(codeStr):
     # True, 'xml'
     return isValidLang, langName
 
-
 def isCssLanguage(codeStr):
     """Detect code str is css programming language or not
 
@@ -1017,27 +1016,39 @@ def isCssLanguage(codeStr):
     Returns:
         True/False(bool)
     Raises:
+    Examples:
+        button  {
+            background-color: peachpuff;
+            border-radius: 3px;
+            border: 1px solid peachpuff;
+        }
+
+        div.menu-bar li:hover > ul {
+            display: block;
+        }
+
+        @font-face {
+            font-family: "Open Sans";
+            src: url("/fonts/OpenSans-Regular-webfont.woff2") format("woff2"),
+                url("/fonts/OpenSans-Regular-webfont.woff") format("woff");
+        }
+
+        class=shortcut-key
+        background-color: #fcfcfc;
+        border-radius: 3px;
+        border: 1px solid #ccc;
     """
-    ValidCssMinElementKeyNum = 1
-    ValidCssMinPropKeyValueNum = 1
+    ValidCssMinElementKeyNumWithBrace = 1
+    ValidCssMinPropKeyValueNumWithBrace = 1
+    ValidCssMinPropKeyValueNumWithoutBrace = 2
 
     isCssLang = False
 
-    """
-    button  {
-        background-color: peachpuff;
-        border-radius: 3px;
-        border: 1px solid peachpuff;
-    }
+    withBraceCssPossibleValid = False
 
-    div.menu-bar li:hover > ul {
-        display: block;
-    }
-    """
-
-    foundWholeCss = re.search("(?P<elementKeyStr>[\w\.\-:\> @]+\s*)\{.+\}?", codeStr, re.S)
-    if foundWholeCss:
-        elementKeyStr = foundWholeCss.group("elementKeyStr")
+    foundWholeBraceCss = re.search("(?P<elementKeyStr>[\w\.\-:\> @]+\s*)\{.+\}?", codeStr, re.S)
+    if foundWholeBraceCss:
+        elementKeyStr = foundWholeBraceCss.group("elementKeyStr")
         elementKeyList = re.findall("(?P<elementKey>[\w@\-]+)(?:[\.:][\w\-]+)?\s+", elementKeyStr)
         # print("elementKeyList=%s" % elementKeyList)
         elementKeyNum = 0
@@ -1049,27 +1060,35 @@ def isCssLanguage(codeStr):
                 elementKeyNum += 1
 
         # print("elementKeyNum=%s" % elementKeyNum)
-        if elementKeyNum >= ValidCssMinElementKeyNum:
-            foundAllPropKeyList = []
+        if elementKeyNum >= ValidCssMinElementKeyNumWithBrace:
+            withBraceCssPossibleValid = True
 
-            # check property key and value
-            allKeyValueMatchIterator = re.finditer("^\s*(?P<propKey>[\w\-]+):\s*[^;]+;$", codeStr, re.M)
-            allKeyValueMatchList = list(allKeyValueMatchIterator)
-            if allKeyValueMatchList:
-                for eachKeyValueMatch in allKeyValueMatchList:
-                    curPropKey = eachKeyValueMatch.group("propKey")
-                    if curPropKey not in foundAllPropKeyList:
-                        foundAllPropKeyList.append(curPropKey)
-            # print("foundAllPropKeyList=%s" % foundAllPropKeyList)
+    foundAllPropKeyList = []
 
-            validPropKeyValueNum = 0
-            for eachPropKey in foundAllPropKeyList:
-                if eachPropKey in CssPropertyKeyList:
-                    validPropKeyValueNum += 1
+    # check property key and value
+    allKeyValueMatchIterator = re.finditer("^\s*(?P<propKey>[\w\-]+):\s*[^;]+;$", codeStr, re.M)
+    allKeyValueMatchList = list(allKeyValueMatchIterator)
+    if allKeyValueMatchList:
+        for eachKeyValueMatch in allKeyValueMatchList:
+            curPropKey = eachKeyValueMatch.group("propKey")
+            if curPropKey not in foundAllPropKeyList:
+                foundAllPropKeyList.append(curPropKey)
+    # print("foundAllPropKeyList=%s" % foundAllPropKeyList)
 
-            # print("validPropKeyValueNum=%s" % validPropKeyValueNum)
-            if validPropKeyValueNum >= ValidCssMinPropKeyValueNum:
-                isCssLang = True
+    validPropKeyValueNum = 0
+    for eachPropKey in foundAllPropKeyList:
+        if eachPropKey in CssPropertyKeyList:
+            validPropKeyValueNum += 1
+
+    # print("validPropKeyValueNum=%s" % validPropKeyValueNum)
+    if withBraceCssPossibleValid:
+        curKeyValueMinValidNum = ValidCssMinPropKeyValueNumWithBrace
+    else:
+        curKeyValueMinValidNum = ValidCssMinPropKeyValueNumWithoutBrace
+
+    # print("curKeyValueMinValidNum=%s" % curKeyValueMinValidNum)
+    if validPropKeyValueNum >= curKeyValueMinValidNum:
+        isCssLang = True
 
     return isCssLang
 
