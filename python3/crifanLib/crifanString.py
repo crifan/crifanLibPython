@@ -18,6 +18,8 @@ import random
 from enum import Enum
 import time
 import uuid
+import codecs
+import binascii
 
 try:
     import chardet
@@ -30,8 +32,6 @@ try:
     import urllib.request as urllib2
 except ImportError:
     import urllib2
-
-import codecs
 
 # from . import crifanMath
 # from . import crifanHttp
@@ -473,7 +473,21 @@ CssPropertyKeyList = [
 # String
 ################################################################################
 
+def bytesToStr(inputBytes, encoding="UTF-8"):
+    """convert binary bytes into str hexadecimal representation
 
+    Args:
+        inputBytes (bytes): bytes
+    Returns:
+        str
+    Examples:
+        input: b'\xdc5]\xa00\xca\xfe\x97m\x81n\x99\xa3+oQ'
+        return: 'dc355da030cafe976d816e99a32b6f51'
+    Raises:
+    """
+    inputHex = binascii.hexlify(inputBytes) # b'dc355da030cafe976d816e99a32b6f51'
+    inputStr = inputHex.decode(encoding) # 'dc355da030cafe976d816e99a32b6f51'
+    return inputStr
 
 def strToList(inputStr, separatorChar=","):
     """
