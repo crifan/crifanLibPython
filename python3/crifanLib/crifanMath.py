@@ -3,15 +3,13 @@
 """
 Filename: crifanMath.py
 Function: crifanLib's math related functions.
-Version: v1.0 20180605
-Note:
-1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython
+Version: 20210112
+Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanMath.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v1.0"
-__copyright__ = "Copyright (c) 2019, Crifan Li"
+__version__ = "20210112"
+__copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
 import re
@@ -133,6 +131,37 @@ def generateMd5(strToMd5) :
     # print("type(encrptedMd5)=%s" % type(encrptedMd5)) # type(encrptedMd5)=<class 'str'>
     # print("encrptedMd5=%s" % encrptedMd5) # encrptedMd5=3a821616bec2e86e3e232d0c7f392cf5
     return encrptedMd5
+
+def calcMd5(inputContent, isRespBytes=False) :
+    """generate md5 string from input content
+
+    Args:
+        inputContent (str/bytes): input content of string or bytes
+        isRespBytes (bool): return bytes, otherwise return string
+    Returns:
+        md5 checksum
+            str:
+                eg: '3110e1e7994dc119ff92439c5758e465'
+            bytes:
+                eg: b'1\x10\xe1\xe7\x99M\xc1\x19\xff\x92C\x9cWX\xe4e'
+    Raises:
+    """
+    md5Value = ""
+    curMd5 = md5()
+
+    inputBytes = ""
+    if isinstance(inputContent, bytes):
+        inputBytes = inputContent
+    elif isinstance(inputContent, str):
+        inputBytes = bytes(inputContent, "UTF-8")
+        # inputBytes = inputContent.encoding("UTF-8")
+
+    curMd5.update(inputBytes)
+    if isRespBytes:
+        md5Value = curMd5.digest()
+    else:
+        md5Value = curMd5.hexdigest()
+    return md5Value
 
 def calcSha256(intputStr):
     """Calculate sha256 value for input string
