@@ -1,6 +1,6 @@
 # Function: Wordpress related functions
 # Author: Crifan Li
-# Update: 20210103
+# Update: 20210112
 # Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanWordpress.py
 
 import logging
@@ -20,6 +20,9 @@ class crifanWordpress(object):
             Tags | REST API Handbook | WordPress Developer Resources
             https://developer.wordpress.org/rest-api/reference/tags/
     """
+
+    # SearchTagPerPage = 10
+    SearchTagPerPage = 100 # large enough to try response all for only sinlge call
 
     ################################################################################
     # Class Method
@@ -212,7 +215,7 @@ class crifanWordpress(object):
         return isCreateOk, respInfo
 
     def searchTaxonomy(self, name, taxonomy):
-        """Search wordpress category/tag
+        """Search wordpress category/post_tag
             return the exactly matched one, name is same, or name lowercase is same
             by call REST api: 
                 GET /wp-json/wp/v2/categories
@@ -220,7 +223,7 @@ class crifanWordpress(object):
 
         Args:
             name (str): category name to search
-            taxonomy (str): taxonomy type: category/tag
+            taxonomy (str): taxonomy type: category/post_tag
         Returns:
             (bool, dict)
                 True, found taxonomy info
@@ -238,6 +241,7 @@ class crifanWordpress(object):
 
         queryParamDict = {
             "search": name, # 'Mac'
+            "per_page": crifanWordpress.SearchTagPerPage,
         }
 
         searchTaxonomyUrl = ""
@@ -265,20 +269,21 @@ class crifanWordpress(object):
         return isSearchOk, finalRespTaxonomy
 
     def getTaxonomyIdList(self, nameList, taxonomy):
-        """convert taxonomy(category/tag) name list to wordpress category/tag id list
+        """convert taxonomy(category/post_tag) name list to wordpress category/post_tag id list
 
         Args:
-            nameList (list): category/tag name list
-            taxonomy (str): the name type: category/tag
+            nameList (list): category/post_tag name list
+            taxonomy (str): the name type: category/post_tag
         Returns:
             taxonomy id list(list)
         Raises:
         """
         taxonomyIdList = []
 
+        totalNum = len(nameList)
         for curIdx, eachTaxonomyName in enumerate(nameList):
             curNum = curIdx + 1
-            logging.info("%s [%d] taxonomy %s %s", "-"*10, curNum, eachTaxonomyName, "-"*10)
+            logging.info("%s taxonomy [%d/%d] %s %s", "-"*10, curNum, totalNum, eachTaxonomyName, "-"*10)
             curTaxonomy = None
 
             isSearhOk, existedTaxonomy = self.searchTaxonomy(eachTaxonomyName, taxonomy)
@@ -343,14 +348,17 @@ class crifanWordpress(object):
         # 'xiaomi sport uses and sets the mi band 4'
         # ->
         # 'xiaomi sport uses sets mi band 4'
-        removeWordList = ["to", "the", "a", "are", "is", "and", "of"]
+        removeWordList = ["to", "the", "a", "are", "is", "and", "of", "in", "at"]
         for eachWord in removeWordList:
             removeInsideP = "\s+%s\s+" % eachWord # '\\s+to\\s+'
             slug = re.sub(removeInsideP, " ", slug, flags=re.I)
             # special: 'the road of water suzhou qingyuan huayan water concerns public number binding door number'
             removeStartP = "^%s\s+" % eachWord
             slug = re.sub(removeStartP, "", slug, flags=re.I)
-            removeEndP = "%s$" % eachWord
+            # Error: slug: Account registration and login in the Android APP of Bank of China -> account_registration_login_in_android_app_bank_chin
+            # removeEndP = "%s$" % eachWord
+            removeEndP = "\s+%s$" % eachWord
+            # 'Account registration and login in the Android APP of Bank of China' -> 'account registration login android app bank china'
             slug = re.sub(removeEndP, "", slug, flags=re.I)
 
         # remove other special char
@@ -616,6 +624,10 @@ class crifanWordpress(object):
                 isOk = True
                 respInfo = respJson
         else:
+            # error example:
+            # resp=<Response [403]> for GET https://www.crifan.com/wp-json/wp/v2/categories with para={'search': '印象笔记'}
+            # ->
+            # {'errCode': 403, 'errMsg': '{"code":"jwt_auth_invalid_token","message":"Expired token","data":{"status":403}}'}
             isOk = False
             # respInfo = resp.status_code, resp.text
             respInfo = {

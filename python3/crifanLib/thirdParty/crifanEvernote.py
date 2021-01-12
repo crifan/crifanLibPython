@@ -1,12 +1,12 @@
 # Function: Evernote related functions
 # Author: Crifan Li
-# Update: 20210103
+# Update: 20210111
 # Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanEvernote.py
 
 import sys
 import re
 import logging
-from bs4 import BeautifulSoup
+# from bs4 import BeautifulSoup
 
 sys.path.append("lib")
 sys.path.append("libs/evernote-sdk-python3/lib")
@@ -25,7 +25,7 @@ from evernote.edam.notestore.NoteStore import *
 from evernote.edam.userstore import *
 
 import evernote.edam.type.ttypes as Types
-import evernote.edam.error.ttypes as EDAMUserException
+from evernote.edam.error.ttypes import EDAMUserException, EDAMNotFoundException
 
 # from evernote.edam.notestore.ttypes import *
 from evernote.edam.notestore.ttypes import NotesMetadataResultSpec
@@ -47,20 +47,89 @@ from evernote.edam.userstore.constants import EDAM_VERSION_MAJOR, EDAM_VERSION_M
 class crifanEvernote(object):
     """Operate Evernote Yinxiang note via python
 
-        首页
-        http://sandbox.yinxiang.com
+        (0) most refer
+            Thrift module: NoteStore
+            https://dev.evernote.com/doc/reference/NoteStore.html
 
-        登录
-        https://sandbox.yinxiang.com/Login.action?offer=www_menu
+            Evernote API: All declarations
+            https://dev.yinxiang.com/doc/reference/
 
-        Web版 主页
-        https://sandbox.yinxiang.com/Home.action?_sourcePage=q4oOUtrE7iDiMUD9T65RG_YvRLZ-1eYO3fqfqRu0fynRL_1nukNa4gH1t86pc1SP&__fp=RRdnsZFJxJY3yWPvuidLz-TPR6I9Jhx8&hpts=1576292029828&showSwitchService=true&usernameImmutable=false&login=&login=登录&login=true&username=green-waste%40163.com&hptsh=10h%2BVHVzIGiSBhmRcxjMg47ZqdQ%3D#n=5b863474-107d-43e0-8087-b566329b24ab&s=s1&ses=4&sh=2&sds=5&
+            Evernote API: Module: Types
+            https://dev.yinxiang.com/doc/reference/Types.html
 
-        获取token
-        https://sandbox.yinxiang.com/api/DeveloperToken.action
-        ->
-        NoteStore URL: https://sandbox.yinxiang.com/shard/s1/notestore
+        (1) get token
+
+            Developer Tokens - 印象笔记开发者
+            https://dev.yinxiang.com/doc/articles/dev_tokens.php
+
+            首页
+            http://sandbox.yinxiang.com
+
+            登录
+            https://sandbox.yinxiang.com/Login.action?offer=www_menu
+
+            Web版 主页
+            https://sandbox.yinxiang.com/Home.action?_sourcePage=q4oOUtrE7iDiMUD9T65RG_YvRLZ-1eYO3fqfqRu0fynRL_1nukNa4gH1t86pc1SP&__fp=RRdnsZFJxJY3yWPvuidLz-TPR6I9Jhx8&hpts=1576292029828&showSwitchService=true&usernameImmutable=false&login=&login=登录&login=true&username=green-waste%40163.com&hptsh=10h%2BVHVzIGiSBhmRcxjMg47ZqdQ%3D#n=5b863474-107d-43e0-8087-b566329b24ab&s=s1&ses=4&sh=2&sds=5&
+
+            获取token
+            https://sandbox.yinxiang.com/api/DeveloperToken.action
+            ->
+            NoteStore URL: https://sandbox.yinxiang.com/shard/s1/notestore
+
+        (2) official doc
+
+            yinxiang:
+                核心概念 - 印象笔记开发者
+                https://dev.yinxiang.com/doc/articles/core_concepts.php
+
+                数据模型 - 印象笔记开发者
+                https://dev.yinxiang.com/doc/articles/data_structure.php
+
+                错误处理 - 印象笔记开发者
+                https://dev.yinxiang.com/doc/articles/error_handling.php
+
+                在沙盒中做测试 - 印象笔记开发者
+                https://dev.yinxiang.com/doc/articles/testing.php
+
+                API 调用频率限制 - 印象笔记开发者
+                https://dev.yinxiang.com/doc/articles/rate_limits.php
+
+                文档 - 印象笔记开发者
+                https://dev.yinxiang.com/doc/#reference
+
+                印象笔记云 API — Python 快速入门指南 - 印象笔记开发者
+                https://dev.yinxiang.com/doc/start/python.php
+
+                创建笔记 - 印象笔记开发者
+                https://dev.yinxiang.com/doc/articles/creating_notes.php
+
+                资源 - 印象笔记开发者
+                https://dev.yinxiang.com/doc/articles/resources.php
+
+                术语表 - 印象笔记开发者
+                https://dev.yinxiang.com/support/glossary.php
+
+                开发规范和建议 - 印象笔记开发者
+                https://dev.yinxiang.com/trunk/guideline.php#sourceURL
+
+        (3) official github
+            evernote:
+                evernote/evernote-sdk-python: Evernote SDK for Python
+                https://github.com/evernote/evernote-sdk-python
+
+                evernote/evernote-sdk-python3: Testing the Evernote Cloud API for Python 3
+                https://github.com/evernote/evernote-sdk-python3
+            
+            yinxiang:
+                yinxiang-dev/evernote-sdk-python: Evernote SDK for Python
+                https://github.com/yinxiang-dev/evernote-sdk-python
+
+                yinxiang-dev/evernote-sdk-python3: Testing the Evernote Cloud API for Python 3
+                https://github.com/yinxiang-dev/evernote-sdk-python3
     """
+
+    XmlHeader = """<?xml version="1.0" encoding="UTF-8"?>"""
+    DoctypeEnNote = """<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">"""
 
     ################################################################################
     # Class Method
@@ -107,12 +176,17 @@ class crifanEvernote(object):
         return client
 
     def listNotebooks(self):
-        """List notebook list"""
+        """Get all notebook
+        
+        Args:
+        Returns:
+        Raises:
+        """
         notebookList = self.noteStore.listNotebooks()
         return notebookList
 
     def findNotes(self, notebookId):
-        """Fina all note of notebook
+        """Fina all notes of a notebook
 
         Args:
             notebookId (str): notebook id
@@ -160,9 +234,40 @@ class crifanEvernote(object):
         logging.info("Total %d notes for notebook of guid=%s", totalNotes, notebookId)
         foundNoteList = foundNoteResult.notes
         return foundNoteList
+    
+    def createNote(self, noteTitle, noteBody="", notebookId=None):
+        """get note detail
+
+        Args:
+            noteTitle (str): note title
+            noteContent (str): note content
+            notebookId (str): parent notebook id, detault: None
+        Returns:
+            note
+        Raises:
+        Examples:
+        """
+        createdNote = None
+
+        noteContent = "%s%s<en-note>%s</en-note>" % (crifanEvernote.XmlHeader, crifanEvernote.DoctypeEnNote, noteBody)
+        # '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note></en-note>'
+        newNote = Types.Note()
+        newNote.title = noteTitle
+        newNote.content = noteContent
+        if notebookId:
+            newNote.notebookGuid = notebookId
+
+        try:
+            createdNote = self.noteStore.createNote(self.authToken, newNote)
+        except EDAMUserException as userErr:
+            logging.error("Fail to create new note for user error %s", userErr)
+        except  EDAMNotFoundException as notFoundErr:
+            logging.error("Fail to create new note for not found error %s", notFoundErr)
+
+        return createdNote
 
     def getNoteDetail(self, noteId):
-        """get note detail
+        """Get note detail
 
         Args:
             noteId (str): Evernote note id
@@ -547,7 +652,8 @@ class crifanEvernote(object):
         # Special:
         # '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">\n<en-note>
         # -> remove: <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-        noteHtml = re.sub('<\?xml version="1.0" encoding="UTF-8" standalone="no"\?>\s*', "", noteContent)
+        # noteHtml = re.sub('<\?xml version="1.0" encoding="UTF-8" standalone="no"\?>\s*', "", noteContent)
+        noteHtml = re.sub('<\?xml version="1.0" encoding="UTF-8"(\s+standalone="no")?\?>\s*', "", noteContent)
 
         # remove fisrt line
         # <!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">
@@ -561,7 +667,12 @@ class crifanEvernote(object):
         else:
             # convert <en-note>...</en-note> to ...
             replacedP = "\g<contentBody>"
-        noteHtml = re.sub('<en-note>(?P<contentBody>.+)</en-note>', replacedP, noteHtml, flags=re.S)
+        # noteHtml = re.sub('<en-note>(?P<contentBody>.+)</en-note>', replacedP, noteHtml, flags=re.S)
+        withEnNoteHtml = noteHtml
+        withoutEnNoteHtml = re.sub('<en-note>(?P<contentBody>.*)</en-note>', replacedP, withEnNoteHtml, flags=re.S)
+        if withoutEnNoteHtml == withEnNoteHtml:
+            logging.warning("Maybe en-note remove not work for %s", withEnNoteHtml)
+        noteHtml = withoutEnNoteHtml
 
         noteHtml = noteHtml.strip()
         return noteHtml
@@ -626,7 +737,8 @@ class crifanEvernote(object):
 
         # add first line
         # <!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">
-        noteContent = '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">\n' + noteContent
+        # noteContent = '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">\n' + noteContent
+        noteContent = "%s\n%s" % (crifanEvernote.DoctypeEnNote, noteContent)
 
         return noteContent
 
