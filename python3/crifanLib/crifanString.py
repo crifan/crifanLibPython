@@ -3,7 +3,7 @@
 """
 Filename: crifanString.py
 Function: crifanLib's string related functions
-Version: 20210112
+Version: 20210113
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanString.py
 """
 
@@ -1126,18 +1126,34 @@ def isJavascriptLanguage(codeStr):
             "id": 70410,
             ...
     """
-    isMatchJson = re.match("^\{.+\}?$", codeStr, re.S)
+    # isMatchJson = re.match("^\{.+\}?$", codeStr, re.S)
+    """
+        option = {
+            title: {
+                text: '矿泉水成本占比图 总价1.5元',
+                subtext: '',
+                left: 'center'
+            },
+            ...
+        };
+    """
+    # isMatchJson = re.match("\{.+\}?", codeStr, re.S)
+    isMatchJson = re.search("\{.+\}?", codeStr, re.S)
     if not isMatchJson:
         # or is [xxx]
         # isMatchJson = re.match("^\[.+\]$", codeStr, re.S)
-        isMatchJson = re.match("^\[.+\]?$", codeStr, re.S)
+        # isMatchJson = re.match("^\[.+\]?$", codeStr, re.S)
+        # isMatchJson = re.match("\[.+\]?", codeStr, re.S)
+        isMatchJson = re.search("\[.+\]?", codeStr, re.S)
 
     if isMatchJson:
         keyValueLineNum = 0
         allKeyValueList = []
-        allDoubleQuoteKeyValueLine = re.findall('"\w+"\s*:\s*"?[^"]+"?,?$', codeStr, re.M)
+        # allDoubleQuoteKeyValueLine = re.findall('"\w+"\s*:\s*"?[^"]+"?,?$', codeStr, re.M)
+        allDoubleQuoteKeyValueLine = re.findall('"?\w+"?\s*:\s*"?[^"]+"?,?$', codeStr, re.M)
         allKeyValueList.extend(allDoubleQuoteKeyValueLine)
-        allSingleQuoteKeyValueLine = re.findall("'\w+'\s*:\s*'?[^']+'?,?$", codeStr, re.M)
+        # allSingleQuoteKeyValueLine = re.findall("'\w+'\s*:\s*'?[^']+'?,?$", codeStr, re.M)
+        allSingleQuoteKeyValueLine = re.findall("'?\w+'?\s*:\s*'?[^']+'?,?$", codeStr, re.M)
         allKeyValueList.extend(allSingleQuoteKeyValueLine)
         keyValueLineNum = len(allKeyValueList)
 
