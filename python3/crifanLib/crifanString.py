@@ -3,7 +3,7 @@
 """
 Filename: crifanString.py
 Function: crifanLib's string related functions
-Version: 20210113
+Version: 20210114
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanString.py
 """
 
@@ -32,6 +32,16 @@ try:
     import urllib.request as urllib2
 except ImportError:
     import urllib2
+
+try:
+    # print("Importing jieba")
+    import jieba
+    # print("Imported jieba")
+    print("Importing jieba.analyse")
+    import jieba.analyse
+    print("Imported jieba.analyse")
+except ImportError:
+    print("crifanString: Can not found lib jieba")
 
 # from . import crifanMath
 # from . import crifanHttp
@@ -1341,6 +1351,49 @@ def detectProgramLanguage(codeSnippet):
         curLang = DefaultLang
 
     return curLang
+
+
+#----------------------------------------
+# Jieba
+#----------------------------------------
+
+def extractTags(curStr, topK=10, withWeight=False, allowPOS=()):
+    """Extract tags from string
+
+    Args:
+        curStr (str): input string
+        topK (int): number of top keywords to return
+        withWeight (bool): return weight or not
+        allowPOS (tuple): allow POS. default to empty to allow all
+    Returns:
+        tag list(list)
+    Raises:
+    Examples:
+        ['微信', '夜神', '登录', '版本', '模拟器', '安装', '下载', '无法', '游戏', '论坛']
+        [('夜神', 0.5645306876369445), ('微信', 0.5313230001288889), ('模拟器', 0.4876438781083333), ('安卓', 0.39849225009666667), ('4.4', 0.39849225009666667), ('版本', 0.2737839555471944), ('Mac', 0.26566150006444444), ('多开', 0.2556173862044444), ('mac', 0.2324538125563889), ('登录', 0.2301085153975)]
+    """
+
+    # segmentGenerator = jieba.cut_for_search(curStr) # 搜索引擎模式
+    # segmentList = list(segmentGenerator)
+    # logging.info("segmentList=%s", segmentList)
+    # topTagList = jieba.analyse.extract_tags(curStr, topK=topK, withWeight=withWeight)
+    # topTagList=[('夜神', 0.5645306876369445), ('微信', 0.5313230001288889), ('模拟器', 0.4876438781083333), ('安卓', 0.39849225009666667), ('4.4', 0.39849225009666667), ('版本', 0.2737839555471944), ('Mac', 0.26566150006444444), ('多开', 0.2556173862044444), ('mac', 0.2324538125563889), ('登录', 0.2301085153975)]
+    # topTagList = jieba.analyse.textrank(curStr, topK=topK, withWeight=withWeight, allowPOS=('ns', 'n', 'vn', 'v')) 
+    # topTagList=['微信', '夜神', '登录', '版本', '模拟器', '安装', '下载', '无法', '游戏', '论坛']
+    # POS can refer: "paddle模式词性标注对应表" in https://github.com/fxsjy/jieba
+    # curPOS = (
+    #     "n", "f", "s",
+    #     "t",
+    #     "nr", "ns", "nt", "nw", "nz", "v", "vd", "vn", "a", "ad", "an", "d",
+    #     "m", "q", "r",
+    #     "p", "c", "u", "xc",
+    #     "w",
+    #     "PER", "LOC", "ORG",
+    #     "TIME",
+    # )
+    # topTagList = jieba.analyse.extract_tags(curStr, topK=topK, withWeight=withWeight, allowPOS=allowPOS)
+    topTagList = jieba.analyse.extract_tags(curStr, topK=topK, withWeight=withWeight, allowPOS=allowPOS)
+    return topTagList
 
 ################################################################################
 # Test

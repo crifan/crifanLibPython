@@ -3,13 +3,13 @@
 """
 Filename: crifanAndroid.py
 Function: crifanLib's Android related functions
-Version: 20201218
-Latest: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanAndroid.py
+Version: 20210114
+Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanAndroid.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20201218"
-__copyright__ = "Copyright (c) 2020, Crifan Li"
+__version__ = "20210114"
+__copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
 import re
