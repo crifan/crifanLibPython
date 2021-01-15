@@ -1,6 +1,6 @@
 # Function: Evernote related functions
 # Author: Crifan Li
-# Update: 20210111
+# Update: 20210114
 # Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanEvernote.py
 
 import sys
@@ -298,6 +298,7 @@ class crifanEvernote(object):
             newContent=None,
             newResList=None,
             newAttributes=None,
+            newTagGuidList=None,
         ):
         """Update note with new content and/or new resource list
 
@@ -308,6 +309,7 @@ class crifanEvernote(object):
             newContent (str): new Note content
             newResList (list): new Note resource list
             newAttributes (list): new attribute list
+            newTagGuidList (list): new tag list
         Returns:
             synchronized note
         Raises:
@@ -331,6 +333,9 @@ class crifanEvernote(object):
         if newAttributes:
             newNote.attributes = newAttributes
 
+        if newTagGuidList:
+            newNote.tagGuids = newTagGuidList
+
         # updatedNote = self.noteStore.syncNote(newNote)
         updatedNote = self.noteStore.updateNote(newNote)
         return updatedNote
@@ -340,7 +345,7 @@ class crifanEvernote(object):
 
         Args:
             curNote (Note): Evernote Note
-            newNotebookGuid (ste): new Notebook guid
+            newNotebookGuid (str): new Notebook guid
         Returns:
             moved ok (bool)
         Raises:
@@ -370,6 +375,9 @@ class crifanEvernote(object):
     def getTagNameList(self, curNote):
         """get note tag name list
 
+            TODO: can change/update to getNoteTagNames ?
+                https://dev.evernote.com/doc/reference/NoteStore.html#Fn_NoteStore_getNoteTagNames
+
         Args:
             curNote (Note): Evernote Note
         Returns:
@@ -388,11 +396,96 @@ class crifanEvernote(object):
                 curTagStr = tagInfo.name
                 curTagList.append(curTagStr)
         else:
-            logging.warning("No tags for note %s", curNote.title)
+            logging.debug("No tags for note %s", curNote.title)
 
-        logging.info("curTagList=%s", curTagList)
+        logging.debug("curTagList=%s", curTagList)
         # curTagList=['Mac', '切换', 'GPU', 'pmset', '显卡模式']
         return curTagList
+
+    def listTags(self):
+        """Get all tags
+        
+        Args:
+        Returns:
+        Raises:
+        """
+        tagList = self.noteStore.listTags()
+        return tagList
+
+    def findTag(self, tagName):
+        """Find existed tag from tag name
+
+        Args:
+            tagName (str): tag name
+        Returns:
+            Tag or None
+        Raises:
+        Examples:
+            '微信' -> Tag(guid='fdb373fa-8382-48da-96d4-6d8111ec32f5', name='微信', parentGuid=None, updateSequenceNum=218537)
+        """
+        existedTag = None
+        tagNameLowecase = tagName.lower() # '夜神'
+        allTagList = self.listTags()
+        for eachTag in allTagList:
+            eachTagName = eachTag.name
+            eachTagNameLower = eachTagName.lower()
+            if tagNameLowecase == eachTagNameLower:
+                existedTag = eachTag
+                break
+        return existedTag
+
+    def createTag(self, tagName):
+        """Create new tag from tag name
+
+        Args:
+            tagName (str): tag name
+        Returns:
+            Tag
+        Raises:
+        Examples:
+            '夜神' -> Tag(guid='209e70eb-34a7-44c9-9f6d-ddd4da91054b', name='夜神', parentGuid=None, updateSequenceNum=5781064)
+        """
+        existedTag = self.findTag(tagName)
+        if existedTag:
+            return existedTag
+
+        newTag = Types.Tag()
+        newTag.name = tagName
+        createdTag = self.noteStore.createTag(newTag)
+        return createdTag
+
+    def updateTags(self, curNote, tagNameList):
+        """Update Note tags from tag name list
+
+        Args:
+            curNote (Note): Evernote Note
+            tagNameList (list): tag name list
+        Returns:
+            updated Note
+        Raises:
+        """
+        tagGuidList = []
+        for eachTagName in tagNameList:
+            createdTag = self.createTag(eachTagName)
+            createdTagGuid = createdTag.guid
+            tagGuidList.append(createdTagGuid)
+        
+        logging.info("tagNameList=%s -> tagGuidList=%s", tagNameList, tagGuidList)
+        # tagNameList=['夜神', '微信', '模拟器', '安卓'] -> tagGuidList=['209e70eb-34a7-44c9-9f6d-ddd4da91054b', 'fdb373fa-8382-48da-96d4-6d8111ec32f5', 'abf548e2-c110-4b92-b1fb-84d5c2052aa3', 'f9ea2006-dba8-41de-8f57-0f0f0fac6a32']
+
+        # Sync to Evernote
+        syncParamDict = {
+            # mandatory
+            "noteGuid": curNote.guid,
+            "noteTitle": curNote.title,
+            # optional
+            "newTagGuidList": tagGuidList,
+        }
+
+        respNote = self.syncNote(**syncParamDict)
+        logging.debug("respNote=%s", respNote)
+
+        return respNote
 
     ################################################################################
     # Static Method
@@ -782,3 +875,98 @@ class crifanEvernote(object):
         """
         noteHtml = re.sub("(?P<enMedia><en-media\s+[^<>]+)>\s*</en-media>", "\g<enMedia> />", noteHtml, flags=re.S)
         return noteHtml
+
+    @staticmethod
+    def generateTags(curNote, maxTagNum=6):
+        """Generate tags from note (title and content)
+
+        Args:
+            curNote (Note): evernote Note
+            maxTagNum (int): max number of tags
+        Returns:
+            tag list(list)
+        Raises:
+        Examples:
+            ['模拟器', 'Charles', '安卓']
+            ['MuMu', '安卓', '网易', '安装', 'JustTrustMe', 'Mac']
+        """
+        # generate tags from content if no tags
+        curNoteTitle = curNote.title
+        logging.debug("curNoteTitle=%s", curNoteTitle)
+        # remove 【未解决】 【已解决】 【记录】 【无需解决】
+        titleStr = re.sub("^【\S{2,5}】(?P<titleStr>.+)", "\g<titleStr>", curNoteTitle)
+        # '【未解决】夜神安卓模拟器安装新版微信并正常打开和使用微信' -> '夜神安卓模拟器安装新版微信并正常打开和使用微信'
+        logging.debug("titleStr=%s", titleStr)
+        # titleTagList = utils.extractTags(titleStr, withWeight=True)
+        titleTagList = utils.extractTags(titleStr)
+        logging.debug("titleTagList=%s", titleTagList)
+
+        noteSoup = crifanEvernote.noteContentToSoup(curNote)
+        noteContentStr = utils.getAllContents(noteSoup, isStripped=True)
+        # contentTagList = utils.extractTags(noteContentStr, withWeight=True)
+        contentTagList = utils.extractTags(noteContentStr)
+        logging.debug("contentTagList=%s", contentTagList)
+
+        # merge title and content tags for same one
+        mergedTagList = []
+        for eachContentTag in contentTagList:
+            for eachTitleTag in titleTagList:
+                if eachContentTag in eachTitleTag:
+                    if eachContentTag not in mergedTagList:
+                        mergedTagList.append(eachContentTag)
+                    break
+        logging.debug("mergedTagList=%s", mergedTagList)
+
+        # after merge, if too little tags, then add some from content tags
+        MinSameTagNum = 3
+        mergedTagNum = len(mergedTagList)
+        # if mergedTagNum <= MinSameTagNum:
+        if mergedTagNum < MinSameTagNum:
+            for eachContentTag in contentTagList:
+                if eachContentTag not in mergedTagList:
+                    mergedTagList.append(eachContentTag)
+                    # if len(mergedTagList) >= maxTagNum:
+                    #     break
+
+            for eachTitleTag in titleTagList:
+                if eachTitleTag not in mergedTagList:
+                    mergedTagList.append(eachTitleTag)
+
+        # filter out invalid tags
+        validTagList = []
+        InvalidTagRuleList = [
+            "^\d+([\d\.]+)?$",
+            "^解决$",
+            "^com$",
+            "^crifan$",
+            "^drwx$",
+            "^drwxr$",
+            "^mnt$",
+            "^Users?$",
+            "^share$",
+            "^shared$",
+            "^staff$",
+            "^xr$",
+        ]
+        for eachTag in mergedTagList:
+            isTagValid = True
+            for eachInvalidRule in InvalidTagRuleList:
+                isInvalid = re.search(eachInvalidRule, eachTag, re.I)
+                if isInvalid:
+                    logging.warning("Omit invalid tag %s for rule %s", eachTag, eachInvalidRule)
+
+                    isTagValid = False
+                    break
+
+            if isTagValid:
+                if eachTag not in validTagList:
+                    validTagList.append(eachTag)
+
+        logging.debug("validTagList=%s", validTagList)
+
+        validTagNum = len(validTagList)
+        if validTagNum > maxTagNum:
+            validTagList = validTagList[0:maxTagNum]
+        logging.debug("validTagList=%s", validTagList)
+
+        return validTagList
