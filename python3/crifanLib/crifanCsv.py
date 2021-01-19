@@ -3,13 +3,13 @@
 """
 Filename: crifanCsv.py
 Function: crifanLib's csv related functions.
-Version: 20201222
-Latest: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanCsv.py
+Version: 20210119
+Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanCsv.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20201222"
-__copyright__ = "Copyright (c) 2020, Crifan Li"
+__version__ = "20210119"
+__copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
 
@@ -39,12 +39,12 @@ CURRENT_LIB_FILENAME = "crifanCsv"
 # Cookie Function
 ################################################################################
 
-def loadCsvFromFile(csvFilePath, fileEncoding="utf-8", isReturnDictList=True):
+def loadCsvFromFile(csvFilePath, fileEncoding="utf-8-sig", isReturnDictList=True):
     """read data from csv file
 
     Args:
         csvFilePath (str): full csv file path
-        fileEncoding (str): file encoding, default to 'utf-8'
+        fileEncoding (str): file encoding, default to 'utf-8-sig'. utf-8-sig can auto remove '\ufeff' if present
         isReturnDictList (bool): return data is row dict list or tuple(header list, row list list)
     Returns:
         isReturnDictList=True  -> csv row dict list
