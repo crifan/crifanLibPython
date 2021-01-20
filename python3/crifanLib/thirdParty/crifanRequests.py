@@ -274,7 +274,6 @@ def isAndroidApkUrl(curApkUrl, proxies=None):
                         #     if eachDebuged in redirectedRealUrl:
                         #         isDebugged = True
                         #         break
-                        
                         # isNotDebuged = not isDebugged
                         # if isNotDebuged:
                         #     logging.info("Not debugged: %s", redirectedRealUrl)
@@ -294,9 +293,12 @@ def isAndroidApkUrl(curApkUrl, proxies=None):
                             errMsg = ""
                         else:
                             isValidApkUrl = False
-                            errMsg = "Content Type is octet-stream but no .apk in redirected url %s" % curApkUrl
+                            errMsg = "Content Type is octet-stream but no .apk or download in redirected url %s" % curApkUrl
                             # 'Content Type is octet-stream but no .apk in redirected url https://appdl-1-drcn.dbankcdn.com/dl/appdl/application/apk/db/dbd3fbf4bb7c4e199e27169b83054afd/com.zsbf.rxsc.2010151906.rpk?sign=f9001091ej1001042000000000000100000000000500100101010@21BD93C47A224B178DE4FCDEAC296E3F&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100450321&hcrId=21BD93C47A224B178DE4FCDEAC296E3F&maple=0&distOpEntity=HWSW'
                             # 
+            # else:
+            #     # for debug
+            #     logging.warning("not expected content type: %s", contentTypeStr)
     else:
         isValidApkUrl = False
         errMsg = "Failed to get content type for url %s" % curApkUrl
