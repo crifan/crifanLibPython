@@ -199,8 +199,13 @@ def isAndroidApkUrl(curApkUrl, proxies=None):
         input: https://appdlc-drcn.hispace.hicloud.com/dl/appdl/application/apk/db/dbd3fbf4bb7c4e199e27169b83054afd/com.zsbf.rxsc.2010151906.rpk?sign=f9001091ej1001042000000000000100000000000500100101010@21BD93C47A224B178DE4FCDEAC296E3F&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100450321&hcrId=21BD93C47A224B178DE4FCDEAC296E3F&maple=0&distOpEntity=HWSW
         output: False, 'Content Type is octet-stream but no .apk in url https://appdlc-drcn.hispace.hicloud.com/dl/appdl/application/apk/db/dbd3fbf4bb7c4e199e27169b83054afd/com.zsbf.rxsc.2010151906.rpk?sign=f9001091ej1001042000000000000100000000000500100101010@21BD93C47A224B178DE4FCDEAC296E3F&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100450321&hcrId=21BD93C47A224B178DE4FCDEAC296E3F&maple=0&distOpEntity=HWSW'
 
+        case application/zip:
         input: https://api-game.meizu.com/games/public/download/redirect/url?auth_time=43200&package_name=com.popcap.pvz2cthdamz&source=0&timestamp=1611106470321&type=2&sign=e53a406706f7f7074469fd1816ce7209&fname=com.popcap.pvz2cthdamz_1040
         output: True, 409527195
+
+        case octet-stream, but url contain download:
+        input: https://api-game.meizu.com/games/public/download/redirect/url?auth_time=43200&package_name=com.hirealgame.hswsw.mz&source=0&timestamp=1611106503304&type=2&sign=fce0aeff829a8b4c4f493f2e86c9e35b&fname=com.hirealgame.hswsw.mz_402
+        output: True, 131942209
     """
     isAllValid = False
     errMsg = "Unknown"
@@ -232,12 +237,15 @@ def isAndroidApkUrl(curApkUrl, proxies=None):
 
         # continue to check other possibility
         if not isValidApkUrl:
-            # 'https://appdlc-drcn.hispace.hicloud.com/dl/appdl/application/apk/47/4795a70deeac4103a8e6182b257ec4a9/com.shenghe.wzcq.huawei.2012221953.apk?sign=f9001091ej1001032000000000000100000000000500100101010@CC0A6D3E117D430483B55B08162FB0F4&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100005003&hcrId=CC0A6D3E117D430483B55B08162FB0F4&maple=0&distOpEntity=HWSW'
             # "Content-Type": "application/octet-stream",
             isOctetStreamType = "octet-stream" in contentTypeStr # True
             if isOctetStreamType:
+                # 'https://appdlc-drcn.hispace.hicloud.com/dl/appdl/application/apk/47/4795a70deeac4103a8e6182b257ec4a9/com.shenghe.wzcq.huawei.2012221953.apk?sign=f9001091ej1001032000000000000100000000000500100101010@CC0A6D3E117D430483B55B08162FB0F4&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100005003&hcrId=CC0A6D3E117D430483B55B08162FB0F4&maple=0&distOpEntity=HWSW'
                 foundApkInUrl = re.search("[^/]+\.apk", curApkUrl, re.I) # <re.Match object; span=(101, 142), match='com.tanwan.yscqlyzf.huawei.2012141704.apk'>
-                isApkInUrl = bool(foundApkInUrl) # True
+                # isApkInUrl = bool(foundApkInUrl) # True
+                # 'https://api-game.meizu.com/games/public/download/redirect/url?auth_time=43200&package_name=com.hirealgame.hswsw.mz&source=0&timestamp=1611106503304&type=2&sign=fce0aeff829a8b4c4f493f2e86c9e35b&fname=com.hirealgame.hswsw.mz_402'
+                foundDownloadInUrl = re.search("download", curApkUrl, re.I) # <re.Match object; span=(40, 48), match='download'>
+                isApkInUrl = foundApkInUrl or foundDownloadInUrl
                 if isApkInUrl:
                     isValidApkUrl = True
                     errMsg = ""
@@ -255,21 +263,21 @@ def isAndroidApkUrl(curApkUrl, proxies=None):
                         # 'https://appdl-1-drcn.dbankcdn.com/dl/appdl/application/apk/db/dbd3fbf4bb7c4e199e27169b83054afd/com.zsbf.rxsc.2010151906.rpk?sign=f9001091ej1001042000000000000100000000000500100101010@21BD93C47A224B178DE4FCDEAC296E3F&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100450321&hcrId=21BD93C47A224B178DE4FCDEAC296E3F&maple=0&distOpEntity=HWSW'
                         # but still invalid
 
-                        # for debug
-                        AllDebugedList = [
-                            "dbankcdn.com",
-                            "vivo.com.cn",
-                            "xiaomi.com",
-                        ]
-                        isDebugged = False
-                        for eachDebuged in AllDebugedList:
-                            if eachDebuged in redirectedRealUrl:
-                                isDebugged = True
-                                break
+                        # # for debug
+                        # AllDebugedList = [
+                        #     "dbankcdn.com",
+                        #     "vivo.com.cn",
+                        #     "xiaomi.com",
+                        # ]
+                        # isDebugged = False
+                        # for eachDebuged in AllDebugedList:
+                        #     if eachDebuged in redirectedRealUrl:
+                        #         isDebugged = True
+                        #         break
                         
-                        isNotDebuged = not isDebugged
-                        if isNotDebuged:
-                            logging.info("Not debugged: %s", redirectedRealUrl)
+                        # isNotDebuged = not isDebugged
+                        # if isNotDebuged:
+                        #     logging.info("Not debugged: %s", redirectedRealUrl)
 
                         curApkUrl = redirectedRealUrl
                         # Normal Expected:
