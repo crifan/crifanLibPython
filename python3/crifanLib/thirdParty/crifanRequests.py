@@ -3,7 +3,7 @@
 """
 Filename: crifanRequests.py
 Function: crifanLib's Requests related functions
-Version: 20201225
+Version: 20210120
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanRequests.py
 """
 
@@ -198,6 +198,9 @@ def isAndroidApkUrl(curApkUrl, proxies=None):
 
         input: https://appdlc-drcn.hispace.hicloud.com/dl/appdl/application/apk/db/dbd3fbf4bb7c4e199e27169b83054afd/com.zsbf.rxsc.2010151906.rpk?sign=f9001091ej1001042000000000000100000000000500100101010@21BD93C47A224B178DE4FCDEAC296E3F&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100450321&hcrId=21BD93C47A224B178DE4FCDEAC296E3F&maple=0&distOpEntity=HWSW
         output: False, 'Content Type is octet-stream but no .apk in url https://appdlc-drcn.hispace.hicloud.com/dl/appdl/application/apk/db/dbd3fbf4bb7c4e199e27169b83054afd/com.zsbf.rxsc.2010151906.rpk?sign=f9001091ej1001042000000000000100000000000500100101010@21BD93C47A224B178DE4FCDEAC296E3F&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100450321&hcrId=21BD93C47A224B178DE4FCDEAC296E3F&maple=0&distOpEntity=HWSW'
+
+        input: https://api-game.meizu.com/games/public/download/redirect/url?auth_time=43200&package_name=com.popcap.pvz2cthdamz&source=0&timestamp=1611106470321&type=2&sign=e53a406706f7f7074469fd1816ce7209&fname=com.popcap.pvz2cthdamz_1040
+        output: True, 409527195
     """
     isAllValid = False
     errMsg = "Unknown"
@@ -214,7 +217,11 @@ def isAndroidApkUrl(curApkUrl, proxies=None):
         # isAndroidType = contentTypeStr == ContentType_Android
         # isValidApkUrl = "android" in contentTypeStr
         foundApplicationAndroid = re.search("application/.*android", contentTypeStr, re.I)
-        isAndroidType = bool(foundApplicationAndroid)
+
+        # 'application/zip'
+        foundApplicationZip = re.search("application/zip", contentTypeStr, re.I)
+
+        isAndroidType = foundApplicationAndroid or foundApplicationZip
 
         if isAndroidType:
             isValidApkUrl = True
@@ -247,6 +254,22 @@ def isAndroidApkUrl(curApkUrl, proxies=None):
                         # ->
                         # 'https://appdl-1-drcn.dbankcdn.com/dl/appdl/application/apk/db/dbd3fbf4bb7c4e199e27169b83054afd/com.zsbf.rxsc.2010151906.rpk?sign=f9001091ej1001042000000000000100000000000500100101010@21BD93C47A224B178DE4FCDEAC296E3F&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100450321&hcrId=21BD93C47A224B178DE4FCDEAC296E3F&maple=0&distOpEntity=HWSW'
                         # but still invalid
+
+                        # for debug
+                        AllDebugedList = [
+                            "dbankcdn.com",
+                            "vivo.com.cn",
+                            "xiaomi.com",
+                        ]
+                        isDebugged = False
+                        for eachDebuged in AllDebugedList:
+                            if eachDebuged in redirectedRealUrl:
+                                isDebugged = True
+                                break
+                        
+                        isNotDebuged = not isDebugged
+                        if isNotDebuged:
+                            logging.info("Not debugged: %s", redirectedRealUrl)
 
                         curApkUrl = redirectedRealUrl
                         # Normal Expected:
@@ -287,7 +310,6 @@ def isAndroidApkUrl(curApkUrl, proxies=None):
         return isAllValid, apkFileSize
     else:
         return isAllValid, errMsg
-
 
 def streamingDownloadFile(
         url,
