@@ -3,13 +3,13 @@
 """
 Filename: crifanRequests.py
 Function: crifanLib's Requests related functions
-Version: 20210120
+Version: 20210129
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanRequests.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20201211"
-__copyright__ = "Copyright (c) 2020, Crifan Li"
+__version__ = "20210129"
+__copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
 import os
@@ -148,7 +148,13 @@ def getContentTypeFromHeaders(respHeaderDict):
     contentTypeStr = None
 
     if respHeaderDict:
-        contentTypeStr = respHeaderDict['Content-Type']
+        if 'Content-Type' in respHeaderDict:
+            contentTypeStr = respHeaderDict['Content-Type']
+        else:
+            contentTypeStr = None
+            # http://s.shouji.qihucdn.com/210112/0c24ebd2f1132df071f5db7301c723e6/com.szs.qh360_1.apk?en=curpage%3D%26exp%3D1611816296%26from%3Dopenbox_Iservice_AppDetail%26m2%3D%26ts%3D1611211496%26tok%3D3960c113b5eb6c09508b2ad674e5757b%26v%3D%26f%3Dz.apk
+            # -> 
+            # {'Server': 'nginx', 'Date': 'Fri, 29 Jan 2021 09:01:18 GMT', 'Content-Length': '0', 'Connection': 'close'}
         # 'Content-Type': 'application/vnd.android.package-archive'
         # 'Content-Type': 'application/pdf'
 
@@ -245,13 +251,13 @@ def isAndroidApkUrl(curApkUrl, proxies=None):
                 # isApkInUrl = bool(foundApkInUrl) # True
                 # 'https://api-game.meizu.com/games/public/download/redirect/url?auth_time=43200&package_name=com.hirealgame.hswsw.mz&source=0&timestamp=1611106503304&type=2&sign=fce0aeff829a8b4c4f493f2e86c9e35b&fname=com.hirealgame.hswsw.mz_402'
                 foundDownloadInUrl = re.search("download", curApkUrl, re.I) # <re.Match object; span=(40, 48), match='download'>
-                isApkInUrl = foundApkInUrl or foundDownloadInUrl
-                if isApkInUrl:
+                isValidOctetStreamUrl = foundApkInUrl or foundDownloadInUrl
+                if isValidOctetStreamUrl:
                     isValidApkUrl = True
                     errMsg = ""
                 else:
                     isValidApkUrl = False
-                    errMsg = "Content Type is octet-stream but no .apk in url %s" % curApkUrl
+                    errMsg = "Content Type is octet-stream but no .apk or download in url %s" % curApkUrl
                     # 'Content Type is octet-stream but no .apk in url https://appdlc-drcn.hispace.hicloud.com/dl/appdl/application/apk/db/dbd3fbf4bb7c4e199e27169b83054afd/com.zsbf.rxsc.2010151906.rpk?sign=f9001091ej1001042000000000000100000000000500100101010@21BD93C47A224B178DE4FCDEAC296E3F&extendStr=detail%3A1%3B&tabStatKey=A09000&relatedAppId=C100450321&hcrId=21BD93C47A224B178DE4FCDEAC296E3F&maple=0&distOpEntity=HWSW'
 
                     # continue check for get redirected 302 real url
@@ -286,9 +292,10 @@ def isAndroidApkUrl(curApkUrl, proxies=None):
                         # (2) 'https://app.mi.com/download/610735?id=com.mobileuncle.toolhero&ref=appstore.mobile_download&nonce=-2797954111430111294%3A26814339&appClientId=2882303761517485445&appSignature=oxBvxJhrGBuUBck5cgFqasC7gI5rLez99KZ24VMiRpA'
                         #     ->
                         #     'https://fga1.market.xiaomi.com/download/AppStore/03367f59ffcbc4719185da0d550a3b407f50cfb62/com.mobileuncle.toolhero.apk'
-                        foundApkInUrl = re.search("[^/]+\.apk", curApkUrl, re.I)
-                        isApkInUrl = bool(foundApkInUrl) # True
-                        if isApkInUrl:
+                        foundApkInUrl = re.search("[^/]+\.apk", curApkUrl, re.I) # <re.Match object; span=(101, 142), match='com.tanwan.yscqlyzf.huawei.2012141704.apk'>
+                        foundDownloadInUrl = re.search("download", curApkUrl, re.I) # <re.Match object; span=(40, 48), match='download'>
+                        isValidOctetStreamUrl = foundApkInUrl or foundDownloadInUrl
+                        if isValidOctetStreamUrl:
                             isValidApkUrl = True
                             errMsg = ""
                         else:
@@ -298,11 +305,21 @@ def isAndroidApkUrl(curApkUrl, proxies=None):
                             # 
             # else:
             #     # for debug
-            #     logging.warning("not expected content type: %s", contentTypeStr)
+            #     logging.error("not expected content type: %s", contentTypeStr)
+            #     # https://app.mi.com/download/1302518?id=com.bgnb.wgll.mi&ref=appstore.mobile_download&nonce=8850090374002965212%3A26849396&appClientId=2882303761517485445&appSignature=1lKwhUaTOGHTvIPOl-sjmR2YMjkbHWy9TrJeTeJfbjU
+            #     # (2)
+            #     # https://api-game.meizu.com/games/public/download/redirect/url?auth_time=43200&package_name=com.mjgame.onweb.mz&source=0×tamp=1611279954158&type=2&sign=d2d619f6314a4d342609d8eb33338ac7&fname=com.mjgame.onweb.mz_17
+            #     # ->
+            #     # application/json
+            #     # (3) 已下架的 不存在的：
+            #     # http://app.mi.com/details?id=com.game.shangguxiux.mi
+            #     # -> 之前的下载地址：
+            #     # 'https://app.mi.com/download/1294550?id=com.game.shangguxiux.mi&ref=appstore.mobile_download&nonce=5009463403913763592%3A26865020&appClientId=2882303761517485445&appSignature=N46VkyUq2p0QwUrKym_uqWxSvoFdiTA1GaPvkzRxONg'
+            #     # -> 返回的是：'text/html; charset=UTF-8'
     else:
         isValidApkUrl = False
         errMsg = "Failed to get content type for url %s" % curApkUrl
-        # 
+        # 已下架的游戏，之前的下载地址： http://s.shouji.qihucdn.com/210112/0c24ebd2f1132df071f5db7301c723e6/com.szs.qh360_1.apk?en=curpage%3D%26exp%3D1611816296%26from%3Dopenbox_Iservice_AppDetail%26m2%3D%26ts%3D1611211496%26tok%3D3960c113b5eb6c09508b2ad674e5757b%26v%3D%26f%3Dz.apk
 
     if isValidApkUrl:
         gotApkFileSize = getFileSizeFromHeaders(respHeaderDict) # 190814345
