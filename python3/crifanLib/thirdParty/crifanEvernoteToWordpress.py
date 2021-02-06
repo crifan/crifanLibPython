@@ -1,6 +1,6 @@
 # Function: Evernote to Wordpress related functions
 # Author: Crifan Li
-# Update: 20210112
+# Update: 20210204
 # Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanEvernoteToWordpress.py
 
 import sys
@@ -54,7 +54,7 @@ class crifanEvernoteToWordpress(object):
         imgeFilename = "%s.%s" % (processedGuid, imgSuffix) # 'f6956c30ef0b475fa2b99c2f49622e35.png'
 
         isUploadImgOk, respInfo = self.wordpress.createMedia(imgMime, imgeFilename, imgBytes)
-        logging.info("%s to upload resource %s to wordpress", isUploadImgOk, imgGuid)
+        logging.debug("%s to upload resource %s to wordpress", isUploadImgOk, imgGuid)
         return isUploadImgOk, respInfo
 
     def syncNoteImage(self, curNoteDetail, curResource, uploadedImgUrl, curResList=None):
@@ -118,7 +118,8 @@ class crifanEvernoteToWordpress(object):
             "newResList": newResList,
         }
         respNote = self.evernote.syncNote(**syncParamDict)
-        logging.info("Complete sync image %s to evernote note %s", uploadedImgUrl, curNoteDetail.title)
+        # logging.info("Completed sync image %s to evernote note %s", uploadedImgUrl, curNoteDetail.title)
+        logging.info("Completed sync image %s", uploadedImgUrl)
 
         return respNote
 
@@ -154,13 +155,13 @@ class crifanEvernoteToWordpress(object):
         if isUploadOk:
             # {'id': 70491, 'url': 'https://www.crifan.com/files/pic/uploads/2020/11/c8b16cafe6484131943d80267d390485.jpg', 'slug': 'c8b16cafe6484131943d80267d390485', 'link': 'https://www.crifan.com/c8b16cafe6484131943d80267d390485/', 'title': 'c8b16cafe6484131943d80267d390485'}
             uploadedImgUrl = respInfo["url"]
-            logging.info("uploaded url %s", uploadedImgUrl)
+            logging.info("Uploaded url %s", uploadedImgUrl)
             # "https://www.crifan.com/files/pic/uploads/2020/03/f6956c30ef0b475fa2b99c2f49622e35.png"
             # relace en-media to img
             respNote = self.syncNoteImage(curNoteDetail, curResource, uploadedImgUrl, curResList)
             # logging.info("Complete sync image %s to note %s", uploadedImgUrl, respNote.title)
         else:
-            logging.warning("Failed to upload image resource %s to wordpress", curResource)
+            logging.warning("Failed to upload image resource %s to wordpress, respInfo=%s", curResInfoStr, respInfo)
 
         return uploadedImgUrl
 
@@ -180,7 +181,7 @@ class crifanEvernoteToWordpress(object):
         firstExistedCategory = None
         for eachTagName in tagNameList:
             isSearhOk, existedCategory = self.wordpress.searchTaxonomy(eachTagName, "category")
-            # 
+            # True, {'_links': {'about': [...], 'collection': [...], 'curies': [...], 'self': [...], 'up': [...], 'wp:post_type': [...]}, 'count': 35, 'description': '', 'id': 3178, 'link': 'https://www.crifan.c...s_windows/', 'meta': [], 'name': 'Windows', 'parent': 4624, 'slug': 'os_windows', 'taxonomy': 'category'}
             if isSearhOk and existedCategory:
                 firstExistedCategory = eachTagName
                 break
@@ -241,13 +242,14 @@ class crifanEvernoteToWordpress(object):
 
         tagNameList = self.evernote.getTagNameList(curNote)
         # tagNameList=['Mac', '切换', 'GPU', 'pmset', '显卡模式']
+        logging.info("origin tagNameList=%s", tagNameList)
         curCategoryList = self.generateCategoryList(tagNameList)
         logging.info("curCategoryList=%s", curCategoryList)
         # curCategoryList=['Mac']
         for eachCategoryName in curCategoryList:
             if eachCategoryName in tagNameList:
                 tagNameList.remove(eachCategoryName)
-        logging.info("tagNameList=%s", tagNameList)
+        logging.info("filtered tagNameList=%s", tagNameList)
         # tagNameList=['切换', 'GPU', 'pmset', '显卡模式']
 
         logging.info("Uploading note %s to wordpress post", curNote.title)
@@ -318,15 +320,13 @@ class crifanEvernoteToWordpress(object):
             processed noteSoup
         Raises:
         """
-        # <div style='box-sizing: border-box; ...: 1px solid rgba(0, 0, 0, 0.14902);-en-codeblock:true;'>
-        codeblockP = re.compile("box-sizing:.+-en-codeblock:true;")
-        codeblockNodeList = noteSoup.find_all("div", attrs={"style": codeblockP})
-        if codeblockNodeList:
-            codeblockNodeNum = len(codeblockNodeList)
-            logging.info("Found %d codeblock", codeblockNodeNum)
-            for curCodeblockIdx, enCodeblockSoup in enumerate(codeblockNodeList):
+        codeblockSoupList = crifanEvernote.getCodeblockSoupList(noteSoup)
+        if codeblockSoupList:
+            codeblockSoupNum = len(codeblockSoupList)
+            logging.info("Found %d en-codeblock", codeblockSoupNum)
+            for curCodeblockIdx, enCodeblockSoup in enumerate(codeblockSoupList):
                 curCodeblockNum = curCodeblockIdx + 1
-                logging.info("%s %d/%d %s", "-"*15, curCodeblockNum, codeblockNodeNum,"-"*15)
+                logging.info("%s %d/%d %s", "-"*15, curCodeblockNum, codeblockSoupNum,"-"*15)
                 logging.debug("enCodeblockSoup.prettify()=%s", enCodeblockSoup.prettify())
                 preSoup = crifanEvernoteToWordpress.convertEnCodeblockDivToPre(enCodeblockSoup)
         else:
@@ -345,8 +345,14 @@ class crifanEvernoteToWordpress(object):
         Raises:
         """
         enCodeblockSoup = crifanEvernoteToWordpress.filterEnCodeblock(enCodeblockSoup)
+
         codeStr = utils.getAllContents(enCodeblockSoup)
         logging.debug("codeStr=%s", codeStr)
+        # codeStrStripped = utils.getAllContents(enCodeblockSoup, isStripped=True)
+        # logging.info("codeStrStripped=%s", codeStrStripped)
+        codeStr = re.sub("\n\n\n+", "\n\n\n", codeStr)
+        logging.debug("after remove multile newline: codeStr=%s", codeStr)
+
         possibleLanguage = utils.detectProgramLanguage(codeStr)
 
         # <pre class="brush: shell; gutter: true">
@@ -401,8 +407,14 @@ class crifanEvernoteToWordpress(object):
         # remove unuseful <div><div></div></div>, which generated redundant newline
         enCodeblockSoup = crifanEvernoteToWordpress.removeUnusefulEmbedEmptyDiv(enCodeblockSoup)
 
-        # # for debug
-        # utils.dbgSaveSoupToHtml(enCodeblockSoup, filenamePrefix="afterFilter")
+        # # # for debug
+        # utils.dbgSaveSoupToHtml(enCodeblockSoup, filenamePrefix="after_removeUnusefulEmbedEmptyDiv")
+
+        # remove unuseful \n, which generated redundant newline
+        enCodeblockSoup = crifanEvernoteToWordpress.removeUnusefulNewline(enCodeblockSoup)
+
+        # # # for debug
+        # utils.dbgSaveSoupToHtml(enCodeblockSoup, filenamePrefix="after_removeUnusefulNewline")
 
         return enCodeblockSoup
 
@@ -592,6 +604,27 @@ class crifanEvernoteToWordpress(object):
             #     logging.warning("unexpected more child: %s", eachDivSoup)
 
         return enCodeblockSoup
+
+    @staticmethod
+    def removeUnusefulNewline(enCodeblockSoup):
+        """Remove unuseful \n string inside en-codeblock
+
+        Args:
+            enCodeblockSoup (BeautifulSoup soup): soup of Evernote Note en-codeblock div
+        Returns:
+            processed soup
+        Raises:
+        """
+        for curChild in enCodeblockSoup.children:
+            isChildIsStr = isinstance(curChild, NavigableString)
+            if isChildIsStr:
+                isNewline = curChild == "\n"
+                if isNewline:
+                    # curChild.decompose()
+                    curChild.extract()
+
+        return enCodeblockSoup
+
 
     @staticmethod
     def removeDivInUlOl(curSoup):
