@@ -3,12 +3,13 @@
 """
 Filename: crifanPillow.py
 Function: crifanLib's pillow/PIL related functions
-Version: 20210112
+Version: 20210206
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanPillow.py
+Usage: https://book.crifan.com/books/python_common_code_snippet/website/common_code/multimedia/image/pillow.html
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210112"
+__version__ = "20210206"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 

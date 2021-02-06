@@ -1,6 +1,6 @@
 # crifanLibPython
 
-最后更新：`20201224`
+最后更新：`20210206`
 
 ## 目录结构
 
@@ -82,4 +82,10 @@
   * `Python 3`的库函数
     * 文件位置：`python3/crifanLib`目录下的各个独立文件
     * 如何使用这些库函数
-      * 详见`python3/crifanLib/demo`下面对应的demo文件
+      * demo
+        * 详见`python3/crifanLib/demo`下面对应的demo文件
+      * 代码段
+        * `python3/crifanLib/thirdParty/crifanBaiduOcr.py`
+          * [百度OCR · Python常用代码段](https://book.crifan.com/books/python_common_code_snippet/website/common_code/multimedia/image/baidu_ocr.html)
+        * `python3/crifanLib/thirdParty/crifanPillow.py`
+          * [Pillow · Python常用代码段](https://book.crifan.com/books/python_common_code_snippet/website/common_code/multimedia/image/pillow.html)
