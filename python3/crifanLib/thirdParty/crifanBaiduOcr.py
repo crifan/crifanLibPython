@@ -3,13 +3,13 @@
 """
 Filename: crifanBaiduOcr.py
 Function: crifanLib's python Baidu image OCR related functions
-Version: 20210206
+Version: 20210209
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanBaiduOcr.py
 Usage: https://book.crifan.com/books/python_common_code_snippet/website/common_code/multimedia/image/baidu_ocr.html
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210206"
+__version__ = "20210209"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
@@ -21,11 +21,6 @@ import time
 import logging
 from collections import OrderedDict
 from difflib import SequenceMatcher
-
-try:
-    from PIL import Image, ImageDraw
-except:
-    print("need `pip install pillow` if use crifanBaiduOcr functions")
 
 from crifanLib.crifanFile  import readBinDataFromFile
 from crifanLib.crifanDatetime  import getCurDatetimeStr
@@ -58,10 +53,28 @@ gConst = {
 ################################################################################
 
 class BaiduOCR():
-	# OCR_URL = "https://aip.baidubce.com/rest/2.0/ocr/v1/general_basic" # 通用文字识别
-	# OCR_URL = "https://aip.baidubce.com/rest/2.0/ocr/v1/general"        # 通用文字识别（含位置信息版）
-	# OCR_URL = "https://aip.baidubce.com/rest/2.0/ocr/v1/accurate_basic" # 通用文字识别（高精度版）
-	OCR_URL = "https://aip.baidubce.com/rest/2.0/ocr/v1/accurate"       # 通用文字识别（高精度含位置版）
+	"""
+		百度OCR
+			QuickStart
+				https://ai.baidu.com/ai-doc/OCR/dk3iqnq51
+
+			费用 价格 通用场景文字识别
+				https://ai.baidu.com/ai-doc/OCR/9k3h7xuv6
+			
+			接口调用
+				通用文字识别（高精度含位置版）
+					https://ai.baidu.com/ai-doc/OCR/tk3h7y2aq
+				
+				通用文字识别（标准含位置版）
+					https://ai.baidu.com/ai-doc/OCR/vk3h7y58v
+	"""
+
+	OCR_URL_GENERAL_BASIC = "https://aip.baidubce.com/rest/2.0/ocr/v1/general_basic"		# 通用文字识别
+	OCR_URL_GENERAL = "https://aip.baidubce.com/rest/2.0/ocr/v1/general"					# 通用文字识别（含位置信息版）
+	OCR_URL_ACCURATE_BASIC = "https://aip.baidubce.com/rest/2.0/ocr/v1/accurate_basic"		# 通用文字识别（高精度版）
+	OCR_URL_ACCURATE = "https://aip.baidubce.com/rest/2.0/ocr/v1/accurate"					# 通用文字识别（高精度含位置版）
+
+	OCR_URL = OCR_URL_ACCURATE
 
 	TOKEN_URL = 'https://aip.baidubce.com/oauth/2.0/token'
 
@@ -74,10 +87,14 @@ class BaiduOCR():
 	API_KEY = 'change_to_your_baidu_ocr_api_key'
 	SECRET_KEY = 'change_to_your_baidu_ocr_secret_key'
 
-	def initOcr(self):
-		self.curToken = self.baiduFetchToken()
+	def __init__(self, api_key=None, secret_key=None):
+		if api_key:
+			self.API_KEY = api_key
+		if secret_key:
+			self.SECRET_KEY = secret_key
+		self.curToken = self.updateToken()
 
-	def baiduFetchToken(self):
+	def updateToken(self):
 		"""Fetch Baidu token for OCR"""
 		params = {
 			'grant_type': 'client_credentials',
@@ -92,7 +109,7 @@ class BaiduOCR():
 
 		if ('access_token' in respJson.keys() and 'scope' in respJson.keys()):
 			if not 'brain_all_scope' in respJson['scope'].split(' '):
-				logging.error('please ensure has check the  ability')
+				logging.error('please ensure has check the ability')
 			else:
 				respToken = respJson['access_token']
 		else:
@@ -101,7 +118,7 @@ class BaiduOCR():
 		# '24.869xxxxxxxxxxxxxxxxxxxxxxx2.2592000.1578465979.282335-17921535'
 		return respToken
 
-	def baiduImageToWords(self, imageFullPath):
+	def imageToWords(self, imageFullPath):
 		"""Detect text from image using Baidu OCR api"""
 
 		# # Note: if using un-paid = free baidu api, need following wait sometime to reduce: qps request limit
@@ -153,7 +170,7 @@ class BaiduOCR():
 				respJson = resp.json()
 				logging.debug("baidu OCR: for errorCode=%s, do again, imgage=%s -> respJson=%s", errorCode, imageFullPath, respJson)
 			elif errorCode == self.RESP_ERR_CODE_DAILY_LIMIT_REACHED:
-				logging.error("Fail to continue using baidu OCR api today !!!")
+				logging.error("Fail to continue using baidu OCR api today for exceed free limit of single day !!!")
 				respJson = None
 
 		"""
@@ -259,7 +276,9 @@ class BaiduOCR():
 					if firtToMatchChar == eachChar:
 						firstCharResult = eachCharResult
 					elif lastToMatchChar == eachChar:
-						lastCharResult = eachCharResult
+						if firstCharResult:
+							# Note: only check last char after already found first char
+							lastCharResult = eachCharResult
 
 			# Note: follow no need check words, to support input ^游戏公告$ to match "游戏公告"
 			# firstLocation = None
@@ -325,13 +344,14 @@ class BaiduOCR():
 		centerPosition = (centerX, centerY)
 		return centerPosition
 
-	def isWordsInResult(self, respJson, wordsOrWordsList, isMatchMultiple=False):
+
+	def isWordsInResult(self, respJson, strOrStrList, isMatchMultiple=True):
 		"""Check words is in result or not
 
 		Args:
 			respJson (dict): Baidu OCR responsed json
-			wordsOrWordsList (str/list): single input str or str list
-			isMatchMultiple (bool): for each single str, to match multiple output or only match one output
+			strOrStrList (str/list): single input str or str list
+			isMatchMultiple (bool): for each single str, to match multiple output or only match one output. default True
 		Returns:
 			dict, matched result
 		Raises:
@@ -339,13 +359,13 @@ class BaiduOCR():
 		# Note: use OrderedDict instead dict to keep order, for later get first match result to process
 		orderedMatchedResultDict = OrderedDict()
 
-		inputWordsList = wordsOrWordsList
-		if isinstance(wordsOrWordsList, str):
-			inputWords = str(wordsOrWordsList)
-			inputWordsList = [inputWords]
+		inputStrList = strOrStrList
+		if isinstance(strOrStrList, str):
+			inputStr = str(strOrStrList)
+			inputStrList = [inputStr]
 
 		wordsResultList = respJson["words_result"]
-		for curInputWords in inputWordsList:
+		for curInputWords in inputStrList:
 			curMatchedResultList = []
 			for eachWordsResult in wordsResultList:
 				eachWords = eachWordsResult["words"]
@@ -358,52 +378,48 @@ class BaiduOCR():
 			orderedMatchedResultDict[curInputWords] = curMatchedResultList
 		return orderedMatchedResultDict
 
-	def isWordsInCurScreen(self,
-		wordsOrWordsList,
+	def isStrInImage(self,
+		strOrStrList,
 		imgPath=None,
 		wordsResultJson=None,
-		isMatchMultiple=False,
+		isMatchMultiple=True,
 		isRespShortInfo=False
 	):
 		"""Found words in current screen
 
 		Args:
-			wordsOrWordsList (str/list): single input str or str list
+			strOrStrList (str/list): single input str or str list
 			imgPath (str): current screen image file path; default=None; if None, will auto get current scrren image
 			wordsResultJson (dict): baidu OCR result dict; if None, will auto generate from imgPath
-			isMatchMultiple (bool): for each single str, to match multiple output or only match one output; default=False
-			isRespShortInfo (bool): return simple=short=nomarlly bool or list[bool] info or return full info which contain imgPath and full matched result.
+			isMatchMultiple (bool): for each single str, to match multiple output or only match one output; default=True
+			isRespShortInfo (bool): return simple=short=nomarlly bool or list[bool] info or return full matched result info
 		Returns:
-			matched result, type=bool/list[bool]/dict/tuple, depends on diffrent condition
+			matched result, type=bool/list/dict/tuple, depends on diffrent condition
 		Raises:
 		"""
 		retValue = None
 
 		if not wordsResultJson:
-			if not imgPath:
-				# do screenshot
-				imgPath = self.getCurScreenshot()
-
-			wordsResultJson = self.baiduImageToWords(imgPath)
+			wordsResultJson = self.imageToWords(imgPath)
 
 		isMultipleInput = False
-		inputWords = None
-		inputWordsList = []
+		inputStr = None
+		inputStrList = []
 
-		if isinstance(wordsOrWordsList, list):
+		if isinstance(strOrStrList, list):
 			isMultipleInput = True
-			inputWordsList = list(wordsOrWordsList)
-		elif isinstance(wordsOrWordsList, str):
+			inputStrList = list(strOrStrList)
+		elif isinstance(strOrStrList, str):
 			isMultipleInput = False
-			inputWords = str(wordsOrWordsList)
-			inputWordsList = [inputWords]
+			inputStr = str(strOrStrList)
+			inputStrList = [inputStr]
 
-		matchedResultDict = self.isWordsInResult(wordsResultJson, wordsOrWordsList, isMatchMultiple)
+		matchedResultDict = self.isWordsInResult(wordsResultJson, strOrStrList, isMatchMultiple)
 
 		# add caclulated location and words
 		# Note: use OrderedDict instead dict to keep order, for later get first match result to process
 		processedResultDict = OrderedDict()
-		for eachInputWords in inputWordsList:
+		for eachInputWords in inputStrList:
 			isCurFound = False
 			# curLocatoinList = []
 			# curWordsList = []
@@ -422,7 +438,7 @@ class BaiduOCR():
 
 			# processedResultDict[eachInputWords] = (isCurFound, curLocatoinList, curWordsList)
 			processedResultDict[eachInputWords] = (isCurFound, curResultList)
-		logging.debug("For %s, matchedResult=%s from imgPath=%s", wordsOrWordsList, processedResultDict, imgPath)
+		logging.debug("For %s, matchedResult=%s from imgPath=%s", strOrStrList, processedResultDict, imgPath)
 
 		if isMultipleInput:
 			if isRespShortInfo:
@@ -435,8 +451,7 @@ class BaiduOCR():
 				retValue = retBoolList
 			else:
 				if isMatchMultiple:
-					retTuple = processedResultDict, imgPath
-					retValue = retTuple
+					retValue = processedResultDict
 				else:
 					# Note: use OrderedDict instead dict to keep order, for later get first match result to process
 					respResultDict = OrderedDict()
@@ -447,15 +462,11 @@ class BaiduOCR():
 						# singleWords = None
 						singleResult = (None, None)
 						if isCurFound:
-							# singleLocation = curLocatoinList[0]
-							# singleWords = curWordsList[0]
 							singleResult = curResultList[0]
-						# respResultDict[eachInputWords] = (isCurFound, singleLocation, singleWords)
 						respResultDict[eachInputWords] = (isCurFound, singleResult)
-					retTuple = respResultDict, imgPath
-					retValue = retTuple
+					retValue = respResultDict
 		else:
-			singleInputResult = processedResultDict[inputWords]
+			singleInputResult = processedResultDict[inputStr]
 			# isCurFound, curLocatoinList, curWordsList = singleInputResult
 			isCurFound, curResultList = singleInputResult
 			if isRespShortInfo:
@@ -464,22 +475,16 @@ class BaiduOCR():
 				retValue = retBool
 			else:
 				if isMatchMultiple:
-					# retTuple = isCurFound, curLocatoinList, curWordsList, imgPath
-					retTuple = isCurFound, curResultList, imgPath
+					retTuple = isCurFound, curResultList
 					retValue = retTuple
 				else:
 					singleResult = (None, None)
-					# singleLocation = None
-					# singleWords = None
 					if isCurFound:
-						# singleLocation = curLocatoinList[0]
-						# singleWords = curWordsList[0]
 						singleResult = curResultList[0]
-					# retTuple = isCurFound, singleLocation, singleWords, imgPath
-					retTuple = isCurFound, singleResult, imgPath
+					retTuple = isCurFound, singleResult
 					retValue = retTuple
 
-		logging.debug("Input: %s, output=%s", wordsOrWordsList, retValue)
+		logging.debug("Input: %s, output=%s", strOrStrList, retValue)
 		return retValue
 
 	def getCurScreen(self):
