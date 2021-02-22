@@ -3,13 +3,13 @@
 """
 Filename: crifanBaiduOcr.py
 Function: crifanLib's python Baidu image OCR related functions
-Version: 20210209
+Version: 20210222
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanBaiduOcr.py
 Usage: https://book.crifan.com/books/python_common_code_snippet/website/common_code/multimedia/image/baidu_ocr.html
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210209"
+__version__ = "20210222"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
@@ -265,20 +265,24 @@ class BaiduOCR():
 				# so using find the corresponding char, then got its location
 				# Note: following method not work for regex str, like '^游戏公告$'
 
+				wordStrLen = len(wordStr)
+				wordStrMaxIdx = wordStrLen - 1
 				firtToMatchChar = wordStr[0]
-				lastToMatchChar = wordStr[-1]
 
-				for eachCharResult in charResultList:
-					if firstCharResult and lastCharResult:
-						break
-
+				for eachIdx, eachCharResult in enumerate(charResultList):
 					eachChar = eachCharResult["char"]
 					if firtToMatchChar == eachChar:
 						firstCharResult = eachCharResult
-					elif lastToMatchChar == eachChar:
-						if firstCharResult:
-							# Note: only check last char after already found first char
-							lastCharResult = eachCharResult
+						endNextIdx = eachIdx + wordStrLen
+						matchedPartList = charResultList[eachIdx:endNextIdx]
+						matchedPartStr = ""
+						for eachMatchedPart in matchedPartList:
+							matchedPartStr += eachMatchedPart["char"]
+						isMatch = re.match(wordStr, matchedPartStr)
+						if isMatch:
+							endIdx = eachIdx + wordStrMaxIdx
+							lastCharResult = charResultList[endIdx]
+							break
 
 			# Note: follow no need check words, to support input ^游戏公告$ to match "游戏公告"
 			# firstLocation = None
