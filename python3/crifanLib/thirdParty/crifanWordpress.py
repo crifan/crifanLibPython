@@ -1,6 +1,6 @@
 # Function: Wordpress related functions
 # Author: Crifan Li
-# Update: 20210112
+# Update: 20210305
 # Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanWordpress.py
 
 import logging
@@ -21,6 +21,9 @@ class crifanWordpress(object):
             https://developer.wordpress.org/rest-api/reference/tags/
     """
 
+    JWT_TOKEN_VALID_CODE = "jwt_auth_valid_token"
+    JWT_TOKEN_INVALID_CODE = "jwt_auth_invalid_token"
+
     # SearchTagPerPage = 10
     SearchTagPerPage = 100 # large enough to try response all for only sinlge call
 
@@ -33,6 +36,9 @@ class crifanWordpress(object):
         self.authorization = "Bearer %s" % jwtToken # 'Bearer xxx'
         self.requestsProxies = requestsProxies # {'http': 'http://127.0.0.1:58591', 'https': 'http://127.0.0.1:58591'}
 
+        # "https://www.crifan.com/wp-json/jwt-auth/v1/token/validate"
+        self.apiValidateToken = self.host + "/wp-json/jwt-auth/v1/token/validate"
+
         # https://developer.wordpress.org/rest-api/reference/media/
         self.apiMedia = self.host + "/wp-json/wp/v2/media" # 'https://www.crifan.com/wp-json/wp/v2/media'
         # https://developer.wordpress.org/rest-api/reference/posts/
@@ -41,6 +47,33 @@ class crifanWordpress(object):
         self.apiCategories = self.host + "/wp-json/wp/v2/categories" # 'https://www.crifan.com/wp-json/wp/v2/categories'
         # https://developer.wordpress.org/rest-api/reference/tags/#create-a-tag
         self.apiTags = self.host + "/wp-json/wp/v2/tags" # 'https://www.crifan.com/wp-json/wp/v2/tags'
+
+    def validateToken(self):
+        """Validate wordpress REST api jwt token is valid or not
+        Args:
+        Returns:
+            bool, str: True/False, None/invalid reason
+        Raises:
+        """
+        curHeaders = {
+            "Authorization": self.authorization,
+            "Accept": "application/json",
+        }
+        validateTokenUrl = self.apiValidateToken
+        resp = requests.post(
+            validateTokenUrl,
+            proxies=self.requestsProxies,
+            headers=curHeaders,
+        )
+        logging.debug("resp=%s", resp)
+        isTokenOk, respInfo = crifanWordpress.processCommonResponse(resp)
+        if isTokenOk:
+            respCode = respInfo["code"]
+            if respCode == crifanWordpress.JWT_TOKEN_VALID_CODE:
+                isTokenOk = True
+            else:
+                isTokenOk = False
+        return isTokenOk, respInfo
 
     def createMedia(self, contentType, filename, mediaBytes):
         """Create wordpress media (image)
@@ -257,7 +290,7 @@ class crifanWordpress(object):
             # data=queryDict, # {'search': 'Mac'}
             params=queryParamDict, # {'search': 'Mac'}
         )
-        logging.info("resp=%s for GET %s with para=%s", resp, searchTaxonomyUrl, queryParamDict)
+        logging.debug("resp=%s for GET %s with para=%s", resp, searchTaxonomyUrl, queryParamDict)
 
         isSearchOk, respTaxonomyLit = crifanWordpress.processCommonResponse(resp)
         logging.debug("isSearchOk=%s, respTaxonomyLit=%s", isSearchOk, respTaxonomyLit)
@@ -291,17 +324,19 @@ class crifanWordpress(object):
             # isSearhOk=True, existedTaxonomy={'id': 1374, 'count': 350, 'description': '', 'link': 'https://www.crifan.com/category/work_and_job/operating_system_and_platform/mac/', 'name': 'Mac', 'slug': 'mac', 'taxonomy': 'category', 'parent': 4624, 'meta': [], '_links': {'self': [{'href': 'https://www.crifan.com/wp-json/wp/v2/categories/1374'}], 'collection': [{'href': 'https://www.crifan.com/wp-json/wp/v2/categories'}], 'about': [{'href': 'https://www.crifan.com/wp-json/wp/v2/taxonomies/category'}], 'up': [{'embeddable': True, 'href': 'https://www.crifan.com/wp-json/wp/v2/categories/4624'}], 'wp:post_type': [{'href': 'https://www.crifan.com/wp-json/wp/v2/posts?categories=1374'}], 'curies': [{'name': 'wp', 'href': 'https://api.w.org/{rel}', 'templated': True}]}}
             if isSearhOk and existedTaxonomy:
                 curTaxonomy = existedTaxonomy
+                logging.info("Found existed %s: name=%s,id=%s,slug=%s", taxonomy, curTaxonomy["name"], curTaxonomy["id"], curTaxonomy["slug"])
             else:
                 isCreateOk, createdTaxonomy = self.createTaxonomy(eachTaxonomyName, taxonomy)
                 logging.debug("isCreateOk=%s, createdTaxonomy=%s", isCreateOk, createdTaxonomy)
                 if isCreateOk and createdTaxonomy:
                     curTaxonomy = createdTaxonomy
+                    logging.info("New created %s: name=%s,id=%s,slug=%s", taxonomy, curTaxonomy["name"], curTaxonomy["id"], curTaxonomy["slug"])
                 else:
                     logging.error("Fail to create %s %s", taxonomy, eachTaxonomyName)
 
             if curTaxonomy:
                 curTaxonomyId = curTaxonomy["id"]
-                logging.info("curTaxonomyId=%s", curTaxonomyId)
+                logging.debug("curTaxonomyId=%s", curTaxonomyId)
                 taxonomyIdList.append(curTaxonomyId)
             else:
                 logging.error("Fail search or create for %s: %s", taxonomy, eachTaxonomyName)
@@ -589,37 +624,40 @@ class crifanWordpress(object):
             if isinstance(respJson, dict):
                 isOk = True
 
-                newId = respJson["id"]
-                newSlug = respJson["slug"]
-                newLink = respJson["link"]
-                logging.debug("newId=%s, newSlug=%s, newLink=%s", newId, newSlug, newLink) # newId=13224, newSlug=gpu, newLink=https://www.crifan.com/tag/gpu/
-                respInfo = {
-                    "id": newId, # 70393
-                    "slug": newSlug, # f6956c30ef0b475fa2b99c2f49622e35
-                    "link": newLink, # https://www.crifan.com/f6956c30ef0b475fa2b99c2f49622e35/
-                }
+                if "id" in respJson:
+                    newId = respJson["id"]
+                    newSlug = respJson["slug"]
+                    newLink = respJson["link"]
+                    logging.debug("newId=%s, newSlug=%s, newLink=%s", newId, newSlug, newLink) # newId=13224, newSlug=gpu, newLink=https://www.crifan.com/tag/gpu/
+                    respInfo = {
+                        "id": newId, # 70393
+                        "slug": newSlug, # f6956c30ef0b475fa2b99c2f49622e35
+                        "link": newLink, # https://www.crifan.com/f6956c30ef0b475fa2b99c2f49622e35/
+                    }
 
-                if "type" in respJson:
-                    curType = respJson["type"]
-                    if (curType == "attachment") or (curType == "post"):
-                        respInfo["url"] = respJson["guid"]["rendered"]
-                        # "url": newUrl, # https://www.crifan.com/files/pic/uploads/2020/03/f6956c30ef0b475fa2b99c2f49622e35.png
-                        respInfo["title"] = respJson["title"]["rendered"]
-                        # "title": newTitle, # f6956c30ef0b475fa2b99c2f49622e35
-                        logging.debug("url=%s, title=%s", respInfo["url"], respInfo["title"])
+                    if "type" in respJson:
+                        curType = respJson["type"]
+                        if (curType == "attachment") or (curType == "post"):
+                            respInfo["url"] = respJson["guid"]["rendered"]
+                            # "url": newUrl, # https://www.crifan.com/files/pic/uploads/2020/03/f6956c30ef0b475fa2b99c2f49622e35.png
+                            respInfo["title"] = respJson["title"]["rendered"]
+                            # "title": newTitle, # f6956c30ef0b475fa2b99c2f49622e35
+                            logging.debug("url=%s, title=%s", respInfo["url"], respInfo["title"])
 
-                if "taxonomy" in respJson:
-                    curTaxonomy = respJson["taxonomy"]
-                    # common for category/post_tag
-                    respInfo["name"] = respJson["name"]
-                    respInfo["description"] = respJson["description"]
-                    logging.debug("name=%s, description=%s", respInfo["name"], respInfo["description"])
+                    if "taxonomy" in respJson:
+                        curTaxonomy = respJson["taxonomy"]
+                        # common for category/post_tag
+                        respInfo["name"] = respJson["name"]
+                        respInfo["description"] = respJson["description"]
+                        logging.debug("name=%s, description=%s", respInfo["name"], respInfo["description"])
 
-                    if curTaxonomy == "category":
-                        respInfo["parent"] = respJson["parent"]
-                        logging.debug("parent=%s", respInfo["parent"])
+                        if curTaxonomy == "category":
+                            respInfo["parent"] = respJson["parent"]
+                            logging.debug("parent=%s", respInfo["parent"])
+                else:
+                    respInfo = respJson
 
-                logging.info("respInfo=%s", respInfo)
+                logging.debug("respInfo=%s", respInfo)
             elif isinstance(respJson, list):
                 isOk = True
                 respInfo = respJson
@@ -638,6 +676,7 @@ class crifanWordpress(object):
         logging.debug("isOk=%s, respInfo=%s", isOk, respInfo)
         # isOk=True, respInfo={'id': 13224, 'slug': 'gpu', 'link': 'https://www.crifan.com/tag/gpu/', 'name': 'GPU', 'description': ''}
         # isOk=True, respInfo={'id': 13226, 'slug': '%e6%98%be%e5%8d%a1%e6%a8%a1%e5%bc%8f', 'link': 'https://www.crifan.com/tag/%e6%98%be%e5%8d%a1%e6%a8%a1%e5%bc%8f/', 'name': '显卡模式', 'description': ''}
+        # isOk=True, respInfo={'code': 'jwt_auth_valid_token', 'data': {'status': 200}}
         return isOk, respInfo
 
     @staticmethod
