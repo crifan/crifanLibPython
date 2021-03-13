@@ -1,6 +1,6 @@
 # Function: Evernote related functions
 # Author: Crifan Li
-# Update: 20210114
+# Update: 20210313
 # Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanEvernote.py
 
 import sys
@@ -572,23 +572,37 @@ class crifanEvernote(object):
                 logging.info("[%d/%d] imgFilename=%s", curResNum, originResNum, imgFilename)
 
                 resBytes = eachResource.data.body
-                resizedImgBytes, imgFormat, newSize = utils.resizeSingleImage(resBytes)
 
-                resizedImgLen = len(resizedImgBytes) # 38578
-                resizedImgLenStr = utils.formatSize(resizedImgLen) # '37.7KB'
-                logging.info("resized to fmt=%s, len=%s, size=%sx%s", imgFormat, resizedImgLenStr, newSize[0], newSize[1])
+                resizeImgInfo = utils.resizeSingleImage(resBytes)
 
-                resizedImgMd5Bytes = utils.calcMd5(resizedImgBytes, isRespBytes=True) # '3110e1e7994dc119ff92439c5758e465'
-                newMime = utils.ImageFormatToMime[imgFormat] # 'image/jpeg'
+                originFormat = resizeImgInfo["originFormat"] # 'JPEG'
+                originSize = resizeImgInfo["originSize"] # (1080, 2340)
+                originLen = resizeImgInfo["originLen"] # 73348
+
+                newFormat = resizeImgInfo["newFormat"] # 'JPEG'
+                newSize = resizeImgInfo["newSize"] # (360, 780)
+                newBytes = resizeImgInfo["newBytes"]
+                newLen = resizeImgInfo["newLen"] # 13795
+
+                resizeRatio = resizeImgInfo["resizeRatio"] # 0.18807602115940447
+                resizeRatioInt = int(resizeRatio * 100) # 18
+
+                originLenStr = utils.formatSize(originLen) # '71.6KB'
+                newLenStr = utils.formatSize(newLen) # '37.7KB'
+
+                logging.info("Resized: %s,%sx%s,%s -> %s,%sx%s,%s => ratio=%d%%",
+                    originFormat, originSize[0], originSize[1], originLenStr, newFormat, newSize[0], newSize[1], newLenStr, resizeRatioInt)
+                # Resized image: origin: fmt=JPEG,size=1080x2340,len=71.6KB -> new: fmt=JPEG,size=360x780,len=13.5KB => ratio=18%
+
+                newMd5Bytes = utils.calcMd5(newBytes, isRespBytes=True) # b'\xaa\x05r\x15l\xb8\xa9\x9a\xe3\xc3MR2\x08\xa8['
+                newMime = utils.ImageFormatToMime[newFormat] # 'image/jpeg'
 
                 newData = Types.Data()
-                # newData = ttypes.Data()
-                newData.size = resizedImgLen
-                newData.bodyHash = resizedImgMd5Bytes
-                newData.body = resizedImgBytes
+                newData.size = newLen
+                newData.bodyHash = newMd5Bytes
+                newData.body = newBytes
 
                 newRes = Types.Resource()
-                # newRes = ttypes.Resource()
                 newRes.mime = newMime
                 newRes.data = newData
                 newRes.attributes = eachResource.attributes

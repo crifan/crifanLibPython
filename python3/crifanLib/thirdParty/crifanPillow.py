@@ -3,13 +3,13 @@
 """
 Filename: crifanPillow.py
 Function: crifanLib's pillow/PIL related functions
-Version: 20210312
+Version: 20210313
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanPillow.py
 Usage: https://book.crifan.com/books/python_common_code_snippet/website/common_code/multimedia/image/pillow.html
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210312"
+__version__ = "20210313"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
@@ -64,62 +64,112 @@ def saveImage(pillowImage, outputImageFile):
     pillowImage.save(outputImageFile)
 
 def resizeImage(inputImage,
-                newSize,
+                newMaxSize,
                 resample=cfgDefaultImageResample,
+                isOutputOptimize=True,
                 outputFormat=None,
-                outputImageFile=None
-                ):
+                outputImageFilePath=None
+    ):
     """
-        resize input image
-        resize normally means become smaller, reduce size
-    :param inputImage: image file object(fp) / filename / binary bytes
-    :param newSize: (width, height)
-    :param resample: PIL.Image.NEAREST, PIL.Image.BILINEAR, PIL.Image.BICUBIC, or PIL.Image.LANCZOS
-        https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.thumbnail
-    :param outputFormat: PNG/JPEG/BMP/GIF/TIFF/WebP/..., more refer:
-        https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html
-        if input image is filename with suffix, can omit this -> will infer from filename suffix
-    :param outputImageFile: output image file filename
-    :return:
-        input image file filename: output resized image to outputImageFile
-        input image binary bytes: resized image binary bytes
-    """
-    openableImage = None
-    if isinstance(inputImage, str):
-        openableImage = inputImage
-    elif isFileObject(inputImage):
-        openableImage = inputImage
-    elif isinstance(inputImage, bytes):
-        inputImageLen = len(inputImage)
-        openableImage = io.BytesIO(inputImage)
+        resize input image, normally means become smaller, reduce size
 
-    if openableImage:
-        imageFile = Image.open(openableImage)
-    elif isinstance(inputImage, Image.Image):
-        imageFile = inputImage
-    # <PIL.PngImagePlugin.PngImageFile image mode=RGBA size=3543x3543 at 0x1065F7A20>
-    imageFile.thumbnail(newSize, resample)
-    if outputImageFile:
-        # save to file
-        # imageFile.save(outputImageFile)
-        saveImage(imageFile, outputImageFile)
-        imageFile.close()
+    Args:
+        inputImage (file/bytes/str/Image): image file object(fp) / filename / binary bytes / Pillow Image
+        newMaxSize (tuple): max size (width, height) for resize
+        resample (int): PIL.Image.NEAREST, PIL.Image.BILINEAR, PIL.Image.BICUBIC, or PIL.Image.LANCZOS
+            doc: https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.thumbnail
+        outputFormat (str): PNG/JPEG/BMP/GIF/TIFF/WebP/...
+            doc: https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html
+        outputImageFilePath (str): output image full file path. if not none, will save image bytes into it
+    Returns:
+        bytes, binary data of Image
+    Raises:
+    """
+    shouldClose = True
+    if isinstance(inputImage, Image.Image):
+        imgObj = inputImage
+        shouldClose = False
     else:
-        # save and return binary byte
-        imageOutput = io.BytesIO()
-        # imageFile.save(imageOutput)
-        outputImageFormat = None
-        if outputFormat:
-            outputImageFormat = outputFormat
-        elif imageFile.format:
-            outputImageFormat = imageFile.format
-        imageFile.save(imageOutput, outputImageFormat)
-        imageFile.close()
-        compressedImageBytes = imageOutput.getvalue()
-        compressedImageLen = len(compressedImageBytes)
-        compressRatio = float(compressedImageLen)/float(inputImageLen)
-        print("%s -> %s, resize ratio: %d%%" % (inputImageLen, compressedImageLen, int(compressRatio * 100)))
-        return compressedImageBytes
+        openableImage = inputImage
+        if isinstance(inputImage, str):
+            openableImage = inputImage
+        elif isFileObject(inputImage):
+            openableImage = inputImage
+        elif isinstance(inputImage, bytes):
+            openableImage = io.BytesIO(inputImage)
+
+        imgObj = Image.open(openableImage) # <PIL.PngImagePlugin.PngImageFile image mode=RGBA size=3543x3543 at 0x1065F7A20>
+
+    originImgObj = copy.deepcopy(imgObj)
+    originBytes = imageToBytes(originImgObj)
+    originBytesLen = len(originBytes) # 73348
+
+    originFormat = imgObj.format # 'JPEG'
+    originSize = imgObj.size # (1080, 2340)
+
+    # resize to smaller
+    imgObj.thumbnail(newMaxSize, resample)
+    # convert to other format
+    if outputFormat and (imgObj.format != outputFormat):
+        imgObj = convertImageFormat(imgObj, outputFormat)
+        # imgObj = convertImageFormat(imgObj, outputFormat, isOptimize=True)
+
+        if outputImageFilePath:
+            # auto change suffix if output format changed
+            imgRootPart, pointSuffix = os.path.splitext(outputImageFilePath)
+            formatToSuffix = {
+                "JPEG": "jpg",
+                "PNG": "png",
+                "BMP": "bmp",
+                "TIFF": "tif",
+            }
+            if outputFormat in formatToSuffix.keys():
+                newSuffix = formatToSuffix[outputFormat]
+            else:
+                newSuffix = outputFormat.lower()
+            newPointSuffix = "." + newSuffix
+            outputImageFilePath = imgRootPart + newPointSuffix
+
+    # get binary data
+    newBytes = imageToBytes(imgObj)
+
+    newSize = imgObj.size # (360, 780)
+    newFormat = imgObj.format # 'JPEG'
+
+    # save image to file
+    if outputImageFilePath:
+        if isOutputOptimize:
+            imgObj.save(outputImageFilePath, optimize=True)
+        else:
+            imgObj.save(outputImageFilePath)
+
+    # close it
+    if shouldClose:
+        imgObj.close()
+
+    newBytesLen = len(newBytes) # 13795
+    # cala resize ratio
+    resizeRatio = float(newBytesLen) / float(originBytesLen)
+    # 0.18807602115940447
+
+    imgInfo = {
+        "originFormat": originFormat,
+        "originSize": originSize,
+        "originBytes": originBytes,
+        "originLen": originBytesLen,
+        "newFormat": newFormat,
+        "newSize": newSize,
+        "newBytes": newBytes,
+        "newLen": newBytesLen,
+        "resizeRatio": resizeRatio,
+    }
+
+    # # for debug
+    # logging.info("origin: format=%s,size=%s -> new: format=%s,size=%s -> resizeRatio=%.3f",
+    #     originFormat, originSize, newFormat, newSize, resizeRatio)
+    # origin: format=JPEG,size=(1080, 2340) -> new: format=JPEG,size=(360, 780) -> resizeRatio=0.188
+
+    return imgInfo
 
 def imageDrawRectangle(inputImgOrImgPath,
     rectLocation,
@@ -317,7 +367,7 @@ def convertImageFormat(imgObj, outputFormat=None, isOptimize=False, isKeepPrevVa
     return newImgObj
 
 def resizeSingleImage(imgBytes, newSize=None):
-    """Draw a rectangle for image (and a small circle), and show it,
+    """Resize a single image
 
     Args:
         imgBytes (bytes): input image binary bytes
@@ -367,22 +417,16 @@ def resizeSingleImage(imgBytes, newSize=None):
         # anotherImgFormat = "PNG"
         anotherImgFormat = "JPEG"
 
-    resizedCurImgBytes = resizeImage(imgBytes, newSize, outputFormat=curImgFormat)
-    curResizeRatio = calcResizeRatio(resizedCurImgBytes, curImg)
+    curImgInfo = resizeImage(imgBytes, newSize, outputFormat=curImgFormat)
+    anotherImgInfo = resizeImage(imgBytes, newSize, outputFormat=anotherImgFormat)
 
-    resizedAnotherImgBytes = resizeImage(imgBytes, newSize, outputFormat=anotherImgFormat)
-    anotherResizeRatio = calcResizeRatio(resizedAnotherImgBytes, curImg)
-
-    minResizedImgBytes = None
-    resizedImgFormat = None
-    if curResizeRatio < anotherResizeRatio:
-        minResizedImgBytes = resizedCurImgBytes
-        resizedImgFormat = curImgFormat
+    betterImgInfo = None
+    if curImgInfo["resizeRatio"] < anotherImgInfo["resizeRatio"]:
+        betterImgInfo = curImgInfo
     else:
-        minResizedImgBytes = resizedAnotherImgBytes
-        resizedImgFormat = anotherImgFormat
+        betterImgInfo = anotherImgInfo
 
-    return minResizedImgBytes, resizedImgFormat, newSize
+    return betterImgInfo
 
 def calcResizeRatio(resizedImgBytes, originImg):
     """Calculate imgage resize ratio
