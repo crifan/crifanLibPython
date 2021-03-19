@@ -3,13 +3,13 @@
 """
 Filename: crifanPillow.py
 Function: crifanLib's pillow/PIL related functions
-Version: 20210313
+Version: 20210319
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanPillow.py
 Usage: https://book.crifan.com/books/python_common_code_snippet/website/common_code/multimedia/image/pillow.html
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210313"
+__version__ = "20210319"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
@@ -36,6 +36,33 @@ from crifanLib.crifanDatetime  import getCurDatetimeStr
 ################################################################################
 CURRENT_LIB_FILENAME = "crifanPillow"
 
+ImageFormatToMime = {
+    "BMP": "image/bmp",
+    "PNG": "image/png",
+    "JPEG": "image/jpeg",
+    "TIFF": "image/tiff",
+    "GIF": "image/gif",
+}
+
+ImageFormatToSuffix = {
+    "BMP": "bmp",
+    "PNG": "png",
+    "JPEG": "jpg",
+    "TIFF": "tif",
+    "GIF": "gif",
+}
+
+ImageSuffixToMime = {
+    'bmp': 'image/bmp',
+    'gif': 'image/gif',
+    'jpe': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'jpg': 'image/jpeg',
+    'png': 'image/png',
+    'tif': 'image/tiff',
+    'tiff': 'image/tiff',
+    # 'svg': 'image/svg',
+}
 ################################################################################
 # Global Variable
 ################################################################################

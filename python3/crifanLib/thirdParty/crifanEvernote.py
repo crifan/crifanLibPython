@@ -1,16 +1,18 @@
 # Function: Evernote related functions
 # Author: Crifan Li
-# Update: 20210313
+# Update: 20210319
 # Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanEvernote.py
 
 import sys
 import re
 import logging
 # from bs4 import BeautifulSoup
+from PIL import Image, ImageFilter
 
 sys.path.append("lib")
 sys.path.append("libs/evernote-sdk-python3/lib")
 from libs.crifan import utils
+from libs.crifan.baiduOcr import BaiduOCR
 
 # import evernote.edam.userstore.constants as UserStoreConstants
 # import evernote.edam.noteStore as NoteStore
@@ -131,6 +133,9 @@ class crifanEvernote(object):
     XmlHeader = """<?xml version="1.0" encoding="UTF-8"?>"""
     DoctypeEnNote = """<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">"""
 
+    BaiduOcrApiKey = "changeToYours"
+    BaiduSecretKey = "changeToYours"
+
     ################################################################################
     # Class Method
     ################################################################################
@@ -160,11 +165,13 @@ class crifanEvernote(object):
         else:
             logging.warning("Evernote API version is NOT latest -> need update")
 
-        try:
-            self.noteStore = self.client.get_note_store()
-            logging.info("self.noteStore=%s", self.noteStore)
-        except BaseException as curException:
-            logging.error("init noteStore exception: %s -> possible reason is token expired -> need refresh Evernote token", curException)
+        # try:
+        self.noteStore = self.client.get_note_store()
+        logging.info("self.noteStore=%s", self.noteStore)
+        # except BaseException as curException:
+        #     logging.error("init noteStore exception: %s -> possible reason is token expired -> need refresh Evernote token", curException)
+
+        self.baiduOcr = BaiduOCR(self.BaiduOcrApiKey, self.BaiduSecretKey)
 
     def initClient(self):
         client = EvernoteClient(
@@ -452,10 +459,11 @@ class crifanEvernote(object):
         newTag = Types.Tag()
         newTag.name = tagName
         createdTag = self.noteStore.createTag(newTag)
+        # Tag(guid='3c22f824-50fa-4c35-960f-85bf02b1a3eb', name='JustTrustMe', parentGuid=None, updateSequenceNum=5781315)
         return createdTag
 
-    def updateTags(self, curNote, tagNameList):
-        """Update Note tags from tag name list
+    def getTagGuidList(self, tagNameList):
+        """get tag guid list from tag name list
 
         Args:
             curNote (Note): Evernote Note
@@ -463,15 +471,33 @@ class crifanEvernote(object):
         Returns:
             updated Note
         Raises:
+        Examples:
+            ['模拟器', 'Charles', '安卓'] ->['abf548e2-c110-4b92-b1fb-84d5c2052aa3', '92642761-0a6d-404c-9ec4-08da2f4df7fb', 'f9ea2006-dba8-41de-8f57-0f0f0fac6a32']
         """
         tagGuidList = []
+
         for eachTagName in tagNameList:
             createdTag = self.createTag(eachTagName)
             createdTagGuid = createdTag.guid
             tagGuidList.append(createdTagGuid)
-        
-        logging.info("tagNameList=%s -> tagGuidList=%s", tagNameList, tagGuidList)
+
+        logging.debug("tagNameList=%s -> tagGuidList=%s", tagNameList, tagGuidList)
         # tagNameList=['夜神', '微信', '模拟器', '安卓'] -> tagGuidList=['209e70eb-34a7-44c9-9f6d-ddd4da91054b', 'fdb373fa-8382-48da-96d4-6d8111ec32f5', 'abf548e2-c110-4b92-b1fb-84d5c2052aa3', 'f9ea2006-dba8-41de-8f57-0f0f0fac6a32']
+        return tagGuidList
+
+    def updateTags(self, curNote, tagNameList=None, tagGuidList=None):
+        """Update Note tags from tag name/guid list
+
+        Args:
+            curNote (Note): Evernote Note
+            tagNameList (list): tag name list
+            tagGuidList (list): tag guid list
+        Returns:
+            updated Note
+        Raises:
+        """
+        if not tagGuidList:
+            tagGuidList = self.getTagGuidList(tagNameList)
 
         # Sync to Evernote
         syncParamDict = {
@@ -548,14 +574,143 @@ class crifanEvernote(object):
         logging.debug("curResMime=%s -> isImage=%s", curResMime, isImage)
         return isImage
 
+    def blurImageResource(self, imgRes, sensitiveInfoList):
+        """Blur image resource
+            Note: NOT process gif image
+
+        Args:
+            imgRes (Resource): Note image resource
+        Returns:
+            new image resouce
+        Raises:
+        """
+        isBlurred = False
+
+        isGif = "gif" in imgRes.mime
+        if isGif:
+            logging.info("Omit process gif image: %s", imgRes.attributes.fileName)
+            return imgRes
+
+        imgBytes = imgRes.data.body
+
+        matchResultDict = self.baiduOcr.isStrInImage(sensitiveInfoList, imgBytes=imgBytes, isMatchMultiple=True, isRespShortInfo=False)
+
+        curImg = utils.bytesToImage(imgBytes)
+        for eachSensitiveInfo, eachMatchResult in matchResultDict.items():
+            isMatch, matchResultList = eachMatchResult
+            if isMatch:
+                for eachMatchResultDict in matchResultList:
+                    matchStr, matchLocation = eachMatchResultDict # ' limao@xx1 ~/dev/crifan/gitbookgitbook_template/books/gitbook_demo master .make install', (49, 0, 72, 16)
+                    logging.debug("matchStr=%s, matchLocation=%s", matchStr, matchLocation)
+                    posX, posY, posW, posH = matchLocation # (49, 0, 72, 16)
+                    matchBox = [posX, posY, posX + posW, posY + posH] # [49, 0, 121, 16]
+                    cropBoxImg = curImg.crop(matchBox) # <PIL.Image.Image image mode=RGBA size=72x16 at 0x101B9CA90>
+                    # Use GaussianBlur directly to blur the image 10 times
+                    blurImg = cropBoxImg.filter(ImageFilter.GaussianBlur(radius=10)) # <PIL.Image.Image image mode=RGBA size=72x16 at 0x103530DF0>
+                    curImg.paste(blurImg, matchBox)
+
+                    # # for debug
+                    # curImg.show()
+
+                    isBlurred = True
+
+        if isBlurred:
+            logging.info("Blurred image: %s", imgRes.attributes.fileName)
+
+        # # for debug
+        # curImg.show()
+
+        newImgBytes = utils.imageToBytes(curImg)
+
+        newImgRes = crifanEvernote.genNewImgRes(imgRes, newImgBytes)
+
+        return newImgRes
+
     @staticmethod
-    def resizeNoteImage(noteDetail):
-        """Resize note each media image and update note content
+    def genNewImgRes(oldImgRes, newImgBytes, newMime=None):
+        """Generate new image resource
+
+        Args:
+            oldImgRes (Resource): old image resource
+            newImgBytes (bytes): new image bytes
+            newMime (str): new image MIME. Default is None. If None, get from oldImgRes.mime
+        Returns:
+            new image resouce
+        Raises:
+        """
+        if not newMime:
+            newMime = oldImgRes.mime # 'image/png'
+
+        newMd5Bytes = utils.calcMd5(newImgBytes, isRespBytes=True) # b'\xaa\x05r\x15l\xb8\xa9\x9a\xe3\xc3MR2\x08\xa8['
+
+        newLen = len(newImgBytes)
+
+        newData = Types.Data()
+        newData.size = newLen
+        newData.bodyHash = newMd5Bytes
+        newData.body = newImgBytes
+
+        newImgRes = Types.Resource()
+        newImgRes.mime = newMime
+        newImgRes.data = newData
+        newImgRes.attributes = oldImgRes.attributes
+
+        return newImgRes
+
+    @staticmethod
+    def resizeImageResource(imgRes):
+        """Resize image resource
+            Note: gif can not resize, so NOT process gif image
+
+        Args:
+            imgRes (Resource): Note image resource
+        Returns:
+            new image resouce
+        Raises:
+        """
+        isGif = "gif" in imgRes.mime
+        if isGif:
+            logging.info("Omit process gif image: %s", imgRes.attributes.fileName)
+            return imgRes
+
+        resBytes = imgRes.data.body
+        resizeImgInfo = utils.resizeSingleImage(resBytes)
+
+        originFormat = resizeImgInfo["originFormat"] # 'JPEG'
+        originSize = resizeImgInfo["originSize"] # (1080, 2340)
+        originLen = resizeImgInfo["originLen"] # 73348
+
+        newFormat = resizeImgInfo["newFormat"] # 'JPEG'
+        newSize = resizeImgInfo["newSize"] # (360, 780)
+        newBytes = resizeImgInfo["newBytes"]
+        newLen = resizeImgInfo["newLen"] # 13795
+
+        resizeRatio = resizeImgInfo["resizeRatio"] # 0.18807602115940447
+        resizeRatioInt = int(resizeRatio * 100) # 18
+
+        originLenStr = utils.formatSize(originLen) # '71.6KB'
+        newLenStr = utils.formatSize(newLen) # '37.7KB'
+
+        logging.info("Resized: %s,%sx%s,%s -> %s,%sx%s,%s => ratio=%d%%",
+            originFormat, originSize[0], originSize[1], originLenStr, newFormat, newSize[0], newSize[1], newLenStr, resizeRatioInt)
+        # Resized image: origin: fmt=JPEG,size=1080x2340,len=71.6KB -> new: fmt=JPEG,size=360x780,len=13.5KB => ratio=18%
+
+        newMime = utils.ImageFormatToMime[newFormat] # 'image/jpeg'
+
+        newImgRes = crifanEvernote.genNewImgRes(imgRes, newBytes, newMime)
+
+        return newImgRes
+
+    @staticmethod
+    def processNoteImage(noteDetail, processImageCallback, callbackParaDict=None):
+        """Process note each media image and update note content
 
         Args:
             noteDetail (Note): evernote note
+            processCallback (func): callback function of process
+            callbackParaDict (dict): callback function parameter dict. Default is None
         Returns:
-            new resouce list with resized imgage resource
+            new resouce list with updated imgage resource
         Raises:
         """
         newResList = []
@@ -570,44 +725,11 @@ class crifanEvernote(object):
             if crifanEvernote.isImageResource(eachResource):
                 imgFilename = eachResource.attributes.fileName
                 logging.info("[%d/%d] imgFilename=%s", curResNum, originResNum, imgFilename)
-
-                resBytes = eachResource.data.body
-
-                resizeImgInfo = utils.resizeSingleImage(resBytes)
-
-                originFormat = resizeImgInfo["originFormat"] # 'JPEG'
-                originSize = resizeImgInfo["originSize"] # (1080, 2340)
-                originLen = resizeImgInfo["originLen"] # 73348
-
-                newFormat = resizeImgInfo["newFormat"] # 'JPEG'
-                newSize = resizeImgInfo["newSize"] # (360, 780)
-                newBytes = resizeImgInfo["newBytes"]
-                newLen = resizeImgInfo["newLen"] # 13795
-
-                resizeRatio = resizeImgInfo["resizeRatio"] # 0.18807602115940447
-                resizeRatioInt = int(resizeRatio * 100) # 18
-
-                originLenStr = utils.formatSize(originLen) # '71.6KB'
-                newLenStr = utils.formatSize(newLen) # '37.7KB'
-
-                logging.info("Resized: %s,%sx%s,%s -> %s,%sx%s,%s => ratio=%d%%",
-                    originFormat, originSize[0], originSize[1], originLenStr, newFormat, newSize[0], newSize[1], newLenStr, resizeRatioInt)
-                # Resized image: origin: fmt=JPEG,size=1080x2340,len=71.6KB -> new: fmt=JPEG,size=360x780,len=13.5KB => ratio=18%
-
-                newMd5Bytes = utils.calcMd5(newBytes, isRespBytes=True) # b'\xaa\x05r\x15l\xb8\xa9\x9a\xe3\xc3MR2\x08\xa8['
-                newMime = utils.ImageFormatToMime[newFormat] # 'image/jpeg'
-
-                newData = Types.Data()
-                newData.size = newLen
-                newData.bodyHash = newMd5Bytes
-                newData.body = newBytes
-
-                newRes = Types.Resource()
-                newRes.mime = newMime
-                newRes.data = newData
-                newRes.attributes = eachResource.attributes
-
-                newResList.append(newRes)
+                if not callbackParaDict:
+                    callbackParaDict = {}
+                callbackParaDict["imgRes"] = eachResource
+                newImgRes = processImageCallback(**callbackParaDict)
+                newResList.append(newImgRes)
             else:
                 """
                     audio/wav
@@ -630,9 +752,28 @@ class crifanEvernote(object):
                 updated note detail
             Raises:
         """
-        newResList = crifanEvernote.resizeNoteImage(noteDetail)
+        newResList = crifanEvernote.processNoteImage(noteDetail, crifanEvernote.resizeImageResource)
         if newResList:
-            noteDetail = crifanEvernote.updateNoteResouces(noteDetail, newResList)
+            noteDetail = crifanEvernote.updateNoteImageResouces(noteDetail, newResList)
+        return noteDetail
+
+    def blurAndUpdateNoteImage(self, noteDetail, sensitiveInfoList):
+        """Blur evernote note image media, then update note content
+
+            Args:
+                noteDetail (Note): Evernote note with details
+                sensitiveInfoList (list): sensitive info list
+            Returns:
+                updated note detail
+            Raises:
+        """
+        paraDict = {
+            # "self": self,
+            "sensitiveInfoList": sensitiveInfoList,
+        }
+        newResList = crifanEvernote.processNoteImage(noteDetail, self.blurImageResource, paraDict)
+        if newResList:
+            noteDetail = crifanEvernote.updateNoteImageResouces(noteDetail, newResList)
         return noteDetail
 
     @staticmethod
@@ -668,8 +809,8 @@ class crifanEvernote(object):
         return curResSoup
 
     @staticmethod
-    def updateNoteResouces(noteDetail, newResList):
-        """Update note resources with new resource
+    def updateNoteImageResouces(noteDetail, newResList):
+        """Update note resources and content, with new resource and updated <en-media> content
 
         Args:
             noteDetail (Note): Evernote note with details
@@ -684,8 +825,16 @@ class crifanEvernote(object):
         # soup = BeautifulSoup(originContent, 'html.parser')
         soup = crifanEvernote.noteContentToSoup(noteDetail)
 
+        # # for debug: try restore not show image
+        # resSoupList = soup.find_all("en-media")
+
         for curIdx, curRes in enumerate(originResList):
             foundMediaNode = crifanEvernote.findResourceSoup(curRes, soup=soup)
+
+            # # for debug: try restore not show image
+            # if not foundMediaNode:
+            #     foundMediaNode = resSoupList[curIdx]
+
             if foundMediaNode:
                 newRes = newResList[curIdx] # 'image/jpeg'
                 validNewResList.append(newRes)
@@ -891,6 +1040,66 @@ class crifanEvernote(object):
         return noteHtml
 
     @staticmethod
+    def getCodeblockSoupList(noteSoup):
+        """Get all en-codeblock div soup list from evernote note content soup
+
+        Args:
+            noteSoup (Soup): note content soup
+        Returns:
+            codeblock div soup list(list)
+        Raises:
+        """
+        # <div style='box-sizing: border-box; ...: 1px solid rgba(0, 0, 0, 0.14902);-en-codeblock:true;'>
+        codeblockP = re.compile("box-sizing:.+-en-codeblock:true;")
+        codeblockNodeList = noteSoup.find_all("div", attrs={"style": codeblockP})
+        return codeblockNodeList
+
+    @staticmethod
+    def getContentForTag(curNote):
+        """Get note content string for generate tags
+
+        Args:
+            curNote (Note): evernote Note
+        Returns:
+            note content (str)
+        Raises:
+        """
+        noteSoup = crifanEvernote.noteContentToSoup(curNote)
+
+        # # for debug
+        # utils.dbgSaveSoupToHtml(noteSoup)
+
+        # remove links
+        # <div><a href="https://npm.taobao.org/mirrors/">https://npm.taobao.org/mirrors/</a></div>
+        # <div><a href="https://npm.taobao.org/mirrors/python/">https://npm.taobao.org/mirrors/python/</a></div>
+        allASoupList = noteSoup.find_all("a")
+        for eachASoup in allASoupList:
+            aAttrDict = eachASoup.attrs
+            aHref = aAttrDict.get("href") # 'https://github.com/pypa/pipenv/issues/3282'
+            if aHref:
+                aHref = aHref.strip() # 'https://github.com/pypa/pipenv/issues/3282'
+            aStr = eachASoup.string # 'https://github.com/pypa/pipenv/issues/3282'
+            if aStr:
+                aStr = aStr.strip() # 'https://github.com/pypa/pipenv/issues/3282'
+
+            if aHref == aStr:
+                eachASoup.decompose()
+
+        # # for debug
+        # utils.dbgSaveSoupToHtml(noteSoup)
+
+        # remove code block
+        codeblockSoupList = crifanEvernote.getCodeblockSoupList(noteSoup)
+        for eachCodeblockSoup in codeblockSoupList:
+            eachCodeblockSoup.decompose()
+
+        # # for debug
+        # utils.dbgSaveSoupToHtml(noteSoup)
+
+        noteContentStr = utils.getAllContents(noteSoup, isStripped=True)
+        return noteContentStr
+
+    @staticmethod
     def generateTags(curNote, maxTagNum=6):
         """Generate tags from note (title and content)
 
@@ -910,16 +1119,15 @@ class crifanEvernote(object):
         # remove 【未解决】 【已解决】 【记录】 【无需解决】
         titleStr = re.sub("^【\S{2,5}】(?P<titleStr>.+)", "\g<titleStr>", curNoteTitle)
         # '【未解决】夜神安卓模拟器安装新版微信并正常打开和使用微信' -> '夜神安卓模拟器安装新版微信并正常打开和使用微信'
-        logging.debug("titleStr=%s", titleStr)
+        logging.info("titleStr=%s", titleStr)
         # titleTagList = utils.extractTags(titleStr, withWeight=True)
         titleTagList = utils.extractTags(titleStr)
-        logging.debug("titleTagList=%s", titleTagList)
+        logging.info("titleTagList=%s", titleTagList)
 
-        noteSoup = crifanEvernote.noteContentToSoup(curNote)
-        noteContentStr = utils.getAllContents(noteSoup, isStripped=True)
+        noteContentStr = crifanEvernote.getContentForTag(curNote)
         # contentTagList = utils.extractTags(noteContentStr, withWeight=True)
         contentTagList = utils.extractTags(noteContentStr)
-        logging.debug("contentTagList=%s", contentTagList)
+        logging.info("contentTagList=%s", contentTagList)
 
         # merge title and content tags for same one
         mergedTagList = []
@@ -929,38 +1137,50 @@ class crifanEvernote(object):
                     if eachContentTag not in mergedTagList:
                         mergedTagList.append(eachContentTag)
                     break
-        logging.debug("mergedTagList=%s", mergedTagList)
+        logging.info("mergedTagList=%s", mergedTagList)
 
         # after merge, if too little tags, then add some from content tags
         MinSameTagNum = 3
         mergedTagNum = len(mergedTagList)
+        mergedTagLowerList = [eachTag.lower() for eachTag in mergedTagList]
         # if mergedTagNum <= MinSameTagNum:
         if mergedTagNum < MinSameTagNum:
+            for eachTitleTag in titleTagList:
+                # if eachTitleTag not in mergedTagList:
+                if eachTitleTag.lower() not in mergedTagLowerList:
+                    mergedTagList.append(eachTitleTag)
+                    mergedTagLowerList = [eachTag.lower() for eachTag in mergedTagList]
+
             for eachContentTag in contentTagList:
-                if eachContentTag not in mergedTagList:
+                # if eachContentTag not in mergedTagList:
+                if eachContentTag.lower() not in mergedTagLowerList:
                     mergedTagList.append(eachContentTag)
+                    mergedTagLowerList = [eachTag.lower() for eachTag in mergedTagList]
                     # if len(mergedTagList) >= maxTagNum:
                     #     break
-
-            for eachTitleTag in titleTagList:
-                if eachTitleTag not in mergedTagList:
-                    mergedTagList.append(eachTitleTag)
+        logging.info("mergedTagList=%s", mergedTagList)
 
         # filter out invalid tags
         validTagList = []
         InvalidTagRuleList = [
-            "^\d+([\d\.]+)?$",
+            "^\d+([\d\.]+)?$", # 4.4, 2018.11
             "^解决$",
+            "^中用$",
             "^com$",
             "^crifan$",
             "^drwx$",
             "^drwxr$",
+            "^install",
+            "^Issue",
+            "^lock",
             "^mnt$",
-            "^Users?$",
-            "^share$",
-            "^shared$",
-            "^staff$",
+            "^package",
+            "^User", # Users
+            "^share", # shared
+            "^skip",
+            "^staff",
             "^xr$",
+            "^[\-\_\+\\\?\.]+", # --
         ]
         for eachTag in mergedTagList:
             isTagValid = True
@@ -976,11 +1196,11 @@ class crifanEvernote(object):
                 if eachTag not in validTagList:
                     validTagList.append(eachTag)
 
-        logging.debug("validTagList=%s", validTagList)
+        logging.info("validTagList=%s", validTagList)
 
         validTagNum = len(validTagList)
         if validTagNum > maxTagNum:
             validTagList = validTagList[0:maxTagNum]
-        logging.debug("validTagList=%s", validTagList)
+        logging.info("validTagList=%s", validTagList)
 
         return validTagList
