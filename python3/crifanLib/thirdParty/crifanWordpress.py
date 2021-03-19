@@ -1,6 +1,6 @@
 # Function: Wordpress related functions
 # Author: Crifan Li
-# Update: 20210305
+# Update: 20210311
 # Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanWordpress.py
 
 import logging
@@ -25,7 +25,7 @@ class crifanWordpress(object):
     JWT_TOKEN_INVALID_CODE = "jwt_auth_invalid_token"
 
     # SearchTagPerPage = 10
-    SearchTagPerPage = 100 # large enough to try response all for only sinlge call
+    SearchTagPerPage = 100 # large enough to try response all for only sinlge call, max per_page is 100
 
     ################################################################################
     # Class Method
@@ -247,34 +247,38 @@ class crifanWordpress(object):
 
         return isCreateOk, respInfo
 
-    def searchTaxonomy(self, name, taxonomy):
-        """Search wordpress category/post_tag
-            return the exactly matched one, name is same, or name lowercase is same
+    def getTaxonomySinglePage(self, name, taxonomy, curPage, perPage=None):
+        """Get single page wordpress category/post_tag
+            return the whole page items
+
             by call REST api: 
                 GET /wp-json/wp/v2/categories
                 GET /wp-json/wp/v2/tags
 
         Args:
-            name (str): category name to search
+            name (str): category name
             taxonomy (str): taxonomy type: category/post_tag
+            curPage (int): current page number
+            perPage (int): max items per page. Default None. If None, use SearchTagPerPage=100
         Returns:
             (bool, dict)
                 True, found taxonomy info
                 False, error detail
         Raises:
         """
-        isSearchOk = False
-        finalRespTaxonomy = None
-
         curHeaders = {
             "Authorization": self.authorization,
             "Accept": "application/json",
         }
         logging.debug("curHeaders=%s", curHeaders)
 
+        if perPage is None:
+            perPage = crifanWordpress.SearchTagPerPage
+
         queryParamDict = {
             "search": name, # 'Mac'
-            "per_page": crifanWordpress.SearchTagPerPage,
+            "page": curPage, # 1
+            "per_page": perPage, # 100
         }
 
         searchTaxonomyUrl = ""
@@ -295,8 +299,79 @@ class crifanWordpress(object):
         isSearchOk, respTaxonomyLit = crifanWordpress.processCommonResponse(resp)
         logging.debug("isSearchOk=%s, respTaxonomyLit=%s", isSearchOk, respTaxonomyLit)
 
-        if respTaxonomyLit:
-            finalRespTaxonomy = crifanWordpress.findSameNameTaxonomy(name, respTaxonomyLit)
+        return isSearchOk, respTaxonomyLit
+
+    def getAllTaxonomy(self, name, taxonomy):
+        """Get all page of wordpress category/post_tag
+
+        Args:
+            name (str): category name to search
+            taxonomy (str): taxonomy type: category/post_tag
+        Returns:
+            (bool, dict)
+                True, found taxonomy info
+                False, error detail
+        Raises:
+        """
+        isGetAllOk = False
+        respInfo = None
+
+        perPage = crifanWordpress.SearchTagPerPage
+
+        firstPageNum = 1
+        isFirstPageSearchOk, firstPageRespInfo = self.getTaxonomySinglePage(name, taxonomy, firstPageNum, perPage)
+        if isFirstPageSearchOk:
+            isGetAllOk = True
+
+            firstPageRespList = firstPageRespInfo
+            respAllTaxonomyLit = firstPageRespList
+            firstPageRespItemNum = len(firstPageRespList)
+            if firstPageRespItemNum >= perPage:
+                # get next page
+                isRestEachPageOk = True
+                isRestEachPageRespFull = True
+                restCurPage = firstPageNum + 1
+                restRespAllItemList = []
+                while (isRestEachPageOk and isRestEachPageRespFull):
+                    isRestEachPageOk, restEachPageRespItemList = self.getTaxonomySinglePage(name, taxonomy, restCurPage, perPage)
+                    if isRestEachPageOk:
+                        restEachPageRespItemNum = len(restEachPageRespItemList)
+                        isRestEachPageRespFull = restEachPageRespItemNum >= perPage
+
+                        restRespAllItemList.extend(restEachPageRespItemList)
+
+                    restCurPage += 1
+
+                respAllTaxonomyLit.extend(restRespAllItemList)
+
+            respInfo = respAllTaxonomyLit
+        else:
+            isGetAllOk = False
+            respInfo = firstPageRespInfo
+
+        return isGetAllOk, respInfo
+
+    def searchTaxonomy(self, name, taxonomy):
+        """Search wordpress category/post_tag
+            return the exactly matched one, name is same, or name lowercase is same
+
+        Args:
+            name (str): category name to search
+            taxonomy (str): taxonomy type: category/post_tag
+        Returns:
+            (bool, dict)
+                True, found taxonomy info
+                False, error detail
+        Raises:
+        """
+        isSearchOk = False
+        finalRespTaxonomy = None
+
+        isGetAllOk, respInfo = self.getAllTaxonomy(name, taxonomy)
+        if isGetAllOk:
+            isSearchOk = True
+            respAllTaxonomyLit = respInfo
+            finalRespTaxonomy = crifanWordpress.findSameNameTaxonomy(name, respAllTaxonomyLit)
             logging.debug("finalRespTaxonomy=%s", finalRespTaxonomy)
 
         return isSearchOk, finalRespTaxonomy
