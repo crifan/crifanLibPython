@@ -3,13 +3,13 @@
 """
 Filename: crifanPillow.py
 Function: crifanLib's pillow/PIL related functions
-Version: 20210319
+Version: 20210325
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanPillow.py
 Usage: https://book.crifan.com/books/python_common_code_snippet/website/common_code/multimedia/image/pillow.html
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210319"
+__version__ = "20210325"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
@@ -165,10 +165,18 @@ def resizeImage(inputImage,
 
     # save image to file
     if outputImageFilePath:
+        # if isOutputOptimize:
+        #     imgObj.save(outputImageFilePath, optimize=True)
+        # else:
+        #     imgObj.save(outputImageFilePath)
+        saveExtraParaDict = {}
         if isOutputOptimize:
-            imgObj.save(outputImageFilePath, optimize=True)
-        else:
-            imgObj.save(outputImageFilePath)
+            saveExtraParaDict["optimize"] = True
+
+        if newFormat == "JPEG":
+            saveExtraParaDict["quality"] = 90
+
+        imgObj.save(outputImageFilePath, **saveExtraParaDict)
 
     # close it
     if shouldClose:
@@ -340,7 +348,12 @@ def imageToBytes(imgObj, isUseOriginObj=False):
     else:
         curImgObj = copy.deepcopy(imgObj)
     imgBytesIO = io.BytesIO()
-    curImgObj.save(imgBytesIO, curImgObj.format) # 'TiffImageFile' object has no attribute 'use_load_libtiff'
+    # curImgObj.save(imgBytesIO, curImgObj.format) # 'TiffImageFile' object has no attribute 'use_load_libtiff'
+    if curImgObj.format == "JPEG":
+        JPEG_QUALITY = 90
+        curImgObj.save(imgBytesIO, curImgObj.format, quality=JPEG_QUALITY)
+    else:
+        curImgObj.save(imgBytesIO, curImgObj.format)
 
     imgBytes = imgBytesIO.getvalue()
     imgBytesIO.close()

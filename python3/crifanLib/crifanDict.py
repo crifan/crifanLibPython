@@ -3,17 +3,19 @@
 """
 Filename: crifanDict.py
 Function: crifanLib's dict related functions
-Version: 20201207
-Latest: https://github.com/crifan/crifanLibPython/blob/master/crifanLib/crifanDict.py
+Version: 20210325
+Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanDict.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20201207"
-__copyright__ = "Copyright (c) 2020, Crifan Li"
+__version__ = "20210325"
+__copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
 
 import sys
+import re
+import json
 from collections import OrderedDict
 import crifanLib.crifanSystem
 
@@ -188,6 +190,60 @@ def insertKeyValueAfterDictKey(curDict, afterKey, newKey, newValue):
         eachValue = valuesList[keyIdx]
         updatedDict[eachKey] = eachValue
     return updatedDict
+
+def removeJsonComment(jsonStr):
+    """Remove comments from json string
+
+    Args:
+        jsonStr (str): json str with comments
+    Returns:
+        str
+    Raises:
+    Examples:
+      {
+        "key1": "value1", # line tail comment
+        # whole line comment
+        "key2": "value2" // line tail comment
+        // whole line comment
+      }
+    """
+    pureJsonStr = jsonStr
+
+    # whole line with #
+    #                 # International
+    pureJsonStr = re.sub("^\s*#.*$\n+", "", pureJsonStr, flags=re.M)
+
+    # whole line with //
+    #     // "mode": "SINGLE",
+    pureJsonStr = re.sub("^\s*//.*$\n+", "", pureJsonStr, flags=re.M)
+
+    # line tail with #
+    pureJsonStr = re.sub("\s+#.*$", "", pureJsonStr, flags=re.M)
+
+    # line tail with //
+    pureJsonStr = re.sub("\s+//.*$", "", pureJsonStr, flags=re.M)
+
+    return pureJsonStr
+
+def strToDict(dictRawStr):
+    """Convert string to dict
+
+    Args:
+        dictRawStr (str): dict raw string (with comment, with True/False ...)
+    Returns:
+        dict
+    Raises:
+    """
+    dictStr = removeJsonComment(dictRawStr)
+
+    # True/False -> true, false
+    dictStr = re.sub("\s*True\s*(,?)", "true\g<1>", dictStr)
+    dictStr = re.sub("\s*False\s*(,?)", "false\g<1>", dictStr)
+
+    curDict = json.loads(dictStr)
+
+    return curDict
+
 
 ################################################################################
 # Test
