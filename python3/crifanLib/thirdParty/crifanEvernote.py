@@ -1,6 +1,6 @@
 # Function: Evernote related functions
 # Author: Crifan Li
-# Update: 20210319
+# Update: 20210326
 # Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanEvernote.py
 
 import sys
@@ -134,7 +134,7 @@ class crifanEvernote(object):
     DoctypeEnNote = """<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">"""
 
     BaiduOcrApiKey = "changeToYours"
-    BaiduSecretKey = "changeToYours"
+    BaiduOcrSecretKey = "changeToYours"
 
     ################################################################################
     # Class Method
@@ -168,10 +168,14 @@ class crifanEvernote(object):
         # try:
         self.noteStore = self.client.get_note_store()
         logging.info("self.noteStore=%s", self.noteStore)
+        # 注：当token过期会报错
+        # 发生异常: EDAMUserException
+        # EDAMUserException(errorCode=9, parameter='authenticationToken')
         # except BaseException as curException:
         #     logging.error("init noteStore exception: %s -> possible reason is token expired -> need refresh Evernote token", curException)
 
-        self.baiduOcr = BaiduOCR(self.BaiduOcrApiKey, self.BaiduSecretKey)
+        self.baiduOcr = BaiduOCR(self.BaiduOcrApiKey, self.BaiduOcrSecretKey)
+        logging.info("self.baiduOcr=%s", self.baiduOcr)
 
     def initClient(self):
         client = EvernoteClient(
@@ -586,10 +590,10 @@ class crifanEvernote(object):
         """
         isBlurred = False
 
-        isGif = "gif" in imgRes.mime
-        if isGif:
-            logging.info("Omit process gif image: %s", imgRes.attributes.fileName)
-            return imgRes
+        # isGif = "gif" in imgRes.mime
+        # if isGif:
+        #     logging.info("Omit process gif image: %s", imgRes.attributes.fileName)
+        #     return imgRes
 
         imgBytes = imgRes.data.body
 
@@ -603,7 +607,11 @@ class crifanEvernote(object):
                     matchStr, matchLocation = eachMatchResultDict # ' limao@xx1 ~/dev/crifan/gitbookgitbook_template/books/gitbook_demo master .make install', (49, 0, 72, 16)
                     logging.debug("matchStr=%s, matchLocation=%s", matchStr, matchLocation)
                     posX, posY, posW, posH = matchLocation # (49, 0, 72, 16)
-                    matchBox = [posX, posY, posX + posW, posY + posH] # [49, 0, 121, 16]
+                    # matchBox = [posX, posY, posX + posW, posY + posH] # [49, 0, 121, 16]
+                    # Note: add extrac width (and height) to makesure all sensitve info blured
+                    extraWidth = 5
+                    extraHeight = 2
+                    matchBox = [posX, posY, posX + posW + extraWidth, posY + posH + extraHeight]
                     cropBoxImg = curImg.crop(matchBox) # <PIL.Image.Image image mode=RGBA size=72x16 at 0x101B9CA90>
                     # Use GaussianBlur directly to blur the image 10 times
                     blurImg = cropBoxImg.filter(ImageFilter.GaussianBlur(radius=10)) # <PIL.Image.Image image mode=RGBA size=72x16 at 0x103530DF0>
@@ -668,10 +676,10 @@ class crifanEvernote(object):
             new image resouce
         Raises:
         """
-        isGif = "gif" in imgRes.mime
-        if isGif:
-            logging.info("Omit process gif image: %s", imgRes.attributes.fileName)
-            return imgRes
+        # isGif = "gif" in imgRes.mime
+        # if isGif:
+        #     logging.info("Omit process gif image: %s", imgRes.attributes.fileName)
+        #     return imgRes
 
         resBytes = imgRes.data.body
         resizeImgInfo = utils.resizeSingleImage(resBytes)
@@ -725,11 +733,21 @@ class crifanEvernote(object):
             if crifanEvernote.isImageResource(eachResource):
                 imgFilename = eachResource.attributes.fileName
                 logging.info("[%d/%d] imgFilename=%s", curResNum, originResNum, imgFilename)
-                if not callbackParaDict:
-                    callbackParaDict = {}
-                callbackParaDict["imgRes"] = eachResource
-                newImgRes = processImageCallback(**callbackParaDict)
-                newResList.append(newImgRes)
+                NotSupportImageMimeList = [
+                    "image/gif",
+                    "image/svg+xml",
+                ]
+                curImgMime = eachResource.mime
+                isNotSupport = curImgMime in NotSupportImageMimeList
+                if isNotSupport:
+                    logging.warning("Omit process not supported image type: %s", curImgMime)
+                    newResList.append(eachResource)
+                else:
+                    if not callbackParaDict:
+                        callbackParaDict = {}
+                    callbackParaDict["imgRes"] = eachResource
+                    newImgRes = processImageCallback(**callbackParaDict)
+                    newResList.append(newImgRes)
             else:
                 """
                     audio/wav
