@@ -3,12 +3,12 @@
 """
 Filename: crifanRequests.py
 Function: crifanLib's Requests related functions
-Version: 20210129
+Version: 20210326
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanRequests.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210129"
+__version__ = "20210326"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
@@ -180,6 +180,24 @@ def getContentTypeFromUrl(curUrl, proxies=None):
     respHeaderDict = getRespHeadersFromUrl(curUrl, proxies=proxies)
     contentTypeStr = getContentTypeFromHeaders(respHeaderDict)
     return contentTypeStr
+
+def isValidImageUrl(imageUrl, proxies=None):
+    """Check whether is valid image url
+
+    Args:
+        imageUrl (str): image url
+        proxies (dict): requests proxies
+    Returns:
+        bool
+    Raises:
+    Examples:
+        https://www.crifan.com/files/pic/uploads/2021/03/f60ea32cf4664b41922431f4ea015621.jpg
+    """
+    isValid = False
+    contentType = getContentTypeFromUrl(imageUrl, proxies=proxies) # 'image/jpeg'
+    isImageType = re.match("^image/", contentType)
+    isValid = bool(isImageType)
+    return isValid
 
 def isAndroidApkUrl(curApkUrl, proxies=None):
     """Check whether is android apk url
