@@ -1,8 +1,7 @@
 """
-Filename: crifanBaiduOcr_simple.py
+Filename: baiduOcr.py
 Function: simple version of https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanBaiduOcr.py
 Version: 20210326
-Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanBaiduOcr_simple.py
 """
 
 import re
@@ -422,6 +421,8 @@ class BaiduOCR():
 						isMatch = re.match(wordStr, matchedPartStr)
 						if isMatch:
 							endIdx = eachIdx + wordStrMaxIdx
+							if endIdx > charResultListMaxIdx:
+								endIdx = charResultListMaxIdx
 							lastCharResult = charResultList[endIdx]
 							break
 
