@@ -1,5 +1,5 @@
 """
-Filename: baiduOcr.py
+Filename: crifanBaiduOcr_simple.py
 Function: simple version of https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanBaiduOcr.py
 Version: 20210326
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanBaiduOcr_simple.py
