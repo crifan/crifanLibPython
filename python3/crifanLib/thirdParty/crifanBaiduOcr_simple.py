@@ -1,7 +1,8 @@
 """
 Filename: baiduOcr.py
 Function: simple version of https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanBaiduOcr.py
-Version: 20210316
+Version: 20210326
+Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanBaiduOcr_simple.py
 """
 
 import re
