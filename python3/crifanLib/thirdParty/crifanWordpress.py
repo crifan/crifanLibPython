@@ -1,11 +1,14 @@
 # Function: Wordpress related functions
 # Author: Crifan Li
-# Update: 20210311
+# Update: 20210325
 # Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanWordpress.py
 
+from datetime import datetime
 import logging
 import re
 import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 class crifanWordpress(object):
     """Use Python operate Wordpress via REST api
@@ -26,6 +29,10 @@ class crifanWordpress(object):
 
     # SearchTagPerPage = 10
     SearchTagPerPage = 100 # large enough to try response all for only sinlge call, max per_page is 100
+
+    # RequestsTimeout = 20 # max timeout for requests. Especially for /wp-json/wp/v2/media many time will stuck so add this.
+
+    MaxRetryNum = 10
 
     ################################################################################
     # Class Method
@@ -48,6 +55,13 @@ class crifanWordpress(object):
         # https://developer.wordpress.org/rest-api/reference/tags/#create-a-tag
         self.apiTags = self.host + "/wp-json/wp/v2/tags" # 'https://www.crifan.com/wp-json/wp/v2/tags'
 
+        # requests.adapters.DEFAULT_RETRIES = 10
+        self.reqSession = requests.Session()
+        self.reqRetry = Retry(connect=self.MaxRetryNum, backoff_factor=0.5)
+        self.reqAdapter = HTTPAdapter(max_retries=self.reqRetry)
+        self.reqSession.mount('http://', self.reqAdapter)
+        self.reqSession.mount('https://', self.reqAdapter)
+
     def validateToken(self):
         """Validate wordpress REST api jwt token is valid or not
         Args:
@@ -60,7 +74,8 @@ class crifanWordpress(object):
             "Accept": "application/json",
         }
         validateTokenUrl = self.apiValidateToken
-        resp = requests.post(
+        # resp = requests.post(
+        resp = self.reqSession.post(
             validateTokenUrl,
             proxies=self.requestsProxies,
             headers=curHeaders,
@@ -74,6 +89,21 @@ class crifanWordpress(object):
             else:
                 isTokenOk = False
         return isTokenOk, respInfo
+
+    def generateUploadedImageUrl(self, uploadImageFilename):
+        """Generate uplaod image file url
+
+        Args:
+            uploadImageFilename (str): upload image filename
+        Returns:
+            str
+        Raises:
+        """
+        curDatetime = datetime.now() # datetime.datetime(2021, 3, 25, 22, 42, 7, 834462)
+        yearMonthStr = curDatetime.strftime(format="%Y/%m") # '2021/03'
+        uploadedImageUrl = "%s/files/pic/uploads/%s/%s" % (self.host, yearMonthStr, uploadImageFilename)
+        # 'https://www.crifan.com/files/pic/uploads/2021/03/f60ea32cf4664b41922431f4ea015621.jpg'
+        return uploadedImageUrl
 
     def createMedia(self, contentType, filename, mediaBytes):
         """Create wordpress media (image)
@@ -98,10 +128,12 @@ class crifanWordpress(object):
         logging.debug("curHeaders=%s", curHeaders)
         # curHeaders={'Authorization': 'Bearer eyJ0xxxyyy.zzzB4', 'Content-Type': 'image/png', 'Content-Disposition': 'attachment; filename=f6956c30ef0b475fa2b99c2f49622e35.png'}
         createMediaUrl = self.apiMedia
-        resp = requests.post(
+        # resp = requests.post(
+        resp = self.reqSession.post(
             createMediaUrl,
             proxies=self.requestsProxies,
             headers=curHeaders,
+            # timeout=self.RequestsTimeout,
             data=mediaBytes,
         )
         logging.debug("resp=%s", resp)
@@ -172,7 +204,8 @@ class crifanWordpress(object):
         logging.debug("postDict=%s", postDict)
         # postDict={'title': '【记录】Mac中用pmset设置GPU显卡切换模式', 'content': '<html>\n <div>\n  折腾：\n </div>\n <div>\。。。。<br/>\n </div>\n</html>', 'date': '2020-08-17T10:16:34', 'slug': 'on_mac_pmset_is_used_set_gpu_graphics_card_switching_mode', 'status': 'draft', 'format': 'standard', 'categories': [1374], 'tags': [1367, 13224, 13225, 13226]}
         createPostUrl = self.apiPosts
-        resp = requests.post(
+        # resp = requests.post(
+        resp = self.reqSession.post(
             createPostUrl,
             proxies=self.requestsProxies,
             headers=curHeaders,
@@ -230,7 +263,8 @@ class crifanWordpress(object):
         elif taxonomy == "post_tag":
             createTaxonomyUrl = self.apiTags
 
-        resp = requests.post(
+        # resp = requests.post(
+        resp = self.reqSession.post(
             createTaxonomyUrl,
             proxies=self.requestsProxies,
             headers=curHeaders,
@@ -287,7 +321,8 @@ class crifanWordpress(object):
         elif taxonomy == "post_tag":
             searchTaxonomyUrl = self.apiTags
 
-        resp = requests.get(
+        # resp = requests.get(
+        resp = self.reqSession.get(
             searchTaxonomyUrl,
             proxies=self.requestsProxies,
             headers=curHeaders,

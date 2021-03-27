@@ -77,6 +77,8 @@ def getRespHeadersFromUrl(curUrl, proxies=None):
             output: {'Server': 'Tengine', 'Date': 'Fri, 11 Dec 2020 14:11:00 GMT', 'Content-Type': 'application/pdf', 'Content-Length': '24422168', 'Last-Modified': 'Fri, 18 Sep 2020 09:56:15 GMT', 'Connection': 'keep-alive', 'ETag': '"5f64843f-174a718"', 'Strict-Transport-Security': 'max-age=15768000', 'Accept-Ranges': 'bytes'}
         3
             output: {'Date': 'Thu, 24 Dec 2020 08:57:18 GMT', 'Content-Type': 'application/vnd.android.package-archive', 'Content-Length': '190814345', 'Connection': 'keep-alive', 'Server': 'openresty', 'Last-Modified': 'Mon, 14 Dec 2020 12:32:50 GMT', 'Expires': 'Mon, 14 Dec 2020 12:32:50 GMT', 'Content-Disposition': 'attachment; filename="com.tanwan.yscqlyzf.huawei.2012141704.apk"', 'Via': 'CHN-JSsuqian-CT3-CACHE7[8],CHN-JSsuqian-CT3-CACHE3[0,TCP_HIT,6],CHN-JSwuxi-GLOBAL2-CACHE63[5],CHN-JSwuxi-GLOBAL2-CACHE74[0,TCP_HIT,2],CHN-SH-GLOBAL1-CACHE92[589],CHN-SH-GLOBAL1-CACHE152[555,TCP_MISS,588],CHN-HElangfang-GLOBAL2-CACHE41[493],CHN-HElangfang-GLOBAL2-CACHE24[487,TCP_MISS,491]', 'X-Hcs-Proxy-Type': '1', 'X-Ccdn-Cachettl': '31536000', 'X-Ccdn-Expires': '30684021', 'Nginx-Hit': '1', 'Cache-Control': 'max-age=7200', 'Age': '851993', 'Lct-Pos-Percent': '0.19', 'Lct-Hot-Series': '1056964608', 'Accept-Ranges': 'bytes', 'dl-from': 'hwcdn'}
+        4
+            {'Server': 'Tengine', 'Date': 'Thu, 25 Mar 2021 14:44:42 GMT', 'Content-Type': 'image/jpeg', 'Content-Length': '49130', 'Last-Modified': 'Thu, 25 Mar 2021 14:08:56 GMT', 'Connection': 'keep-alive', 'ETag': '"605c9978-bfea"', 'Expires': 'Sat, 24 Apr 2021 14:44:42 GMT', 'Cache-Control': 'max-age=2592000', 'Strict-Transport-Security': 'max-age=15768000', 'Accept-Ranges': 'bytes'}
     """
     respHeaderDict = None
 
