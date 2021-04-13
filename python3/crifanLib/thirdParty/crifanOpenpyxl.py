@@ -3,13 +3,13 @@
 """
 Filename: crifanOpenpyxl.py
 Function: crifanLib's openpyxl related functions.
-Version: 20201224
-Latest: https://github.com/crifan/crifanLibPython
+Update: 20210413
+Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanOpenpyxl.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20201224"
-__copyright__ = "Copyright (c) 2020, Crifan Li"
+__version__ = "20210413"
+__copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
 import logging
