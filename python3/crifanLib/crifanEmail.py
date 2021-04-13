@@ -3,15 +3,13 @@
 """
 Filename: crifanEmail.py
 Function: crifanLib's email related functions.
-Version: v1.0 20180605
-Note:
-1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython
+Update: 20210413
+Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanEmail.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v1.0"
-__copyright__ = "Copyright (c) 2019, Crifan Li"
+__version__ = "20210413"
+__copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
 
