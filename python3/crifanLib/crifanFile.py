@@ -3,13 +3,13 @@
 """
 Filename: crifanFile.py
 Function: crifanLib's file related functions.
-Update: 20201231
+Update: 20210509
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanFile.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20201029"
-__copyright__ = "Copyright (c) 2020, Crifan Li"
+__version__ = "20210509"
+__copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
 import os
@@ -229,6 +229,42 @@ def createEmptyFile(fullFilePath):
     with open(fullFilePath, 'a'):
         # Note: not use 'w' for maybe conflict for others constantly writing to it
         os.utime(fullFilePath, None)
+
+def updateFileTime(filePath, newAccessTime=None, newModificationTime=None, isAccessSameWithModif=True):
+    """Update file access time and modification time
+
+    Args:
+        filePath (str): file path
+        newAccessTime (int): new file access time, float
+        newModificationTime (int): new file modification time, float
+        isAccessSameWithModif (bool): make access same with modification 
+    Returns:
+        None
+    Raises:
+    Examples:
+        newModificationTime=1620549707.664307
+    """
+    if (not newAccessTime) and (not newModificationTime):
+        return
+    
+    statInfo = os.stat(filePath)
+    # print("statInfo=%s" % statInfo)
+    # print("statInfo.st_info=%s" % statInfo.st_info)
+
+    if not newAccessTime:
+        oldAccessTime = statInfo.st_atime # 1619490904.6651974
+        # print("oldAccessTime=%s" % oldAccessTime)
+        newAccessTime = oldAccessTime
+
+    if not newModificationTime:
+        oldModificationTime = statInfo.st_mtime # 1617002149.62217
+        # print("oldModificationTime=%s" % oldModificationTime)
+        newModificationTime = oldModificationTime
+
+    if isAccessSameWithModif:
+        newAccessTime = newModificationTime
+
+    os.utime(filePath, (newAccessTime, newModificationTime))
 
 ################################################################################
 # Folder Function
