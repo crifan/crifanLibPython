@@ -230,11 +230,11 @@ def createEmptyFile(fullFilePath):
         # Note: not use 'w' for maybe conflict for others constantly writing to it
         os.utime(fullFilePath, None)
 
-def updateFileTime(filePath, newAccessTime=None, newModificationTime=None, isAccessSameWithModif=True):
+def updateFileTime(fileOrFolderPath, newAccessTime=None, newModificationTime=None, isAccessSameWithModif=True):
     """Update file access time and modification time
 
     Args:
-        filePath (str): file path
+        fileOrFolderPath (str): file or folder path
         newAccessTime (int): new file access time, float
         newModificationTime (int): new file modification time, float
         isAccessSameWithModif (bool): make access same with modification 
@@ -247,7 +247,7 @@ def updateFileTime(filePath, newAccessTime=None, newModificationTime=None, isAcc
     if (not newAccessTime) and (not newModificationTime):
         return
     
-    statInfo = os.stat(filePath)
+    statInfo = os.stat(fileOrFolderPath)
     # print("statInfo=%s" % statInfo)
     # print("statInfo.st_info=%s" % statInfo.st_info)
 
@@ -264,7 +264,7 @@ def updateFileTime(filePath, newAccessTime=None, newModificationTime=None, isAcc
     if isAccessSameWithModif:
         newAccessTime = newModificationTime
 
-    os.utime(filePath, (newAccessTime, newModificationTime))
+    os.utime(fileOrFolderPath, (newAccessTime, newModificationTime))
 
 ################################################################################
 # Folder Function
