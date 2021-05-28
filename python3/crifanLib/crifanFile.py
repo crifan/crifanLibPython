@@ -3,12 +3,12 @@
 """
 Filename: crifanFile.py
 Function: crifanLib's file related functions.
-Update: 20210509
+Update: 20210528
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanFile.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210509"
+__version__ = "20210528"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
@@ -285,6 +285,30 @@ def createFolder(folderFullPath):
     """
     os.makedirs(folderFullPath, exist_ok=True)
 
+def listSubfolderFiles(subfolder, isContainSubfolder=False):
+    """os.listdir recursively
+
+    Args:
+        subfolder (str): sub folder path
+        isContainSubfolder (bool): whether contain sub folder. Default is False
+    Returns:
+        list of str
+    Raises:
+    """
+    allSubItemList = []
+    curSubItemList = os.listdir(path=subfolder)
+    for curSubItem in curSubItemList:
+        curSubItemFullPath = os.path.join(subfolder, curSubItem)
+        if os.path.isfile(curSubItemFullPath):
+            allSubItemList.append(curSubItemFullPath)
+        elif os.path.isdir(curSubItemFullPath):
+            subSubItemList = listSubfolderFiles(curSubItemFullPath, isContainSubfolder)
+            allSubItemList.extend(subSubItemList)
+
+    if isContainSubfolder:
+        allSubItemList.append(subfolder)
+
+    return allSubItemList
 
 ################################################################################
 # File and Folder Function
