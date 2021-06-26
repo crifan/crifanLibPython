@@ -3,15 +3,13 @@
 """
 Filename: crifanList.py
 Function: crifanLib's list related functions.
-Version: 20201211
-Note:
-1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython
+Version: 20210511
+Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanList.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20201211"
-__copyright__ = "Copyright (c) 2020, Crifan Li"
+__version__ = "20210511"
+__copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
 
@@ -53,15 +51,35 @@ gConst = {
 ################################################################################
 
 
+# Note: following set method not support complex list values
+# def uniqueList(oldList):
+#     """remove overlapped item in the list"""
+#     # newList = []
+#     # for x in oldList:
+#     #     if x not in newList:
+#     #         newList.append(x)
+#     newSet = set(oldList)
+#     newList = list(newSet)
+#     return newList
+
 def uniqueList(oldList):
-    """remove overlapped item in the list"""
-    # newList = []
-    # for x in oldList:
-    #     if x not in newList:
-    #         newList.append(x)
-    newSet = set(oldList)
-    newList = list(newSet)
+    """unique list
+
+    Args:
+        oldList (list): old list
+    Returns:
+        uniqued new list
+    Raises:
+    """
+    newList = []
+    for curItem in oldList:
+        if curItem not in newList:
+            newList.append(curItem)
+        # else:
+        #     # for debug
+        #     print("Duplicated %s" % curItem)
     return newList
+
 
 def genListStr(listValue, encForUniVal="UTF-8", isRetainLastComma=False, delimiter=","):
     """

@@ -1052,12 +1052,22 @@ def removeEmptyInList(list) :
     return newList;
 
 #------------------------------------------------------------------------------
-# remove overlapped item in the list
-def uniqueList(old_list):
+def uniqueList(oldList):
+    """unique list
+
+    Args:
+        oldList (list): old list
+    Returns:
+        uniqued new list
+    Raises:
+    """
     newList = []
-    for x in old_list:
-        if x not in newList :
-            newList.append(x)
+    for curItem in oldList:
+        if curItem not in newList:
+            newList.append(curItem)
+        # else:
+        #     # for debug
+        #     print("Duplicated %s" % curItem)
     return newList
 
 #------------------------------------------------------------------------------

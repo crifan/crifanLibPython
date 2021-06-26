@@ -1,6 +1,6 @@
 # Function: Evernote related functions
 # Author: Crifan Li
-# Update: 20210326
+# Update: 20210328
 # Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanEvernote.py
 
 import sys
@@ -554,8 +554,8 @@ class crifanEvernote(object):
         return resInfoStr
 
     @staticmethod
-    def isImageResource(curResource):
-        """check is image media or not
+    def isValidImageResource(curResource):
+        """check is image media or not, and makesure is valid
 
         Args:
             curMedia (Resource): Evernote Resouce instance
@@ -563,7 +563,10 @@ class crifanEvernote(object):
             bool
         Raises:
         """
-        isImage = False
+        isValidImg = False
+        isImageType = False
+        isValidImgBytes = False
+
         curResMime = curResource.mime # 'image/png' 'image/jpeg'
         # libs/evernote-sdk-python3/lib/evernote/edam/limits/constants.py
         matchImage = re.match("^image/", curResMime)
@@ -574,9 +577,20 @@ class crifanEvernote(object):
                 image/jpeg
                 image/png
             """
-            isImage = True
-        logging.debug("curResMime=%s -> isImage=%s", curResMime, isImage)
-        return isImage
+            isImageType = True
+        
+        # b'<img style="-webkit-user-select:none; display:block; margin:auto; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);" src="http://www.wuxiairport.com/web101/uploadfiles/images/lkfw/tcfw/2016/6/8/61ca51ad-46ed-4ec7-bbfc-2bbf76a1cd38.jpg">'
+        imgBytes = curResource.data.body
+        foundImgTag = re.match(b"<img ", imgBytes)
+        if foundImgTag:
+            logging.error("Invalid image resource %s", str(curResource))
+        else:
+            isValidImgBytes = True
+
+        isValidImg = isImageType and isValidImgBytes
+
+        logging.debug("curResMime=%s -> isValidImg=%s", curResMime, isValidImg)
+        return isValidImg
 
     def blurImageResource(self, imgRes, sensitiveInfoList):
         """Blur image resource
@@ -666,12 +680,13 @@ class crifanEvernote(object):
         return newImgRes
 
     @staticmethod
-    def resizeImageResource(imgRes):
+    def resizeImageResource(imgRes, defaultMaxSize=None):
         """Resize image resource
             Note: gif can not resize, so NOT process gif image
 
         Args:
             imgRes (Resource): Note image resource
+            defaultMaxSize (Resource): default max resize
         Returns:
             new image resouce
         Raises:
@@ -682,7 +697,7 @@ class crifanEvernote(object):
         #     return imgRes
 
         resBytes = imgRes.data.body
-        resizeImgInfo = utils.resizeSingleImage(resBytes)
+        resizeImgInfo = utils.resizeSingleImage(resBytes, defaultMaxSize=defaultMaxSize)
 
         originFormat = resizeImgInfo["originFormat"] # 'JPEG'
         originSize = resizeImgInfo["originSize"] # (1080, 2340)
@@ -730,7 +745,7 @@ class crifanEvernote(object):
         originResNum = len(originResList)
         for curResIdx, eachResource in enumerate(originResList):
             curResNum = curResIdx + 1
-            if crifanEvernote.isImageResource(eachResource):
+            if crifanEvernote.isValidImageResource(eachResource):
                 imgFilename = eachResource.attributes.fileName
                 logging.info("[%d/%d] imgFilename=%s", curResNum, originResNum, imgFilename)
                 NotSupportImageMimeList = [
@@ -761,16 +776,20 @@ class crifanEvernote(object):
         return newResList
 
     @staticmethod
-    def resizeAndUpdateNoteImage(noteDetail):
+    def resizeAndUpdateNoteImage(noteDetail, defaultMaxSize=None):
         """Resize evernote note image media, then update note content
 
             Args:
                 noteDetail (Note): Evernote note with details
+                defaultMaxSize (tuple): default max resize
             Returns:
                 updated note detail
             Raises:
         """
-        newResList = crifanEvernote.processNoteImage(noteDetail, crifanEvernote.resizeImageResource)
+        paraDict = {
+            "defaultMaxSize": defaultMaxSize,
+        }
+        newResList = crifanEvernote.processNoteImage(noteDetail, crifanEvernote.resizeImageResource, paraDict)
         if newResList:
             noteDetail = crifanEvernote.updateNoteImageResouces(noteDetail, newResList)
         return noteDetail

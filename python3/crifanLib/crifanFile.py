@@ -3,13 +3,13 @@
 """
 Filename: crifanFile.py
 Function: crifanLib's file related functions.
-Update: 20201231
+Update: 20210528
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanFile.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20201029"
-__copyright__ = "Copyright (c) 2020, Crifan Li"
+__version__ = "20210528"
+__copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
 import os
@@ -230,6 +230,42 @@ def createEmptyFile(fullFilePath):
         # Note: not use 'w' for maybe conflict for others constantly writing to it
         os.utime(fullFilePath, None)
 
+def updateFileTime(fileOrFolderPath, newAccessTime=None, newModificationTime=None, isAccessSameWithModif=True):
+    """Update file access time and modification time
+
+    Args:
+        fileOrFolderPath (str): file or folder path
+        newAccessTime (int): new file access time, float
+        newModificationTime (int): new file modification time, float
+        isAccessSameWithModif (bool): make access same with modification 
+    Returns:
+        None
+    Raises:
+    Examples:
+        newModificationTime=1620549707.664307
+    """
+    if (not newAccessTime) and (not newModificationTime):
+        return
+    
+    statInfo = os.stat(fileOrFolderPath)
+    # print("statInfo=%s" % statInfo)
+    # print("statInfo.st_info=%s" % statInfo.st_info)
+
+    if not newAccessTime:
+        oldAccessTime = statInfo.st_atime # 1619490904.6651974
+        # print("oldAccessTime=%s" % oldAccessTime)
+        newAccessTime = oldAccessTime
+
+    if not newModificationTime:
+        oldModificationTime = statInfo.st_mtime # 1617002149.62217
+        # print("oldModificationTime=%s" % oldModificationTime)
+        newModificationTime = oldModificationTime
+
+    if isAccessSameWithModif:
+        newAccessTime = newModificationTime
+
+    os.utime(fileOrFolderPath, (newAccessTime, newModificationTime))
+
 ################################################################################
 # Folder Function
 ################################################################################
@@ -249,6 +285,30 @@ def createFolder(folderFullPath):
     """
     os.makedirs(folderFullPath, exist_ok=True)
 
+def listSubfolderFiles(subfolder, isContainSubfolder=False):
+    """os.listdir recursively
+
+    Args:
+        subfolder (str): sub folder path
+        isContainSubfolder (bool): whether contain sub folder. Default is False
+    Returns:
+        list of str
+    Raises:
+    """
+    allSubItemList = []
+    curSubItemList = os.listdir(path=subfolder)
+    for curSubItem in curSubItemList:
+        curSubItemFullPath = os.path.join(subfolder, curSubItem)
+        if os.path.isfile(curSubItemFullPath):
+            allSubItemList.append(curSubItemFullPath)
+        elif os.path.isdir(curSubItemFullPath):
+            subSubItemList = listSubfolderFiles(curSubItemFullPath, isContainSubfolder)
+            allSubItemList.extend(subSubItemList)
+
+    if isContainSubfolder:
+        allSubItemList.append(subfolder)
+
+    return allSubItemList
 
 ################################################################################
 # File and Folder Function

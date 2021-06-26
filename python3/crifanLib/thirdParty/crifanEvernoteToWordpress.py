@@ -1,12 +1,12 @@
 # Function: Evernote to Wordpress related functions
 # Author: Crifan Li
-# Update: 20210204
+# Update: 20210328
 # Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanEvernoteToWordpress.py
 
 import sys
 import logging
 import re
-
+import copy
 from bs4 import Tag, NavigableString
 
 sys.path.append("lib")
@@ -23,15 +23,18 @@ class crifanEvernoteToWordpress(object):
         self.evernote = curEvernote
         self.wordpress = curWordpress
 
-    def uploadImageToWordpress(self, imgResource):
+    def uploadImageToWordpress(self, imgResource, isCheckExisted=False):
         """Upload image resource to wordpress
 
         Args:
             imgResource (Resouce): evernote image Resouce
+            isCheckExisted (bool): whether check image is uploaded or not
         Returns:
             (bool, dict)
         Raises:
         """
+        respInfo = {}
+
         imgData = imgResource.data
         imgBytes = imgData.body
         imgDataSize = imgData.size
@@ -53,8 +56,22 @@ class crifanEvernoteToWordpress(object):
         # imgeFilename = "%s.%s" % (curDatetimeStr, imgSuffix) # '20200307_173141.png'
         imgeFilename = "%s.%s" % (processedGuid, imgSuffix) # 'f6956c30ef0b475fa2b99c2f49622e35.png'
 
-        isUploadImgOk, respInfo = self.wordpress.createMedia(imgMime, imgeFilename, imgBytes)
-        logging.debug("%s to upload resource %s to wordpress", isUploadImgOk, imgGuid)
+        isNeedUpload = True
+        if isCheckExisted:
+            generatedImgeUrl = self.wordpress.generateUploadedImageUrl(imgeFilename)
+            # https://www.crifan.com/files/pic/uploads/2021/03/f60ea32cf4664b41922431f4ea015621.jpg
+            # 'url':'https://www.crifan.com/files/pic/uploads/2021/03/f60ea32cf4664b41922431f4ea015621-1.jpg'
+            isValid = utils.isValidImageUrl(generatedImgeUrl, proxies=self.wordpress.requestsProxies)
+            if isValid:
+                logging.info("Found existed image %s", generatedImgeUrl)
+                isUploadImgOk = True
+                respInfo["url"] = generatedImgeUrl
+                isNeedUpload = False
+
+        if isNeedUpload:
+            isUploadImgOk, respInfo = self.wordpress.createMedia(imgMime, imgeFilename, imgBytes)
+            logging.debug("%s to upload resource %s to wordpress", isUploadImgOk, imgGuid)
+
         return isUploadImgOk, respInfo
 
     def syncNoteImage(self, curNoteDetail, curResource, uploadedImgUrl, curResList=None):
@@ -123,11 +140,11 @@ class crifanEvernoteToWordpress(object):
 
         return respNote
 
-    def uploadNoteImageToWordpress(self, curNoteDetail, curResource, curResList=None):
-        """Upload note single imges to wordpress, and sync to note (replace en-media to img) 
+    def singleUploadAndSyncImage(self, curNoteDetail, curResource, curResList=None):
+        """Upload note single image to wordpress, and sync to note (replace en-media to img) 
 
         Args:
-            curNote (Note): evernote Note
+            curNoteDetail (Note): evernote Note
             curResource (Resource): evernote Note Resource
             curResList (list): evernote Note Resource list
         Returns:
@@ -141,7 +158,7 @@ class crifanEvernoteToWordpress(object):
 
         curResInfoStr = crifanEvernote.genResourceInfoStr(curResource)
 
-        isImg = self.evernote.isImageResource(curResource)
+        isImg = self.evernote.isValidImageResource(curResource)
         if not isImg:
             logging.warning("Not upload resource for NOT image for %s", curResInfoStr)
             return uploadedImgUrl
@@ -164,6 +181,62 @@ class crifanEvernoteToWordpress(object):
             logging.warning("Failed to upload image resource %s to wordpress, respInfo=%s", curResInfoStr, respInfo)
 
         return uploadedImgUrl
+
+    def batchUploadAndSyncImage(self, curNoteDetail, isCheckExisted):
+        """Batch upload image to wordpress and sync to note (replace en-media to img) 
+
+        Args:
+            curNoteDetail (Note): evernote Note
+            isCheckExisted (bool): whether check image is uploaded or not
+        Returns:
+            resp Note
+        Raises:
+        """
+        originResList = copy.deepcopy(curNoteDetail.resources)
+        totalResNum = len(originResList)
+        logging.info("Total resources: %d", totalResNum)
+        latestResList = copy.deepcopy(curNoteDetail.resources)
+
+        soup = crifanEvernote.noteContentToSoup(curNoteDetail)
+
+        for curResIdx, eachResource in enumerate(originResList):
+            curResNum = curResIdx + 1
+            logging.info("%s resource %d/%d %s", "-"*20, curResNum, totalResNum, "-"*20)
+            curResInfoStr = crifanEvernote.genResourceInfoStr(eachResource)
+            if self.evernote.isValidImageResource(eachResource):
+                curEnMediaSoup = crifanEvernote.findResourceSoup(eachResource, soup=soup)
+                if not curEnMediaSoup:
+                    logging.warning("NOT upload for not found related <en-media> node for %s", curResInfoStr)
+                    continue
+
+                isUploadOk, respInfo = self.uploadImageToWordpress(eachResource, isCheckExisted)
+                if isUploadOk:
+                    uploadedImgUrl = respInfo["url"]
+                    logging.info("Uploaded image url %s", uploadedImgUrl)
+
+                    curImgSoup = curEnMediaSoup
+                    curImgSoup.name = "img"
+                    curImgSoup.attrs = {"src": uploadedImgUrl}
+                    latestResList.remove(eachResource)
+                else:
+                    logging.error("Failed to upload image resource=%s, respInfo=%s", curResInfoStr, respInfo)
+            else:
+                logging.warning("NOT upload for non-image resource: %s", curResInfoStr)
+
+        updatedContent = crifanEvernote.soupToNoteContent(soup)
+
+        newResList = latestResList
+
+        syncParamDict = {
+            # mandatory
+            "noteGuid": curNoteDetail.guid,
+            "noteTitle": curNoteDetail.title,
+            # optional
+            "newContent": updatedContent,
+            "newResList": newResList,
+        }
+        respNote = self.evernote.syncNote(**syncParamDict)
+        return respNote
 
     def generateCategoryList(self, tagNameList):
         """Generate category list from tag name list
