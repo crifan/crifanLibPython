@@ -3,8 +3,8 @@
 """
 Filename: crifanMysql.py
 Function: crifanLib's mysql related functions.
-Version: 20201224
-Latest: https://github.com/crifan/crifanLibPython
+Version: 20210702
+Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanMysql.py
 Note:
     If you want to modify to your mysql and table, you need:
         (1) change change MysqlDb config to your mysql config
@@ -15,8 +15,8 @@ Note:
 
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20201224"
-__copyright__ = "Copyright (c) 2019, Crifan Li"
+__version__ = "20210702"
+__copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
 import logging
