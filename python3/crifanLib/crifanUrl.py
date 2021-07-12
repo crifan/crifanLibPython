@@ -3,15 +3,15 @@
 """
 Filename: crifanUrl.py
 Function: crifanLib's url related functions.
-Version: v1.0 20180605
-Note:
-1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython
+Update: 20210709
+Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanUrl.py
 """
 
+import re
+
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v1.0"
-__copyright__ = "Copyright (c) 2019, Crifan Li"
+__version__ = "20210709"
+__copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
 
@@ -127,6 +127,31 @@ def findSimilarUrl(url, urlList):
             similarSrcUrl = srcUrl
             break
     return (isSimilar, similarSrcUrl)
+
+
+def isIpUrl(curUrl):
+    """Check whether url is IP or not
+
+    Args:
+        curUrl (str): current url
+    Returns:
+        bool
+    Raises:
+    Examples:
+        is IP:
+            http://127.0.0.1:7912/info/wifi
+            http://192.168.31.1/
+            http://119.29.29.29/d?dn=wup.imtt.qq.com
+            https://111.231.108.161:888/notice/notice?platform=aligames
+
+            http://2408:80f1:31:10::3d:8080/monitor/monitor.jsp?t=1625540141127
+        not IP:
+            http://37.com.cn/useragreement/shell/xxx
+    """
+    isIpV4 = re.match('https?://\d+\.\d+\.\d+\.\d+', curUrl)
+    isIpV6 = re.match("https?://[\da-z]+:[\da-z]+:[\da-z]+:[\da-z]+::[\da-z]+", curUrl, re.I)
+    isIp = isIpV4 or isIpV6
+    return isIp
 
 ################################################################################
 # Test
