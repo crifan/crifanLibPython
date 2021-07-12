@@ -3,8 +3,8 @@
 """
 Filename: crifanMongodb.py
 Function: crifanLib's Mongodb related functions.
-Version: 20201224
-Latest: https://github.com/crifan/crifanLibPython
+Version: 20210702
+Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanMongodb.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
