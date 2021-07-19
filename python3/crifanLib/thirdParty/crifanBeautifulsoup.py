@@ -3,16 +3,17 @@
 """
 Filename: crifanBeautifulSoup.py
 Function: crifanLib's BeautifulSoup related functions.
-Version: 20210106
+Version: 20210719
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanBeautifulsoup.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210106"
+__version__ = "20210719"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
 import copy
+import logging
 
 try:
     from BeautifulSoup import BeautifulSoup, Tag, CData, NavigableString
@@ -573,6 +574,41 @@ def findEmAferSpan(parentSoup, spanStr):
         respEm = None
 
     return respEm
+
+def extractHtmlTitle_BeautifulSoup(htmlStr):
+    """
+    Extract title from html, use BeautifulSoup
+
+    Args:
+        htmlStr (str): html string
+    Returns:
+        str
+    Raises:
+    Examples:
+    """
+    curTitle = ""
+
+    soup = BeautifulSoup(htmlStr, "html.parser")
+    if soup:
+        if soup.title and soup.title.string:
+            curTitle = soup.title.string
+            curTitle = curTitle.strip()
+        else:
+            # logging.warning("Empty title for html: %s", htmlStr)
+            logging.debug("Empty title for html: %s", htmlStr)
+            # Empty title for html: <script type="text/javascript">top.location.href='https://login.zhongan.com/passport/login.htm?sourceApp=1&target=http://www.zhongan.com/open/member/loginJump?logincallback=%2Fahita';</script>
+
+            # for debug
+            if "<title>" not in htmlStr:
+                logging.warning("Special not incldue <title> html: %s", htmlStr)
+                # 'Illegal access address!\n'
+                # <script type="text/javascript">top.location.href='https://login.zhongan.com/passport/login.htm?sourceApp=1&target=http://www.zhongan.com/open/member/loginJump?logincallback=%2Fahita';</script>
+                # 
+    else:
+        logging.error("Failed to convert to soup for html: %s", htmlStr)
+        # 
+
+    return curTitle
 
 ################################################################################
 # Test

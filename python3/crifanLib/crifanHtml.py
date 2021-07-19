@@ -3,15 +3,13 @@
 """
 Filename: crifanHtml.py
 Function: crifanLib's html related functions.
-Version: v1.0 20180605
-Note:
-1. latest version and more can found here:
-https://github.com/crifan/crifanLibPython
+Version: 20210719
+Update: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanHtml.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "v1.0"
-__copyright__ = "Copyright (c) 2019, Crifan Li"
+__version__ = "20210719"
+__copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
 import re
@@ -27,6 +25,8 @@ except ImportError:
 
 # from . import crifanSystem
 import crifanLib.crifanSystem
+
+from .thirdParty.crifanBeautifulsoup import extractHtmlTitle_BeautifulSoup
 
 ################################################################################
 # Config
@@ -273,6 +273,50 @@ def repUniNumEntToChar(text):
         unicodeChar = codePointToChar(num)
         return unicodeChar
     return unicodeP.sub(transToUniChr, text)
+
+def extractHtmlTitle_re(htmlStr):
+    """
+    Extract html title, use re
+
+    Args:
+        htmlStr (str): html string
+    Returns:
+        str
+    Raises:
+    """
+    curTitle = ""
+
+    # foundTitle = re.search("<title>(?P<title>.*?)</title>", htmlStr, re.I)
+    # foundTitle = re.search("<title>(?P<title>.*?)</title>", htmlStr, re.I|re.M)
+    foundTitle = re.search("<title>(?P<title>.*?)</title>", htmlStr, re.I|re.M|re.S)
+    if foundTitle:
+        title = foundTitle.group("title")
+        curTitle = title.strip()
+    # else:
+    #     logging.warning("Failed to find title from html %s", htmlStr) # 'Illegal access address!\n'
+
+    return curTitle
+
+def extractHtmlTitle(htmlStr):
+    """
+    Extract title from html
+
+    Args:
+        htmlStr (str): html string
+    Returns:
+        str
+    Raises:
+    """
+    curTitle = ""
+
+    # Method 1: use re
+    # curTitle = extractHtmlTitle_re(htmlStr)
+
+    # # Method 2: use BeautifulSoup
+    curTitle = extractHtmlTitle_BeautifulSoup(htmlStr)
+
+    return curTitle
+
 
 ################################################################################
 # Test
