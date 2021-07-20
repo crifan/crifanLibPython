@@ -3,12 +3,12 @@
 """
 Filename: crifanHtml.py
 Function: crifanLib's html related functions.
-Version: 20210719
+Version: 20210720
 Update: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanHtml.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210719"
+__version__ = "20210720"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
@@ -317,6 +317,35 @@ def extractHtmlTitle(htmlStr):
 
     return curTitle
 
+def isDnsFailedError(errMsg):
+    """Whether is DNS parse failed, for input exception error message when open some url
+
+    Args:
+        errMsg (str): (open url exception) error message
+    Returns:
+        (bool)
+    Raises:
+        errMsg
+            requests
+                "HTTPConnectionPool(host='dmh2.cn', port=80): Max retries exceeded with url: /9jaSp0 (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x1036b7220>: Failed to establish a new connection: [Errno 8] nodename nor servname provided, or not known'))"
+            Selenium
+                Message: unknown error: net::ERR_NAME_NOT_RESOLVED
+                    (Session info: chrome=91.0.4472.164)
+            Playwright
+                'net::ERR_NAME_NOT_RESOLVED at http://dmh2.cn/9jaSp0\n=========================== logs ===========================\nnavigating to "http://dmh2.cn/9jaSp0", waiting until "load"\n============================================================\nNote: use DEBUG=pw:api environment variable to capture Playwright logs.'
+    """
+    # requests
+    #   Exception HTTPConnectionPool(host='dmh2.cn', port=80): Max retries exceeded with url: /9jaSp0 (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x10fe2cbe0>: Failed to establish a new connection: [Errno 8] nodename nor servname provided, or not known')) for requests get http://dmh2.cn/9jaSp0
+    DNS_FAILED_ERROR_LIST = [
+        "[Errno 8] nodename nor servname provided", # Requests
+        "ERR_NAME_NOT_RESOLVED", # Selenium
+        "ERR_NAME_NOT_RESOLVED", # Playwright
+    ]
+    for curFailedErrStr in DNS_FAILED_ERROR_LIST:
+        if curFailedErrStr in errMsg:
+            return True
+
+    return False
 
 ################################################################################
 # Test

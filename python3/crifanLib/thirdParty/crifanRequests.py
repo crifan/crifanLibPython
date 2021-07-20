@@ -3,12 +3,12 @@
 """
 Filename: crifanRequests.py
 Function: crifanLib's Requests related functions
-Version: 20210326
+Version: 20210720
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanRequests.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210326"
+__version__ = "20210720"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
@@ -17,8 +17,11 @@ import time
 import re
 import requests
 
-from crifanLib.crifanFile import formatSize, getFileSizeFromUrl
+from crifanLib.crifanHtml import extractHtmlTitle
+
+from crifanLib.crifanFile import formatSize, isFileExistAndValid
 from crifanLib.crifanDatetime import floatSecondsToDatetimeDict, datetimeDictToStr
+from crifanLib.crifanHtml import extractHtmlTitle
 
 ################################################################################
 # Config
@@ -517,6 +520,56 @@ def downloadFile(url,
         print("Exception %s when download %s to %s" % (curException, url, fileToSave))
 
     return isDownloadOk
+
+
+def parseUrl(curUrl, pageLoadTimeout=10):
+    """Use requests to parse url, to get final url, title, html
+
+    Args:
+        curUrl (str): current url, probabaly short link address
+        pageLoadTimeout (int): timeout in seconds for load page. Default is 10 seconds.
+    Returns:
+        parse result(dict)
+    Raises:
+    Examples:
+    """
+    respValue = None
+
+    try:
+        curHeader = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36",
+        }
+        resp = requests.get(curUrl, headers=curHeader, timeout=pageLoadTimeout)
+
+        if resp.history:
+            logging.debug("Found redirected history url:")
+            for curIdx, curResp in enumerate(resp.history):
+                curNum = curIdx + 1
+                logging.debug("  [%d] status_code=%s, url=%s", curNum, curResp.status_code, curResp.url)
+
+        finalUrl = resp.url
+        logging.debug("finalUrl=%s", finalUrl) # 
+        finalHtml = resp.text
+        finalTitle = extractHtmlTitle(finalHtml)
+        logging.debug("finalTitle=%s", finalTitle)
+
+        respValue = {
+            "isParseOk": True,
+            "url": finalUrl,
+            "title": finalTitle,
+            "html": finalHtml,
+        }
+    except Exception as err:
+        errStr = str(err)
+        # "HTTPConnectionPool(host='dmh2.cn', port=80): Max retries exceeded with url: /9jaSp0 (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x1036b7220>: Failed to establish a new connection: [Errno 8] nodename nor servname provided, or not known'))"
+        logging.debug("requests get %s exception: %s", curUrl, errStr)
+
+        respValue = {
+            "isParseOk": False,
+            "errMsg": errStr, 
+        }
+
+    return respValue
 
 ################################################################################
 # Test

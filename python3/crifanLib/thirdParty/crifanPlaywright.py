@@ -3,12 +3,12 @@
 """
 Filename: crifanPlaywright.py
 Function: crifanLib's Playwright related functions
-Version: 20210712
+Version: 20210720
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanPlaywright.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210712"
+__version__ = "20210720"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
@@ -37,27 +37,25 @@ gConst = {
 # Function
 ################################################################################
 
-def initBrowser(browserType="chromium"):
+def initBrowser(browserType="chromium", browserConfig={"headless": False}):
     """
     For playwright, init to create a browser. For later use, such as google search
 
     Args:
         browserType (str): Playwright browser type: chromium / firefox / webkit
+        browserConfig (dict): Playwright browser config. Default is {"headless": False}.
     Returns:
         BrowserType
+    Examples:
+        browserConfig
+            {
+                "headless": False,
+                "proxy": {
+                    "server": "http://127.0.0.1:58591",
+                }
+            }
     Raises:
     """
-    PROXY_HTTP = "http://127.0.0.1:58591"
-    PROXY_SOCKS5 = "socks5://127.0.0.1:51837"
-
-    browserLaunchOptionDict = {
-        "headless": False,
-        # "headless": True,
-        "proxy": {
-            "server": PROXY_HTTP,
-        }
-    }
-
     curBrowserType = None
 
     if browserType:
@@ -66,6 +64,10 @@ def initBrowser(browserType="chromium"):
     # with sync_playwright() as p:
     # p = sync_playwright()
     p = sync_playwright().start()
+    # 多次调用，会：
+	# 发生异常: Error
+    # It looks like you are using Playwright Sync API inside the asyncio loop.
+    # Please use the Async API instead.
 
     if browserType == "chromium":
         curBrowserType = p.chromium
@@ -81,11 +83,40 @@ def initBrowser(browserType="chromium"):
         return None
 
     # browser = curBrowserType.launch(headless=False)
-    browser = curBrowserType.launch(**browserLaunchOptionDict)
+    # browser = curBrowserType.launch(**browserLaunchOptionDict)
+    browser = curBrowserType.launch(**browserConfig)
     print("browser=%s" % browser)
     # browser=<Browser type=<BrowserType name=chromium executable_path=/Users/limao/Library/Caches/ms-playwright/chromium-888113/chrome-mac/Chromium.app/Contents/MacOS/Chromium> version=93.0.4530.0>
 
     return browser
+
+def initPage(pageConfig=None, browser=None):
+    """Init playwright browser new page
+
+    Args:
+        pageConfig (dict): page config. Default is None.
+        browser (BrowserType): Playwright browser. Default is None. If None, create new one
+    Returns:
+        Page
+    Examples:
+        pageConfig
+            {"pageLoadTimeout": 10}
+    Raises:
+    """
+    if not browser:
+        browser = initBrowser()
+
+    page = browser.new_page()
+    print("page=%s" % page)
+
+    if "pageLoadTimeout" in pageConfig:
+        curPageLoadTimeout = pageConfig["pageLoadTimeout"]
+        curPageLoadTimeoutMilliSec = curPageLoadTimeout * 1000
+
+        page.set_default_navigation_timeout(curPageLoadTimeoutMilliSec)
+        page.set_default_timeout(curPageLoadTimeoutMilliSec)
+
+    return page
 
 def closeBrowser(browser):
     """
@@ -98,6 +129,52 @@ def closeBrowser(browser):
     """
     browser.close()
 
+
+def parseUrl(inputUrl, page=None):
+    """Parse (redirected final long) url, title, html from input (possible short link) url
+
+    Args:
+        inputUrl (dict): input original (short link) url
+        page (Page): Playwright page. Default is None. If None, create a new one.
+    Returns:
+        parse result(dict)
+    Raises:
+    """
+    respValue = None
+
+    if not page:
+        page = initPage()
+
+    try:
+        page.goto(inputUrl)
+
+        parsedLongLink = page.url # https://api.interactive.angpi.cn/interactive.htm?dateUnix=1588341459669&adSpaceCode=MEDIA200501215739781110&tinyUrl=5NGSFX&domain=m6z.cn&bulletinId=66e0953cdc614aa6a72eb44ba7927b71&sys=pc&tencent=0&reqId=66e0953cdc614aa6a72eb44ba7927b71&mediaRequestId=66e0953cdc614aa6a72eb44ba7927b71
+        logging.debug("parsedLongLink=%s", parsedLongLink) # 'https://miyuanxp1260.kuaizhan.com/?inviteCode=RWXK5M&osType=1'
+        longLinkTitle = page.title() # '现金大派送'
+        logging.debug("longLinkTitle=%s", longLinkTitle)
+        longLinkHtml = page.content()
+        logging.debug("longLinkHtml=%s", longLinkHtml)
+
+        respValue = {
+            "isParseOk": True,
+            "url": parsedLongLink,
+            "title": longLinkTitle,
+            "html": longLinkHtml,
+        }
+    except Exception as err:
+        errStr = str(err)
+        # 'net::ERR_NAME_NOT_RESOLVED at http://dmh2.cn/9jaSp0\n=========================== logs ===========================\nnavigating to "http://dmh2.cn/9jaSp0", waiting until "load"\n============================================================\nNote: use DEBUG=pw:api environment variable to capture Playwright logs.'
+        # 'net::ERR_CONNECTION_CLOSED at http://zhongan.com/Ahita\n=========================== logs ===========================\nnavigating to "http://zhongan.com/Ahita", waiting until "load"\n============================================================\nNote: use DEBUG=pw:api environment variable to capture Playwright logs.'
+        # 'Timeout 10000ms exceeded.\n=========================== logs ===========================\nnavigating to "http://zhongan.com/Ahita", waiting until "load"\n============================================================\nNote: use DEBUG=pw:api environment variable to capture Playwright logs.'
+        # 
+        logging.debug("Playwright goto %s exception: %s", inputUrl, errStr)
+
+        respValue = {
+            "isParseOk": False,
+            "errMsg": errStr, 
+        }
+
+    return respValue
 
 def parseGoogleSearchResult(page):
     """
@@ -283,11 +360,13 @@ def getGoogleSearchResult(searchKeyword, browser=None, isAutoCloseBrowser=False)
 
     searchResultDictList = []
 
-    if not browser:
-        browser = initBrowser()
+    # if not browser:
+    #     browser = initBrowser()
 
-    page = browser.new_page()
-    print("page=%s" % page)
+    # page = browser.new_page()
+    # print("page=%s" % page)
+
+    page = initPage(browser=browser)
 
     page.goto(GoogleHomeUrl)
 
@@ -357,7 +436,16 @@ if __name__ == '__main__':
     print("[crifanLib-%s] %s" % (CURRENT_LIB_FILENAME, __version__))
 
     # test code
-    browser = initBrowser()
+    PROXY_HTTP = "http://127.0.0.1:58591"
+    PROXY_SOCKS5 = "socks5://127.0.0.1:51837"
+    browserConfig = {
+        "headless": False,
+        # "headless": True,
+        "proxy": {
+            "server": PROXY_HTTP,
+        }
+    }
+    browser = initBrowser(browserConfig=browserConfig)
 
     searchStr = '游戏题材 新斗罗大陆'
     resultDictList = getGoogleSearchResult(searchStr, browser=browser)
