@@ -14,6 +14,10 @@ __license__ = "GPL"
 
 import re
 
+import logging
+
+from enum import Enum
+
 try:
     import htmlentitydefs
 except ImportError:
@@ -36,6 +40,15 @@ from .thirdParty.crifanBeautifulsoup import extractHtmlTitle_BeautifulSoup
 # Constant
 ################################################################################
 CURRENT_LIB_FILENAME = "crifanHtml"
+
+
+class ParseUrlErrorType(Enum):
+    UNKNOWN = "UNKNOWN"
+    DNS_HOST_FAILED = "DNS_HOST_FAILED"
+    TIMEOUT = "TIMEOUT"
+    CONNECTION_CLOSED = "CONNECTION_CLOSED"
+    ABORTED = "ABORTED"
+    EMPTY_RESPONSE = "EMPTY_RESPONSE"
 
 ################################################################################
 # Global Variable
@@ -346,6 +359,53 @@ def isDnsFailedError(errMsg):
             return True
 
     return False
+
+def parseUrlErrorType(errMsg):
+    """
+    Parse error type from error message when parsing (short) url (to long url)
+
+    Args:
+        errMsg (str): (open url exception) error message
+    Returns:
+        error type value(str)
+    Raises:
+    """
+    errType = ParseUrlErrorType.UNKNOWN
+
+    if isDnsFailedError(errMsg):
+        # curFailedHost = get_fld(curShortLink) # 'dmh2.cn'
+        # if curFailedHost not in gDnsFailedHost:
+        #     gDnsFailedHost.add(curFailedHost)
+        #     logging.warning("Added DNS failed host %s for url %s", curFailedHost, curShortLink)
+        # else:
+        #     logging.debug("Omit duplicated DNS failed host %s", curFailedHost)
+        errType = ParseUrlErrorType.DNS_HOST_FAILED
+    else:
+        # parsedResultItem["errType"] = "UNKNOWN" ?
+        keyToTypeDict = {
+            "Timeout": ParseUrlErrorType.TIMEOUT, # 'Timeout 10000ms exceeded.\n=========================== logs ===========================\nnavigating to "http://4g3.cn/GmM4y", waiting until "load"\n============================================================\nNote: use DEBUG=pw:api environment variable to capture Playwright logs.'
+            "ERR_CONNECTION_CLOSED": ParseUrlErrorType.CONNECTION_CLOSED, # 'net::ERR_CONNECTION_CLOSED at http://zhongan.com/Ahita\n=========================== logs ===========================\nnavigating to "http://zhongan.com/Ahita", waiting until "load"\n============================================================\nNote: use DEBUG=pw:api environment variable to capture Playwright logs.'
+            "ERR_ABORTED": ParseUrlErrorType.ABORTED, # 'net::ERR_ABORTED at http://h0e.cn/8cx7y\n=========================== logs ===========================\nnavigating to "http://h0e.cn/8cx7y", waiting until "load"\n============================================================\nNote: use DEBUG=pw:api environment variable to capture Playwright logs.'
+            "ERR_EMPTY_RESPONSE": ParseUrlErrorType.EMPTY_RESPONSE, # 'net::ERR_EMPTY_RESPONSE at http://h0e.cn/8cx7y\n=========================== logs ===========================\nnavigating to "http://h0e.cn/8cx7y", waiting until "load"\n============================================================\nNote: use DEBUG=pw:api environment variable to capture Playwright logs.'
+        }
+
+        isKnownErr = False
+        for curKey, curType in keyToTypeDict.items():
+            if curKey in errMsg:
+                errType = curType
+                isKnownErr = True
+                break
+
+        # for eachKnownErr in KnownErrorList:
+        #     if eachKnownErr in errMsg:
+        #         isKnownErr = True
+        #         break
+        if not isKnownErr:
+            logging.error("Unsupported parsed error: %s", errMsg)
+
+    # return errType
+    errTypeValue = errType.value
+    return errTypeValue
 
 ################################################################################
 # Test
