@@ -3,16 +3,17 @@
 """
 Filename: crifanSelenium.py
 Function: crifanLib's Selenium related functions
-Version: 20210720
+Version: 20210723
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanSelenium.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210720"
+__version__ = "20210723"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
-from selenium import webdriver
+# from selenium import webdriver
+from seleniumwire import webdriver # Support capture http request and response
 
 # for debug
 import logging

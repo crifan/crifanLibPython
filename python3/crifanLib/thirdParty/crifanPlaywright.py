@@ -3,16 +3,19 @@
 """
 Filename: crifanPlaywright.py
 Function: crifanLib's Playwright related functions
-Version: 20210720
+Version: 20210723
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanPlaywright.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210720"
+__version__ = "20210723"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
 from playwright.sync_api import sync_playwright
+
+# for debug
+import logging
 
 ################################################################################
 # Config
@@ -76,7 +79,7 @@ def initBrowser(browserType="chromium", browserConfig={"headless": False}):
     elif browserType == "webkit":
         curBrowserType = p.webkit
     print("curBrowserType=%s" % curBrowserType)
-    # curBrowserType=<BrowserType name=chromium executable_path=/Users/limao/Library/Caches/ms-playwright/chromium-888113/chrome-mac/Chromium.app/Contents/MacOS/Chromium>
+    # curBrowserType=<BrowserType name=chromium executable_path=/Users/limao/Library/Caches/ms-playwright/chromium-901522/chrome-mac/Chromium.app/Contents/MacOS/Chromium>
 
     if not curBrowserType:
         print("Unsupported playwright browser type: %s" % browserType)
@@ -86,7 +89,7 @@ def initBrowser(browserType="chromium", browserConfig={"headless": False}):
     # browser = curBrowserType.launch(**browserLaunchOptionDict)
     browser = curBrowserType.launch(**browserConfig)
     print("browser=%s" % browser)
-    # browser=<Browser type=<BrowserType name=chromium executable_path=/Users/limao/Library/Caches/ms-playwright/chromium-888113/chrome-mac/Chromium.app/Contents/MacOS/Chromium> version=93.0.4530.0>
+    # browser=<Browser type=<BrowserType name=chromium executable_path=/Users/limao/Library/Caches/ms-playwright/chromium-901522/chrome-mac/Chromium.app/Contents/MacOS/Chromium> version=93.0.4576.0>
 
     return browser
 
@@ -107,14 +110,15 @@ def initPage(pageConfig=None, browser=None):
         browser = initBrowser()
 
     page = browser.new_page()
-    print("page=%s" % page)
+    # print("page=%s" % page)
 
-    if "pageLoadTimeout" in pageConfig:
-        curPageLoadTimeout = pageConfig["pageLoadTimeout"]
-        curPageLoadTimeoutMilliSec = curPageLoadTimeout * 1000
+    if pageConfig:
+        if "pageLoadTimeout" in pageConfig:
+            curPageLoadTimeout = pageConfig["pageLoadTimeout"]
+            curPageLoadTimeoutMilliSec = curPageLoadTimeout * 1000
 
-        page.set_default_navigation_timeout(curPageLoadTimeoutMilliSec)
-        page.set_default_timeout(curPageLoadTimeoutMilliSec)
+            page.set_default_navigation_timeout(curPageLoadTimeoutMilliSec)
+            page.set_default_timeout(curPageLoadTimeoutMilliSec)
 
     return page
 
@@ -281,7 +285,7 @@ def parseGoogleSearchResult(page):
     # print("searchResultList=%s" % searchResultList)
     # searchResultList=[<JSHandle preview=JSHandle@node>, <JSHandle preview=JSHandle@node>, <JSHandle preview=JSHandle@node>, <JSHandle preview=JSHandle@node>, <JSHandle preview=JSHandle@node>, <JSHandle preview=JSHandle@node>, <JSHandle preview=JSHandle@node>, <JSHandle preview=JSHandle@node>, <JSHandle preview=JSHandle@node>]
     searchResultNum = len(searchResultList)
-    print("Found %s search result:" % searchResultNum) # 9, 10
+    # print("Found %s search result" % searchResultNum) # 9, 10
 
     # for debug
     # if searchResultNum < 8:
@@ -290,7 +294,7 @@ def parseGoogleSearchResult(page):
 
     for curIdx, curResultElem in enumerate(searchResultList):
         curNum = curIdx + 1
-        print("%s [%d] %s" % ("-"*20, curNum, "-"*20))
+        # print("%s [%d] %s" % ("-"*20, curNum, "-"*20))
         # print("curResultElem=%s" % curResultElem)
 
         # urlTitleElemSelector = "div[class='tF2Cxc']"
@@ -336,7 +340,7 @@ def parseGoogleSearchResult(page):
             "date": dateStr,
             "description": descStr,
         }
-        print("curSearchResultDict=%s" % curSearchResultDict)
+        # print("curSearchResultDict=%s" % curSearchResultDict)
         # curSearchResultDict={'url': 'https://www.325sy.com/game/1118.html', 'title': '城池攻坚战_三国题材为基础的国战类策略手游- 325手游', 'date': '2021年4月19日', 'description': '《城池攻坚战-送2万真充》是一款以三国题材为基础的国战类策略手机游戏！进入游戏之后，首先升级领取你的2W真充.激活运营活动，你就是\xa0...'}
         searchResultDictList.append(curSearchResultDict)
 
@@ -416,8 +420,8 @@ def getGoogleSearchResult(searchKeyword, browser=None, isAutoCloseBrowser=False)
     page.wait_for_selector(bottomNaviPageSelector, state="visible")
 
     searchResultDictList = parseGoogleSearchResult(page)
-    searchResultNum = len(searchResultDictList)
-    print("searchResultNum=%s" % searchResultNum)
+    # searchResultNum = len(searchResultDictList)
+    # print("searchResultNum=%s" % searchResultNum)
 
     page.close()
 

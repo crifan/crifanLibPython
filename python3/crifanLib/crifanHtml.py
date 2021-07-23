@@ -3,12 +3,12 @@
 """
 Filename: crifanHtml.py
 Function: crifanLib's html related functions.
-Version: 20210720
+Version: 20210723
 Update: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanHtml.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210720"
+__version__ = "20210723"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
@@ -46,6 +46,7 @@ class ParseUrlErrorType(Enum):
     UNKNOWN = "UNKNOWN"
     DNS_HOST_FAILED = "DNS_HOST_FAILED"
     TIMEOUT = "TIMEOUT"
+    DISCONNECTED = "DISCONNECTED"
     CONNECTION_CLOSED = "CONNECTION_CLOSED"
     ABORTED = "ABORTED"
     EMPTY_RESPONSE = "EMPTY_RESPONSE"
@@ -384,6 +385,8 @@ def parseUrlErrorType(errMsg):
         # parsedResultItem["errType"] = "UNKNOWN" ?
         keyToTypeDict = {
             "Timeout": ParseUrlErrorType.TIMEOUT, # 'Timeout 10000ms exceeded.\n=========================== logs ===========================\nnavigating to "http://4g3.cn/GmM4y", waiting until "load"\n============================================================\nNote: use DEBUG=pw:api environment variable to capture Playwright logs.'
+            "Timed out": ParseUrlErrorType.TIMEOUT,  # 'Message: timeout: Timed out receiving message from renderer: 6.607\n  (Session info: headless chrome=92.0.4515.107)\n'
+            "disconnected: Unable to receive message": ParseUrlErrorType.DISCONNECTED,  # 'Message: disconnected: Unable to receive message from renderer\n  (Session info: headless chrome=92.0.4515.107)\n'
             "ERR_CONNECTION_CLOSED": ParseUrlErrorType.CONNECTION_CLOSED, # 'net::ERR_CONNECTION_CLOSED at http://zhongan.com/Ahita\n=========================== logs ===========================\nnavigating to "http://zhongan.com/Ahita", waiting until "load"\n============================================================\nNote: use DEBUG=pw:api environment variable to capture Playwright logs.'
             "ERR_ABORTED": ParseUrlErrorType.ABORTED, # 'net::ERR_ABORTED at http://h0e.cn/8cx7y\n=========================== logs ===========================\nnavigating to "http://h0e.cn/8cx7y", waiting until "load"\n============================================================\nNote: use DEBUG=pw:api environment variable to capture Playwright logs.'
             "ERR_EMPTY_RESPONSE": ParseUrlErrorType.EMPTY_RESPONSE, # 'net::ERR_EMPTY_RESPONSE at http://h0e.cn/8cx7y\n=========================== logs ===========================\nnavigating to "http://h0e.cn/8cx7y", waiting until "load"\n============================================================\nNote: use DEBUG=pw:api environment variable to capture Playwright logs.'
@@ -406,6 +409,7 @@ def parseUrlErrorType(errMsg):
     # return errType
     errTypeValue = errType.value
     return errTypeValue
+
 
 ################################################################################
 # Test
