@@ -64,13 +64,12 @@ def initBrowser(browserConfig):
             normal Selenium: {'headless': True, 'pageLoadTimeout': 10}
             Selenium-wire: {'headless': True, 'pageLoadTimeout': 10, "seleniumwire": {"disable_capture":True}}
     """
-    curPageLoadTimeout = browserConfig["pageLoadTimeout"]
-    isCurHeadless = browserConfig["headless"]
-
     chromeOptions = webdriver.ChromeOptions()
-    if isCurHeadless:
-        chromeOptions.add_argument('--headless')
-    # driver = webdriver.Chrome(options=chromeOptions)
+
+    if "headless" in browserConfig:
+        isCurHeadless = browserConfig["headless"]
+        if isCurHeadless:
+            chromeOptions.add_argument('--headless')
 
     driverConfigDict = {
         "options": chromeOptions
@@ -83,8 +82,11 @@ def initBrowser(browserConfig):
             del browserConfig["seleniumwire"]
 
     driver = webdriver.Chrome(**driverConfigDict)
+    # driver = webdriver.Chrome(options=chromeOptions)
 
-    driver.set_page_load_timeout(curPageLoadTimeout)
+    if "pageLoadTimeout" in browserConfig:
+        curPageLoadTimeout = browserConfig["pageLoadTimeout"]
+        driver.set_page_load_timeout(curPageLoadTimeout)
 
     return driver
 
@@ -165,6 +167,20 @@ def parseUrl(inputUrl, driver=None):
         }
 
     return respValue
+
+def cleanCapturedRequests(driver):
+    """Clean selenium-wire captured requests
+        to avoid later, after many get, accumulated too much requests
+
+    Args:
+        driver (WebDriver): selenium-wire web driver
+    Returns:
+    Raises:
+    Examples:
+    """
+    # driver.requests = None
+    if hasattr(driver, "requests"):
+        del driver.requests
 
 def parseBingSearchResult(driver, isIncludeAd=True):
     """
