@@ -3,12 +3,12 @@
 """
 Filename: crifanSelenium.py
 Function: crifanLib's Selenium related functions
-Version: 20210729
+Version: 20210730
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanSelenium.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210729"
+__version__ = "20210730"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
@@ -62,7 +62,7 @@ def initBrowser(browserConfig):
     Examples:
         browserConfig
             normal Selenium: {'headless': True, 'pageLoadTimeout': 10}
-            Selenium-wire: {'headless': True, 'pageLoadTimeout': 10, "seleniumwire: {"disable_capture":True}}
+            Selenium-wire: {'headless': True, 'pageLoadTimeout': 10, "seleniumwire": {"disable_capture":True}}
     """
     curPageLoadTimeout = browserConfig["pageLoadTimeout"]
     isCurHeadless = browserConfig["headless"]
@@ -360,7 +360,6 @@ def parseBingSearchResult(driver, isIncludeAd=True):
             adLiList = resultElem.find_elements_by_xpath(adLiXpath)
             adLiNum = len(adLiList)
             logging.info("adLiNum=%s", adLiNum)
-            # TODO: add support for ad item
 
             for eachAdElem in adLiList:
                 curAdTitle = ""
