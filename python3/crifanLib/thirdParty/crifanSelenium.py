@@ -3,22 +3,22 @@
 """
 Filename: crifanSelenium.py
 Function: crifanLib's Selenium related functions
-Version: 20210730
+Version: 20210802
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanSelenium.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210730"
+__version__ = "20210802"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
-# isUseSeleniumwire = False
-isUseSeleniumwire = True
+# # isUseSeleniumwire = False
+# isUseSeleniumwire = True
 
-if isUseSeleniumwire:
-    from seleniumwire import webdriver # Support capture http request and response
-else:
-    from selenium import webdriver
+# if isUseSeleniumwire:
+#     from seleniumwire import webdriver # Support capture http request and response
+# else:
+#     from selenium import webdriver
 
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
@@ -27,6 +27,8 @@ from selenium.webdriver.support import expected_conditions as EC
 # for debug
 import logging
 import re
+
+from seleniumwire import webdriver
 
 ################################################################################
 # Config
@@ -51,11 +53,32 @@ gConst = {
 # Function
 ################################################################################
 
-def initBrowser(browserConfig):
+def getWebDirver(isUseSeleniumwire=False):
+    """Init selenium webdriver
+
+    Args:
+        isUseSeleniumwire (bool): get selenium-wire webdriver or not. Default is False.
+    Returns:
+        driver
+    Raises:
+    Examples:
+    """
+    # # isUseSeleniumwire = False
+    # isUseSeleniumwire = True
+
+    if isUseSeleniumwire:
+        from seleniumwire import webdriver # Support capture http request and response
+    else:
+        from selenium import webdriver
+
+    return webdriver
+
+def initBrowser(browserConfig, isUseSeleniumwire=False):
     """Init browser driver for selenium
 
     Args:
         browserConfig (dict): browser config
+        isUseSeleniumwire (bool): get selenium-wire webdriver or not. Default is False.
     Returns:
         driver
     Raises:
@@ -64,6 +87,7 @@ def initBrowser(browserConfig):
             normal Selenium: {'headless': True, 'pageLoadTimeout': 10}
             Selenium-wire: {'headless': True, 'pageLoadTimeout': 10, "seleniumwire": {"disable_capture":True}}
     """
+    webdriver = getWebDirver(isUseSeleniumwire=isUseSeleniumwire)
     chromeOptions = webdriver.ChromeOptions()
 
     if "headless" in browserConfig:
@@ -127,7 +151,9 @@ def parseUrl(inputUrl, driver=None):
             </html>
     """
     if not driver:
-        driver = webdriver.Chrome()
+        # webdriver = getWebDirver()
+        # driver = webdriver.Chrome()
+        driver = initBrowser()
 
     respValue = None
 
@@ -203,7 +229,6 @@ def parseBingSearchResult(driver, isIncludeAd=True):
     resultElem = driver.find_element_by_id(resultId)
     logging.info("resultElem=%s", resultElem)
     if resultElem:
-
         # allLiXpath = "//li[@class='b_algo' or @starts-with(@class, 'b_ad')]"
         # allLiXpath = '//li[@class="b_algo" or starts-with(@class, "b_ad")]'
         # allLiXpath = "//li[@class='b_algo' or starts-with(@class, 'b_ad')]"
@@ -410,11 +435,6 @@ def parseBingSearchResult(driver, isIncludeAd=True):
 
     return searchResultDictList
 
-
-
-
-
-
 def getBingSearchResult(searchKeyword, driver=None):
     """
     Emulate bing search, return search result
@@ -429,7 +449,8 @@ def getBingSearchResult(searchKeyword, driver=None):
         '游戏题材 白夜琉璃'
     """
     if not driver:
-        driver = webdriver.Chrome()
+        # driver = webdriver.Chrome()
+        driver = initBrowser()
 
     BingHomeUrl = "https://cn.bing.com/"
     # https://cn.bing.com/search?q=%e7%99%bd%e5%a4%9c%e4%bd%bf%e5%be%92&FORM=R5FD7
