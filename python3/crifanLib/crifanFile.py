@@ -3,7 +3,7 @@
 """
 Filename: crifanFile.py
 Function: crifanLib's file related functions.
-Update: 20210528
+Update: 20210811
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanFile.py
 """
 
@@ -285,12 +285,13 @@ def createFolder(folderFullPath):
     """
     os.makedirs(folderFullPath, exist_ok=True)
 
-def listSubfolderFiles(subfolder, isContainSubfolder=False):
+def listSubfolderFiles(subfolder, isIncludeFolder=True, isRecursive=False):
     """os.listdir recursively
 
     Args:
         subfolder (str): sub folder path
-        isContainSubfolder (bool): whether contain sub folder. Default is False
+        isIncludeFolder (bool): whether is include folder. Default is True. If True, result contain folder
+        isRecursive (bool): whether is recursive, means contain sub folder. Default is False
     Returns:
         list of str
     Raises:
@@ -301,11 +302,13 @@ def listSubfolderFiles(subfolder, isContainSubfolder=False):
         curSubItemFullPath = os.path.join(subfolder, curSubItem)
         if os.path.isfile(curSubItemFullPath):
             allSubItemList.append(curSubItemFullPath)
-        elif os.path.isdir(curSubItemFullPath):
-            subSubItemList = listSubfolderFiles(curSubItemFullPath, isContainSubfolder)
-            allSubItemList.extend(subSubItemList)
+        else:
+            if isIncludeFolder:
+                if os.path.isdir(curSubItemFullPath):
+                    subSubItemList = listSubfolderFiles(curSubItemFullPath, isIncludeFolder, isRecursive)
+                    allSubItemList.extend(subSubItemList)
 
-    if isContainSubfolder:
+    if isIncludeFolder:
         allSubItemList.append(subfolder)
 
     return allSubItemList
