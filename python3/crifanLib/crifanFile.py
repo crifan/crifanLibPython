@@ -8,7 +8,7 @@ Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210528"
+__version__ = "20210811"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
