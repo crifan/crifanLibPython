@@ -3,12 +3,12 @@
 """
 Filename: crifanLogging.py
 Function: crifanLib's logging related functions.
-Version: 20210108
+Version: 20210824
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanLogging.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210108"
+__version__ = "20210824"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
@@ -26,11 +26,14 @@ except ImportError:
 ################################################################################
 
 LOG_FORMAT_FILE = "%(asctime)s %(filename)s:%(lineno)-4d %(levelname)-7s %(message)s"
+# https://docs.python.org/3/library/time.html#time.strftime
+LOG_FORMAT_FILE_DATETIME = "%Y/%m/%d %H:%M:%S"
 LOG_LEVEL_FILE = logging.DEBUG
 # LOG_FORMAT_CONSOLE = "%(asctime)s %(filename)s:%(lineno)-4d %(levelname)-7s %(message)s"
 LOG_FORMAT_CONSOLE = "%(color)s%(asctime)s %(filename)s:%(lineno)-4d %(levelname)-7s%(end_color)s %(message)s"
-# LOG_LEVEL_CONSOLE = logging.INFO
-LOG_LEVEL_CONSOLE = logging.DEBUG
+LOG_FORMAT_CONSOLE_DATETIME = "%Y%m%d %H:%M:%S"
+LOG_LEVEL_CONSOLE = logging.INFO
+# LOG_LEVEL_CONSOLE = logging.DEBUG
 
 
 ################################################################################
@@ -332,11 +335,11 @@ class LogFormatter(logging.Formatter):
 def loggingInit(filename = None,
                 fileLogLevel = LOG_LEVEL_FILE,
                 fileLogFormat = LOG_FORMAT_FILE,
-                fileLogDateFormat = '%Y/%m/%d %I:%M:%S',
+                fileLogDateFormat = LOG_FORMAT_FILE_DATETIME,
                 enableConsole = True,
                 consoleLogLevel = LOG_LEVEL_CONSOLE,
                 consoleLogFormat = LOG_FORMAT_CONSOLE,
-                consoleLogDateFormat = '%Y%m%d %I:%M:%S',
+                consoleLogDateFormat = LOG_FORMAT_CONSOLE_DATETIME,
                 ):
     """
     init logging for both log to file and console
