@@ -3,12 +3,12 @@
 """
 Filename: crifanLogging.py
 Function: crifanLib's logging related functions.
-Version: 20210824
+Version: 20210827
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanLogging.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210824"
+__version__ = "20210827"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
@@ -392,6 +392,34 @@ def loggingInit(filename = None,
         # tell the handler to use this format
         console.setFormatter(consoleFormatter)
         rootLogger.addHandler(console)
+
+def logSingleLine(curNum, itemStr, totalNum=0, indicatorChar="-", indicatorLength=10):
+    """Log output info for single line
+
+    Args:
+        curNum (int): current number
+        itemStr (str): current item string
+        totalNum (int): total number. Default is 0
+        indicatorChar (str): the indicator char. Default is '-'. Other common ones: '=', '*'
+        indicatorLength (str): length of indicator char. Default is 10
+    Returns:
+    Raises:
+    Examples:
+        eg: 
+    """
+    curProgressStr = ""
+    if totalNum > 0:
+        curPercent = curNum / totalNum
+        curPercentInt = (int)(curPercent * 100)
+        curProgressStr = "%2d%% %s/%s" % (curPercentInt, curNum, totalNum)
+    else:
+        curProgressStr = "%s" % (curNum)
+    
+    indicatorStr = indicatorChar * indicatorLength
+
+    logging.info("%s [%s] %s %s", indicatorStr, curProgressStr, itemStr, indicatorStr)
+
+    return
 
 ################################################################################
 # Test

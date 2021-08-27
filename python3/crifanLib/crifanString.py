@@ -3,12 +3,12 @@
 """
 Filename: crifanString.py
 Function: crifanLib's string related functions
-Version: 20210114
+Version: 20210827
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanString.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210112"
+__version__ = "20210827"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
@@ -1394,6 +1394,12 @@ def extractTags(curStr, topK=10, withWeight=False, allowPOS=()):
     # topTagList = jieba.analyse.extract_tags(curStr, topK=topK, withWeight=withWeight, allowPOS=allowPOS)
     topTagList = jieba.analyse.extract_tags(curStr, topK=topK, withWeight=withWeight, allowPOS=allowPOS)
     return topTagList
+
+def toPureStr(originStr):
+    """Stripped all \s(empty space, CR etc.) char, to pure string
+    """
+    pureStr = re.sub("\s", "", originStr)
+    return pureStr
 
 ################################################################################
 # Test
