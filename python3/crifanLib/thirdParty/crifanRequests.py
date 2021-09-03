@@ -3,22 +3,29 @@
 """
 Filename: crifanRequests.py
 Function: crifanLib's Requests related functions
-Version: 20210720
+Version: 20210903
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanRequests.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210720"
+__version__ = "20210903"
 __copyright__ = "Copyright (c) 2021, Crifan Li"
 __license__ = "GPL"
 
 import os
 import time
 import re
+import logging
 import requests
+
+try:
+    from bs4 import BeautifulSoup
+except:
+    print("! import bs4 failed, please install: `pip install bs4`")
 
 from crifanLib.crifanHtml import extractHtmlTitle
 
+from crifanLib.crifanString import toPureStr
 from crifanLib.crifanFile import formatSize, isFileExistAndValid
 from crifanLib.crifanDatetime import floatSecondsToDatetimeDict, datetimeDictToStr
 from crifanLib.crifanHtml import extractHtmlTitle
@@ -31,6 +38,8 @@ from crifanLib.crifanHtml import extractHtmlTitle
 # Constant
 ################################################################################
 CURRENT_LIB_FILENAME = "crifanRequests"
+
+UserAgent_Mac = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36"
 
 ################################################################################
 # Global Variable
@@ -570,6 +579,147 @@ def parseUrl(curUrl, pageLoadTimeout=10):
         }
 
     return respValue
+
+#-------------------------------------------------------------------------------
+# Small Crawler
+#-------------------------------------------------------------------------------
+
+def parsePhoneSegmentInfo_ip138(inputPhoneSegment):
+    """Parse out phone segment info (location, city, etc.), emulating ip138
+
+    Args:
+        inputPhoneSegment (str): phone segment
+    Returns:
+        dict
+    Raises:
+    Examples:
+        '1300100' -> {'您查询的手机号码段': '1300100', '卡号归属地': '北京', '卡类型': '联通130卡', '区号': '010', '邮编': '100000'}
+    """
+    Ip138_ParseMobileUrl = "https://www.ip138.com/mobile.asp"
+
+    respKeyValueDict = {}
+
+    qsParaDict = {
+        "mobile": inputPhoneSegment,
+        "action": "mobile",
+    }
+    # "https://www.ip138.com/mobile.asp?mobile=1300109&action=mobile"
+
+    """
+        GET /mobile.asp?mobile=1300109&action=mobile HTTP/1.1
+        Host: www.ip138.com
+        Connection: keep-alive
+        Pragma: no-cache
+        Cache-Control: no-cache
+        sec-ch-ua: "Chromium";v="92", " Not A;Brand";v="99", "Google Chrome";v="92"
+        sec-ch-ua-mobile: ?0
+        Upgrade-Insecure-Requests: 1
+        User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+        Sec-Fetch-Site: none
+        Sec-Fetch-Mode: navigate
+        Sec-Fetch-User: ?1
+        Sec-Fetch-Dest: document
+        Accept-Encoding: gzip, deflate, br
+        Accept-Language: zh-CN,zh;q=0.9,en;q=0.8
+        Cookie: ASPSESSIONIDQAQTTSDA=NPKPDMNAIDBMJPFALCKDCOON
+    """
+
+    gHeaderDict = {
+        # "Host": "www.ip138.com",
+        # "Connection": "keep-alive",
+        # "Pragma": "no-cache",
+        # "Cache-Control": "no-cache",
+        # "sec-ch-ua": '"Chromium";v="92", " Not A;Brand";v="99", "Google Chrome";v="92"',
+        # "sec-ch-ua-mobile": "?0",
+        # "Upgrade-Insecure-Requests": "1",
+        "User-Agent": UserAgent_Mac,
+        # "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+        # "Sec-Fetch-Site": "none",
+        # "Sec-Fetch-Mode": "navigate",
+        # "Sec-Fetch-User": "?1",
+        # "Sec-Fetch-Dest": "document",
+        # "Accept-Encoding": "gzip, deflate, br",
+        # "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+        # "Cookie": "ASPSESSIONIDQAQTTSDA=NPKPDMNAIDBMJPFALCKDCOON",
+    }
+
+    logging.info("opening %s", Ip138_ParseMobileUrl)
+    resp = requests.get(Ip138_ParseMobileUrl, params=qsParaDict, headers=gHeaderDict)
+    logging.info("resp.url=%s", resp.url)
+    logging.info("resp=%s", resp)
+
+    logging.debug("resp.encoding=%s", resp.encoding)
+    # resp.encoding = "ISO-8859-1"
+    resp.encoding = "UTF-8" # to fix zhcn char messy
+    # logging.debug("resp.encoding=%s", resp.encoding)
+
+    respHtml = resp.text
+    logging.debug("respHtml=%s", respHtml)
+
+    soup = BeautifulSoup(respHtml, "html.parser")
+    logging.debug("soup=%s", soup)
+    """
+            <tbody>
+                <tr>
+                    <td>您查询的手机号码段</td>
+                    <td><span>1300109</span> <a href="  //jx.ip138.com/1300109/" target="_blank">测吉凶(<font color="red">新</font>)</a></td>
+                </tr>
+                <tr><td>卡号归属地</td><td><span>北京&nbsp;</span></td></tr>
+                <tr><td>卡&nbsp;类&nbsp;型</td><td><span>联通130卡</span></td></tr>
+                <tr><td>区 号</td><td><span>010</span></td></tr>
+                <tr><td>邮 编</td><td><span>100000</span></td></tr>
+            </tbody>
+        </table>
+    """
+    tbodySoup = soup.find("tbody")
+    logging.debug("tbodySoup=%s", tbodySoup)
+    trSoupList = tbodySoup.find_all("tr")
+    logging.debug("trSoupList=%s", trSoupList)
+
+    # allItemDictList = []
+    for eachTrSoup in trSoupList:
+        logging.debug("eachTrSoup=%s", eachTrSoup)
+        tdSoupList = eachTrSoup.find_all("td")
+        tdSoupListNum = len(tdSoupList)
+        TotalTdNum = 2
+        if tdSoupListNum != TotalTdNum:
+            logging.error("Unexpeced td list: %s", tdSoupList)
+        else:
+            tdKeySoup = tdSoupList[0]
+            tdValueSoup = tdSoupList[1]
+            logging.debug("tdKeySoup=%s, tdValueSoup=%s", tdKeySoup, tdValueSoup)
+            # tdKeySoup=<td>您查询的手机号码段</td>, tdValueSoup=<td><span>1300109</span> <a href="  //jx.ip138.com/1300109/" target="_blank">测吉凶(<font color="red">新</font>)</a></td>
+            keyStr = tdKeySoup.string
+            logging.debug("keyStr=%s", keyStr)
+            # keyStr=您查询的手机号码段
+            # keyStr = keyStr.strip()
+            pureKeyStr = toPureStr(keyStr)
+            logging.debug("pureKeyStr=%s", pureKeyStr)
+            # pureKeyStr=您查询的手机号码段
+            spanValueSoup = tdValueSoup.find("span")
+            logging.debug("spanValueSoup=%s", spanValueSoup)
+            # spanValueSoup=<span>1300109</span>
+            valueStr = spanValueSoup.string
+            logging.debug("valueStr=%s", valueStr)
+            # valueStr=1300109
+            pureValueStr = toPureStr(valueStr)
+            logging.debug("pureValueStr=%s", pureValueStr)
+            # pureValueStr=1300109
+            curItemDict = {
+                "key": pureKeyStr,
+                "value": pureValueStr
+            }
+            logging.info("curItemDict=%s", curItemDict)
+            # curItemDict={'key': '您查询的手机号码段', 'value': '1300109'}
+            # allItemDictList.append(curItemDict)
+            respKeyValueDict[pureKeyStr] = pureValueStr
+
+    # logging.info("allItemDictList=%s", allItemDictList)
+    # allItemDictList=[{'key': '您查询的手机号码段', 'value': '1300100'}, {'key': '卡号归属地', 'value': '北京'}, {'key': '卡类型', 'value': '联通130卡'}, {'key': '区号', 'value': '010'}, {'key': '邮编', 'value': '100000'}]
+    logging.info("respKeyValueDict=%s", respKeyValueDict)
+    # respKeyValueDict={'您查询的手机号码段': '1300100', '卡号归属地': '北京', '卡类型': '联通130卡', '区号': '010', '邮编': '100000'}
+    return respKeyValueDict
 
 ################################################################################
 # Test
