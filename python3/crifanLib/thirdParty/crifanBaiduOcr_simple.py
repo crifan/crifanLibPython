@@ -1,7 +1,7 @@
 """
 Filename: baiduOcr.py
 Function: simple version of https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanBaiduOcr.py
-Version: 20210326
+Version: 20210919
 """
 
 import re
@@ -387,13 +387,23 @@ class BaiduOCR():
 		if foundWords:
 			logging.debug("foundWords=%s" % foundWords)
 
-			firstMatchedPos = foundWords.start()
-			lastMatchedPos = foundWords.end() - 1
-
 			matchedStrLen = len(matchedStr)
 			charResultList = curWordsResult["chars"]
 			charResultListLen = len(charResultList)
 			charResultListMaxIdx = charResultListLen - 1
+
+			firstMatchedPos = foundWords.start()
+			lastMatchedPos = foundWords.end() - 1
+
+			# check validation
+			if firstMatchedPos > charResultListMaxIdx:
+				# avoid special:
+				# 	foundWords = '无线局域网《xxxxxxguest《'=
+				# 	but curWordsResult[5] = {'char': '《xxxxxxguest《', 'location': {'top': 26, 'left': 131, 'width': 92, 'height': 20}}
+				firstMatchedPos = charResultListMaxIdx
+
+			if lastMatchedPos > charResultListMaxIdx:
+				lastMatchedPos = -1
 
 			firstCharResult = None
 			lastCharResult = None
@@ -443,10 +453,11 @@ class BaiduOCR():
 				firstCharResult = charResultList[firstMatchedPos]
 
 			if not lastCharResult:
-				if lastMatchedPos <= charResultListMaxIdx:
-					lastCharResult = charResultList[lastMatchedPos]
-				else:
-					lastCharResult = charResultList[-1]
+				# if lastMatchedPos <= charResultListMaxIdx:
+				# 	lastCharResult = charResultList[lastMatchedPos]
+				# else:
+				# 	lastCharResult = charResultList[-1]
+				lastCharResult = charResultList[lastMatchedPos]
 
 			firstLocation = firstCharResult["location"]
 			lastLocation = lastCharResult["location"]

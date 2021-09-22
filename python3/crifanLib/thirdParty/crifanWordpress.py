@@ -1,6 +1,6 @@
 # Function: Wordpress related functions
 # Author: Crifan Li
-# Update: 20210325
+# Update: 20210922
 # Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanWordpress.py
 
 from datetime import datetime
@@ -39,21 +39,21 @@ class crifanWordpress(object):
     ################################################################################
 
     def __init__(self, host, jwtToken, requestsProxies=None):
-        self.host = host # 'https://www.crifan.com'
+        self.host = host # 'https://www.crifan.org'
         self.authorization = "Bearer %s" % jwtToken # 'Bearer xxx'
         self.requestsProxies = requestsProxies # {'http': 'http://127.0.0.1:58591', 'https': 'http://127.0.0.1:58591'}
 
-        # "https://www.crifan.com/wp-json/jwt-auth/v1/token/validate"
+        # "https://www.crifan.org/wp-json/jwt-auth/v1/token/validate"
         self.apiValidateToken = self.host + "/wp-json/jwt-auth/v1/token/validate"
 
         # https://developer.wordpress.org/rest-api/reference/media/
-        self.apiMedia = self.host + "/wp-json/wp/v2/media" # 'https://www.crifan.com/wp-json/wp/v2/media'
+        self.apiMedia = self.host + "/wp-json/wp/v2/media" # 'https://www.crifan.org/wp-json/wp/v2/media'
         # https://developer.wordpress.org/rest-api/reference/posts/
-        self.apiPosts = self.host + "/wp-json/wp/v2/posts" # 'https://www.crifan.com/wp-json/wp/v2/posts'
+        self.apiPosts = self.host + "/wp-json/wp/v2/posts" # 'https://www.crifan.org/wp-json/wp/v2/posts'
         # https://developer.wordpress.org/rest-api/reference/categories/#create-a-category
-        self.apiCategories = self.host + "/wp-json/wp/v2/categories" # 'https://www.crifan.com/wp-json/wp/v2/categories'
+        self.apiCategories = self.host + "/wp-json/wp/v2/categories" # 'https://www.crifan.org/wp-json/wp/v2/categories'
         # https://developer.wordpress.org/rest-api/reference/tags/#create-a-tag
-        self.apiTags = self.host + "/wp-json/wp/v2/tags" # 'https://www.crifan.com/wp-json/wp/v2/tags'
+        self.apiTags = self.host + "/wp-json/wp/v2/tags" # 'https://www.crifan.org/wp-json/wp/v2/tags'
 
         # requests.adapters.DEFAULT_RETRIES = 10
         self.reqSession = requests.Session()
@@ -102,7 +102,7 @@ class crifanWordpress(object):
         curDatetime = datetime.now() # datetime.datetime(2021, 3, 25, 22, 42, 7, 834462)
         yearMonthStr = curDatetime.strftime(format="%Y/%m") # '2021/03'
         uploadedImageUrl = "%s/files/pic/uploads/%s/%s" % (self.host, yearMonthStr, uploadImageFilename)
-        # 'https://www.crifan.com/files/pic/uploads/2021/03/f60ea32cf4664b41922431f4ea015621.jpg'
+        # 'https://www.crifan.org/files/pic/uploads/2021/03/f60ea32cf4664b41922431f4ea015621.jpg'
         return uploadedImageUrl
 
     def createMedia(self, contentType, filename, mediaBytes):
@@ -149,9 +149,9 @@ class crifanWordpress(object):
             categoryNameList=[],
             tagNameList=[],
             status="draft",
-            postFormat="standard"
+            postFormat="standard",
         ):
-        """Create wordpress standard post
+        """Create wordpress post
             by call REST api: POST /wp-json/wp/v2/posts
 
         Args:
@@ -271,13 +271,13 @@ class crifanWordpress(object):
             json=postDict,
         )
         logging.info("resp=%s for POST %s with postDict=%s", resp, createTaxonomyUrl, postDict)
-        # {'id': 13223, 'count': 0, 'description': '', 'link': 'https://www.crifan.com/category/mac-2/', 'name': 'Mac', 'slug': 'mac-2', 'taxonomy': 'category', 'parent': 0, 'meta': [], '_links': {'self': [{'href': 'https://www.crifan.com/wp-json/wp/v2/categories/13223'}], 'collection': [{'href': 'https://www.crifan.com/wp-json/wp/v2/categories'}], 'about': [{'href': 'https://www.crifan.com/wp-json/wp/v2/taxonomies/category'}], 'wp:post_type': [{'href': 'https://www.crifan.com/wp-json/wp/v2/posts?categories=13223'}], 'curies': [{'name': 'wp', 'href': 'https://api.w.org/{rel}', 'templated': True}]}}
+        # {'id': 13223, 'count': 0, 'description': '', 'link': 'https://www.crifan.org/category/mac-2/', 'name': 'Mac', 'slug': 'mac-2', 'taxonomy': 'category', 'parent': 0, 'meta': [], '_links': {'self': [{'href': 'https://www.crifan.org/wp-json/wp/v2/categories/13223'}], 'collection': [{'href': 'https://www.crifan.org/wp-json/wp/v2/categories'}], 'about': [{'href': 'https://www.crifan.org/wp-json/wp/v2/taxonomies/category'}], 'wp:post_type': [{'href': 'https://www.crifan.org/wp-json/wp/v2/posts?categories=13223'}], 'curies': [{'name': 'wp', 'href': 'https://api.w.org/{rel}', 'templated': True}]}}
         # postDict={'name': 'Mac'}
         # postDict={'name': 'GPU'}
 
         isCreateOk, respInfo = crifanWordpress.processCommonResponse(resp)
         logging.debug("isCreateOk=%s, respInfo=%s", isCreateOk, respInfo)
-        # isCreateOk=True, respInfo={'id': 13224, 'slug': 'gpu', 'link': 'https://www.crifan.com/tag/gpu/', 'name': 'GPU', 'description': ''}
+        # isCreateOk=True, respInfo={'id': 13224, 'slug': 'gpu', 'link': 'https://www.crifan.org/tag/gpu/', 'name': 'GPU', 'description': ''}
 
         return isCreateOk, respInfo
 
@@ -431,7 +431,7 @@ class crifanWordpress(object):
 
             isSearhOk, existedTaxonomy = self.searchTaxonomy(eachTaxonomyName, taxonomy)
             logging.debug("isSearhOk=%s, existedTaxonomy=%s", isSearhOk, existedTaxonomy)
-            # isSearhOk=True, existedTaxonomy={'id': 1374, 'count': 350, 'description': '', 'link': 'https://www.crifan.com/category/work_and_job/operating_system_and_platform/mac/', 'name': 'Mac', 'slug': 'mac', 'taxonomy': 'category', 'parent': 4624, 'meta': [], '_links': {'self': [{'href': 'https://www.crifan.com/wp-json/wp/v2/categories/1374'}], 'collection': [{'href': 'https://www.crifan.com/wp-json/wp/v2/categories'}], 'about': [{'href': 'https://www.crifan.com/wp-json/wp/v2/taxonomies/category'}], 'up': [{'embeddable': True, 'href': 'https://www.crifan.com/wp-json/wp/v2/categories/4624'}], 'wp:post_type': [{'href': 'https://www.crifan.com/wp-json/wp/v2/posts?categories=1374'}], 'curies': [{'name': 'wp', 'href': 'https://api.w.org/{rel}', 'templated': True}]}}
+            # isSearhOk=True, existedTaxonomy={'id': 1374, 'count': 350, 'description': '', 'link': 'https://www.crifan.org/category/work_and_job/operating_system_and_platform/mac/', 'name': 'Mac', 'slug': 'mac', 'taxonomy': 'category', 'parent': 4624, 'meta': [], '_links': {'self': [{'href': 'https://www.crifan.org/wp-json/wp/v2/categories/1374'}], 'collection': [{'href': 'https://www.crifan.org/wp-json/wp/v2/categories'}], 'about': [{'href': 'https://www.crifan.org/wp-json/wp/v2/taxonomies/category'}], 'up': [{'embeddable': True, 'href': 'https://www.crifan.org/wp-json/wp/v2/categories/4624'}], 'wp:post_type': [{'href': 'https://www.crifan.org/wp-json/wp/v2/posts?categories=1374'}], 'curies': [{'name': 'wp', 'href': 'https://api.w.org/{rel}', 'templated': True}]}}
             if isSearhOk and existedTaxonomy:
                 curTaxonomy = existedTaxonomy
                 logging.info("Found existed %s: name=%s,id=%s,slug=%s", taxonomy, curTaxonomy["name"], curTaxonomy["id"], curTaxonomy["slug"])
@@ -552,15 +552,15 @@ class crifanWordpress(object):
                     "date": "2020-03-13T22:34:29",
                     "date_gmt": "2020-03-13T14:34:29",
                     "guid": {
-                        "rendered": "https://www.crifan.com/files/pic/uploads/2020/03/f6956c30ef0b475fa2b99c2f49622e35.png",
-                        "raw": "https://www.crifan.com/files/pic/uploads/2020/03/f6956c30ef0b475fa2b99c2f49622e35.png"
+                        "rendered": "https://www.crifan.org/files/pic/uploads/2020/03/f6956c30ef0b475fa2b99c2f49622e35.png",
+                        "raw": "https://www.crifan.org/files/pic/uploads/2020/03/f6956c30ef0b475fa2b99c2f49622e35.png"
                     },
                     "modified": "2020-03-13T22:34:29",
                     ...
                     "slug": "f6956c30ef0b475fa2b99c2f49622e35",
                     "status": "inherit",
                     "type": "attachment",
-                    "link": "https://www.crifan.com/f6956c30ef0b475fa2b99c2f49622e35/",
+                    "link": "https://www.crifan.org/f6956c30ef0b475fa2b99c2f49622e35/",
                     "title": {
                         "raw": "f6956c30ef0b475fa2b99c2f49622e35",
                         "rendered": "f6956c30ef0b475fa2b99c2f49622e35"
@@ -572,8 +572,8 @@ class crifanWordpress(object):
                     "date": "2020-02-27T21:11:49",
                     "date_gmt": "2020-02-27T13:11:49",
                     "guid": {
-                        "rendered": "https://www.crifan.com/?p=70410",
-                        "raw": "https://www.crifan.com/?p=70410"
+                        "rendered": "https://www.crifan.org/?p=70410",
+                        "raw": "https://www.crifan.org/?p=70410"
                     },
                     "modified": "2020-02-27T21:11:49",
                     "modified_gmt": "2020-02-27T13:11:49",
@@ -581,7 +581,7 @@ class crifanWordpress(object):
                     "slug": "mac_pip_change_source_server_to_spped_up_download",
                     "status": "draft",
                     "type": "post",
-                    "link": "https://www.crifan.com/?p=70410",
+                    "link": "https://www.crifan.org/?p=70410",
                     "title": {
                         'raw": "【已解决】Mac中给pip更换源以加速下载",
                         "rendered": "【已解决】Mac中给pip更换源以加速下载"
@@ -594,7 +594,7 @@ class crifanWordpress(object):
                     "id": 13223,
                     "count": 0,
                     "description": "",
-                    "link": "https://www.crifan.com/category/mac-2/",
+                    "link": "https://www.crifan.org/category/mac-2/",
                     "name": "Mac",
                     "slug": "mac-2",
                     "taxonomy": "category",
@@ -602,16 +602,16 @@ class crifanWordpress(object):
                     "meta": [],
                     "_links": {
                         "self": [{
-                        "href": "https://www.crifan.com/wp-json/wp/v2/categories/13223"
+                        "href": "https://www.crifan.org/wp-json/wp/v2/categories/13223"
                         }],
                         "collection": [{
-                        "href": "https://www.crifan.com/wp-json/wp/v2/categories"
+                        "href": "https://www.crifan.org/wp-json/wp/v2/categories"
                         }],
                         "about": [{
-                        "href": "https://www.crifan.com/wp-json/wp/v2/taxonomies/category"
+                        "href": "https://www.crifan.org/wp-json/wp/v2/taxonomies/category"
                         }],
                         "wp:post_type": [{
-                        "href": "https://www.crifan.com/wp-json/wp/v2/posts?categories=13223"
+                        "href": "https://www.crifan.org/wp-json/wp/v2/posts?categories=13223"
                         }],
                         "curies": [{
                         "name": "wp",
@@ -627,7 +627,7 @@ class crifanWordpress(object):
                         "id": 1639,
                         "count": 7,
                         "description": "",
-                        "link": "https://www.crifan.com/category/work_and_job/operating_system_and_platform/mac/cocoa-mac/",
+                        "link": "https://www.crifan.org/category/work_and_job/operating_system_and_platform/mac/cocoa-mac/",
                         "name": "Cocoa",
                         "slug": "cocoa-mac",
                         "taxonomy": "category",
@@ -635,20 +635,20 @@ class crifanWordpress(object):
                         "meta": [],
                         "_links": {
                             "self": [{
-                            "href": "https://www.crifan.com/wp-json/wp/v2/categories/1639"
+                            "href": "https://www.crifan.org/wp-json/wp/v2/categories/1639"
                             }],
                             "collection": [{
-                            "href": "https://www.crifan.com/wp-json/wp/v2/categories"
+                            "href": "https://www.crifan.org/wp-json/wp/v2/categories"
                             }],
                             "about": [{
-                            "href": "https://www.crifan.com/wp-json/wp/v2/taxonomies/category"
+                            "href": "https://www.crifan.org/wp-json/wp/v2/taxonomies/category"
                             }],
                             "up": [{
                             "embeddable": True,
-                            "href": "https://www.crifan.com/wp-json/wp/v2/categories/1374"
+                            "href": "https://www.crifan.org/wp-json/wp/v2/categories/1374"
                             }],
                             "wp:post_type": [{
-                            "href": "https://www.crifan.com/wp-json/wp/v2/posts?categories=1639"
+                            "href": "https://www.crifan.org/wp-json/wp/v2/posts?categories=1639"
                             }],
                             "curies": [{
                             "name": "wp",
@@ -671,23 +671,23 @@ class crifanWordpress(object):
                         "id": 1367,
                         "count": 12,
                         "description": "",
-                        "link": "https://www.crifan.com/tag/%e5%88%87%e6%8d%a2/",
+                        "link": "https://www.crifan.org/tag/%e5%88%87%e6%8d%a2/",
                         "name": "切换",
                         "slug": "%e5%88%87%e6%8d%a2",
                         "taxonomy": "post_tag",
                         "meta": [],
                         "_links": {
                             "self": [{
-                            "href": "https://www.crifan.com/wp-json/wp/v2/tags/1367"
+                            "href": "https://www.crifan.org/wp-json/wp/v2/tags/1367"
                             }],
                             "collection": [{
-                            "href": "https://www.crifan.com/wp-json/wp/v2/tags"
+                            "href": "https://www.crifan.org/wp-json/wp/v2/tags"
                             }],
                             "about": [{
-                            "href": "https://www.crifan.com/wp-json/wp/v2/taxonomies/post_tag"
+                            "href": "https://www.crifan.org/wp-json/wp/v2/taxonomies/post_tag"
                             }],
                             "wp:post_type": [{
-                            "href": "https://www.crifan.com/wp-json/wp/v2/posts?tags=1367"
+                            "href": "https://www.crifan.org/wp-json/wp/v2/posts?tags=1367"
                             }],
                             "curies": [{
                             "name": "wp",
@@ -705,23 +705,23 @@ class crifanWordpress(object):
                     "id": 13224,
                     "count": 0,
                     "description": "",
-                    "link": "https://www.crifan.com/tag/gpu/",
+                    "link": "https://www.crifan.org/tag/gpu/",
                     "name": "GPU",
                     "slug": "gpu",
                     "taxonomy": "post_tag",
                     "meta": [],
                     "_links": {
                         "self": [{
-                        "href": "https://www.crifan.com/wp-json/wp/v2/tags/13224"
+                        "href": "https://www.crifan.org/wp-json/wp/v2/tags/13224"
                         }],
                         "collection": [{
-                        "href": "https://www.crifan.com/wp-json/wp/v2/tags"
+                        "href": "https://www.crifan.org/wp-json/wp/v2/tags"
                         }],
                         "about": [{
-                        "href": "https://www.crifan.com/wp-json/wp/v2/taxonomies/post_tag"
+                        "href": "https://www.crifan.org/wp-json/wp/v2/taxonomies/post_tag"
                         }],
                         "wp:post_type": [{
-                        "href": "https://www.crifan.com/wp-json/wp/v2/posts?tags=13224"
+                        "href": "https://www.crifan.org/wp-json/wp/v2/posts?tags=13224"
                         }],
                         "curies": [{
                         "name": "wp",
@@ -738,18 +738,18 @@ class crifanWordpress(object):
                     newId = respJson["id"]
                     newSlug = respJson["slug"]
                     newLink = respJson["link"]
-                    logging.debug("newId=%s, newSlug=%s, newLink=%s", newId, newSlug, newLink) # newId=13224, newSlug=gpu, newLink=https://www.crifan.com/tag/gpu/
+                    logging.debug("newId=%s, newSlug=%s, newLink=%s", newId, newSlug, newLink) # newId=13224, newSlug=gpu, newLink=https://www.crifan.org/tag/gpu/
                     respInfo = {
                         "id": newId, # 70393
                         "slug": newSlug, # f6956c30ef0b475fa2b99c2f49622e35
-                        "link": newLink, # https://www.crifan.com/f6956c30ef0b475fa2b99c2f49622e35/
+                        "link": newLink, # https://www.crifan.org/f6956c30ef0b475fa2b99c2f49622e35/
                     }
 
                     if "type" in respJson:
                         curType = respJson["type"]
                         if (curType == "attachment") or (curType == "post"):
                             respInfo["url"] = respJson["guid"]["rendered"]
-                            # "url": newUrl, # https://www.crifan.com/files/pic/uploads/2020/03/f6956c30ef0b475fa2b99c2f49622e35.png
+                            # "url": newUrl, # https://www.crifan.org/files/pic/uploads/2020/03/f6956c30ef0b475fa2b99c2f49622e35.png
                             respInfo["title"] = respJson["title"]["rendered"]
                             # "title": newTitle, # f6956c30ef0b475fa2b99c2f49622e35
                             logging.debug("url=%s, title=%s", respInfo["url"], respInfo["title"])
@@ -773,7 +773,7 @@ class crifanWordpress(object):
                 respInfo = respJson
         else:
             # error example:
-            # resp=<Response [403]> for GET https://www.crifan.com/wp-json/wp/v2/categories with para={'search': '印象笔记'}
+            # resp=<Response [403]> for GET https://www.crifan.org/wp-json/wp/v2/categories with para={'search': '印象笔记'}
             # ->
             # {'errCode': 403, 'errMsg': '{"code":"jwt_auth_invalid_token","message":"Expired token","data":{"status":403}}'}
             isOk = False
@@ -784,8 +784,8 @@ class crifanWordpress(object):
             }
 
         logging.debug("isOk=%s, respInfo=%s", isOk, respInfo)
-        # isOk=True, respInfo={'id': 13224, 'slug': 'gpu', 'link': 'https://www.crifan.com/tag/gpu/', 'name': 'GPU', 'description': ''}
-        # isOk=True, respInfo={'id': 13226, 'slug': '%e6%98%be%e5%8d%a1%e6%a8%a1%e5%bc%8f', 'link': 'https://www.crifan.com/tag/%e6%98%be%e5%8d%a1%e6%a8%a1%e5%bc%8f/', 'name': '显卡模式', 'description': ''}
+        # isOk=True, respInfo={'id': 13224, 'slug': 'gpu', 'link': 'https://www.crifan.org/tag/gpu/', 'name': 'GPU', 'description': ''}
+        # isOk=True, respInfo={'id': 13226, 'slug': '%e6%98%be%e5%8d%a1%e6%a8%a1%e5%bc%8f', 'link': 'https://www.crifan.org/tag/%e6%98%be%e5%8d%a1%e6%a8%a1%e5%bc%8f/', 'name': '显卡模式', 'description': ''}
         # isOk=True, respInfo={'code': 'jwt_auth_valid_token', 'data': {'status': 200}}
         return isOk, respInfo
 

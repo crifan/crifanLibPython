@@ -1,12 +1,13 @@
 # Function: Evernote to Wordpress related functions
 # Author: Crifan Li
-# Update: 20210328
+# Update: 20210922
 # Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanEvernoteToWordpress.py
 
 import sys
 import logging
 import re
 import copy
+from operator import itemgetter
 from bs4 import Tag, NavigableString
 
 sys.path.append("lib")
@@ -59,8 +60,8 @@ class crifanEvernoteToWordpress(object):
         isNeedUpload = True
         if isCheckExisted:
             generatedImgeUrl = self.wordpress.generateUploadedImageUrl(imgeFilename)
-            # https://www.crifan.com/files/pic/uploads/2021/03/f60ea32cf4664b41922431f4ea015621.jpg
-            # 'url':'https://www.crifan.com/files/pic/uploads/2021/03/f60ea32cf4664b41922431f4ea015621-1.jpg'
+            # https://www.crifan.org/files/pic/uploads/2021/03/f60ea32cf4664b41922431f4ea015621.jpg
+            # 'url':'https://www.crifan.org/files/pic/uploads/2021/03/f60ea32cf4664b41922431f4ea015621-1.jpg'
             isValid = utils.isValidImageUrl(generatedImgeUrl, proxies=self.wordpress.requestsProxies)
             if isValid:
                 logging.info("Found existed image %s", generatedImgeUrl)
@@ -99,7 +100,7 @@ class crifanEvernoteToWordpress(object):
             curImgSoup.name = "img"
             curImgSoup.attrs = {"src": uploadedImgUrl}
             logging.debug("curImgSoup=%s", curImgSoup)
-            # curImgSoup=<img src="https://www.crifan.com/files/pic/uploads/2020/11/c8b16cafe6484131943d80267d390485.jpg"></img>
+            # curImgSoup=<img src="https://www.crifan.org/files/pic/uploads/2020/11/c8b16cafe6484131943d80267d390485.jpg"></img>
             # new content string
             updatedContent = crifanEvernote.soupToNoteContent(soup)
             logging.debug("updatedContent=%s", updatedContent)
@@ -170,10 +171,10 @@ class crifanEvernoteToWordpress(object):
 
         isUploadOk, respInfo = self.uploadImageToWordpress(curResource)
         if isUploadOk:
-            # {'id': 70491, 'url': 'https://www.crifan.com/files/pic/uploads/2020/11/c8b16cafe6484131943d80267d390485.jpg', 'slug': 'c8b16cafe6484131943d80267d390485', 'link': 'https://www.crifan.com/c8b16cafe6484131943d80267d390485/', 'title': 'c8b16cafe6484131943d80267d390485'}
+            # {'id': 70491, 'url': 'https://www.crifan.org/files/pic/uploads/2020/11/c8b16cafe6484131943d80267d390485.jpg', 'slug': 'c8b16cafe6484131943d80267d390485', 'link': 'https://www.crifan.org/c8b16cafe6484131943d80267d390485/', 'title': 'c8b16cafe6484131943d80267d390485'}
             uploadedImgUrl = respInfo["url"]
             logging.info("Uploaded url %s", uploadedImgUrl)
-            # "https://www.crifan.com/files/pic/uploads/2020/03/f6956c30ef0b475fa2b99c2f49622e35.png"
+            # "https://www.crifan.org/files/pic/uploads/2020/03/f6956c30ef0b475fa2b99c2f49622e35.png"
             # relace en-media to img
             respNote = self.syncNoteImage(curNoteDetail, curResource, uploadedImgUrl, curResList)
             # logging.info("Complete sync image %s to note %s", uploadedImgUrl, respNote.title)
@@ -252,24 +253,48 @@ class crifanEvernoteToWordpress(object):
         #     firstTag = tagNameList.pop(0) # 'Mac'
         #     categoryNameList.append(firstTag)
         firstExistedCategory = None
+        # for eachTagName in tagNameList:
+        #     isSearhOk, existedCategory = self.wordpress.searchTaxonomy(eachTagName, "category")
+        #     # True, {'_links': {'about': [...], 'collection': [...], 'curies': [...], 'self': [...], 'up': [...], 'wp:post_type': [...]}, 'count': 35, 'description': '', 'id': 3178, 'link': 'https://www.crifan.c...s_windows/', 'meta': [], 'name': 'Windows', 'parent': 4624, 'slug': 'os_windows', 'taxonomy': 'category'}
+        #     logging.debug("isSearhOk=%s, existedCategory=%s", isSearhOk, existedCategory)
+        #     if isSearhOk and existedCategory:
+        #         firstExistedCategory = eachTagName
+        #         break
+
+        existedCategoryList = []
         for eachTagName in tagNameList:
             isSearhOk, existedCategory = self.wordpress.searchTaxonomy(eachTagName, "category")
             # True, {'_links': {'about': [...], 'collection': [...], 'curies': [...], 'self': [...], 'up': [...], 'wp:post_type': [...]}, 'count': 35, 'description': '', 'id': 3178, 'link': 'https://www.crifan.c...s_windows/', 'meta': [], 'name': 'Windows', 'parent': 4624, 'slug': 'os_windows', 'taxonomy': 'category'}
+            logging.debug("isSearhOk=%s, existedCategory=%s", isSearhOk, existedCategory)
             if isSearhOk and existedCategory:
-                firstExistedCategory = eachTagName
-                break
-    
+                existedCategoryList.append(existedCategory)
+
+        if existedCategoryList:
+            existedCategoryList.sort(key = itemgetter("count"), reverse=True)
+            highestCountCategory = existedCategoryList[0]
+            firstExistedCategory = highestCountCategory["name"]
+
         if not firstExistedCategory:
             firstExistedCategory = tagNameList[0]
 
         categoryNameList.append(firstExistedCategory)
         return categoryNameList
 
-    def uploadNoteToWordpress(self, curNote, isNeedGetLatestDetail=True):
+    def uploadNoteToWordpress(
+            self,
+            curNote,
+            dateType="created",
+            postStatus="draft",
+            postFormat="standard",
+            isNeedGetLatestDetail=True,
+        ):
         """Upload note content new html to wordpress
 
         Args:
             curNote (Note): evernote Note
+            dateType (str): wordpress post create time using evernote note time's type: created/updated
+            postStatus (str): post status. Default to 'draft'. Options: publish/future/draft/pending/private
+            postFormat (str): post format. Default to 'standard'. Options: standard/aside/chat/gallery/link/image/quote/status/video/audio
             isNeedGetLatestDetail (bool): need or not to get latest detailed note content
         Returns:
             (bool, dict)
@@ -288,6 +313,10 @@ class crifanEvernoteToWordpress(object):
         postSlug = curNote.attributes.sourceURL
         logging.debug("postSlug=%s", postSlug)
         # 'on_mac_pmset_is_used_set_gpu_graphics_card_switching_mode'
+        # '_ourselves_parses_extracts_baidu_search_results'
+        postSlug = re.sub("^_*(?P<pureSlug>.+?)_*$", "\g<pureSlug>", postSlug)
+        # # 'ourselves_parses_extracts_baidu_search_results'
+        logging.debug("after validation: postSlug=%s", postSlug)
 
         # content html
         # contentHtml = curNote.content
@@ -302,8 +331,11 @@ class crifanEvernoteToWordpress(object):
         # utils.dbgSaveHtml(contentHtml, "%s_处理后" % curNote.title)
 
         # created=1597630594000, updated=1606826719000,
-        # dateTimestampInt = curNote.updated
-        dateTimestampInt = curNote.created # 1597630594000
+        dateTimestampInt = None
+        if dateType == "updated":
+            dateTimestampInt = curNote.updated
+        elif dateType == "created":
+            dateTimestampInt = curNote.created # 1597630594000
         logging.debug("dateTimestampInt=%s", dateTimestampInt)
         dateTimestampFloat = float(dateTimestampInt) / 1000.0 # 1597630594.0
         logging.debug("dateTimestampFloat=%s", dateTimestampFloat)
@@ -333,9 +365,11 @@ class crifanEvernoteToWordpress(object):
             slug=postSlug, # 'on_mac_pmset_is_used_set_gpu_graphics_card_switching_mode'
             categoryNameList=curCategoryList, # ['Mac']
             tagNameList=tagNameList, # ['切换', 'GPU', 'pmset', '显卡模式']
+            status=postStatus, # draft / publish
+            postFormat=postFormat, # standard
         )
         logging.info("%s to upload note to post, respInfo=%s", isUploadOk, respInfo)
-        # {'id': 70563, 'url': 'https://www.crifan.com/?p=70563', 'slug': 'try_mi_band_4', 'link': 'https://www.crifan.com/?p=70563', 'title': '【记录】试用小米手环4'}
+        # {'id': 70563, 'url': 'https://www.crifan.org/?p=70563', 'slug': 'try_mi_band_4', 'link': 'https://www.crifan.org/?p=70563', 'title': '【记录】试用小米手环4'}
         return isUploadOk, respInfo
 
     @staticmethod
