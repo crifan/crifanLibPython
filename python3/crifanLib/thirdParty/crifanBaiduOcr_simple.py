@@ -1,9 +1,10 @@
 """
 Filename: baiduOcr.py
-Function: simple version of https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanBaiduOcr.py
-Version: 20210919
+Function: simple version of https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanBaiduOcr_simple.py
+Version: 20210924
 """
 
+# import enum
 import re
 import base64
 import requests
@@ -38,6 +39,50 @@ def readBinDataFromFile(filePath):
 # Python Baidu OCR Function
 ################################################################################
 
+# class BaiduOcrApiError(AutoNumber):
+# class BaiduOcrApiError(Enum):
+
+# from collections import namedtuple
+from enum import Enum
+
+# class BaiduOcrApiError(namedtuple("errCode", "errMsg"), Enum):
+# class BaiduOcrApiError(Enum):
+class BaiduOcrApiError(tuple, Enum):
+	"""Baidu OCR API call response error
+			错误码 - 文字识别OCR
+			https://ai.baidu.com/ai-doc/OCR/dk3h7y5vr
+	"""
+
+	# def __new__(cls, *args, **kwds):
+	# 		value = len(cls.__members__) + 1
+	# 		obj = object.__new__(cls)
+	# 		obj._value_ = value
+	# 		return obj
+
+	# # def __init__(self, errCode=1, errMsg="Unknown error"):
+	# def __init__(self, errCode=1, errMsg="Unknown error"):
+	# 	self.errCode = errCode
+	# 	self.errMsg = errMsg
+
+	# def __new__(cls, errorCode=1, errorMsg="Unknown error"):
+	def __new__(cls, errTuple=(1, "Unknown error")):
+		errorCode = errTuple[0]
+		errorMsg = errTuple[1]
+
+		# value = len(cls.__members__) + 1
+		# obj = object.__new__(cls)
+		obj = tuple.__new__(cls)
+		obj._value_ = errorCode
+
+		obj.errorCode = errorCode
+		obj.errorMsg = errorMsg
+
+		return obj
+
+	DAILY_LIMIT_REACHED = (17, "Open api daily request limit reached")
+	QPS_LIMIT_REACHED = (18, "Open api qps request limit reached")
+	IMAGE_SIZE_ERROR = (216202, "image size error")
+
 class BaiduOCR():
 	"""
 		百度OCR
@@ -63,12 +108,6 @@ class BaiduOCR():
 	OCR_URL = OCR_URL_ACCURATE
 
 	TOKEN_URL = 'https://aip.baidubce.com/oauth/2.0/token'
-
-	RESP_ERR_CODE_QPS_LIMIT_REACHED = 18
-	RESP_ERR_TEXT_QPS_LIMIT_REACHED = "Open api qps request limit reached"
-
-	RESP_ERR_CODE_DAILY_LIMIT_REACHED = 17
-	RESP_ERR_TEXT_DAILY_LIMIT_REACHED = "Open api daily request limit reached"
 
 	API_KEY = 'change_to_your_baidu_ocr_api_key'
 	SECRET_KEY = 'change_to_your_baidu_ocr_secret_key'
@@ -151,23 +190,44 @@ class BaiduOCR():
 		logging.debug("baidu OCR: imgage=%s -> respJson=%s", imagePath, respJson)
 
 		if "error_code" in respJson:
-			logging.warning("respJson=%s" % respJson)
-			errorCode = respJson["error_code"]
+			logging.warning("respJson=%s", respJson)
+			errorCode = respJson["error_code"] # 216202
+			errorMsg = respJson["error_msg"] # 'image size error'
+
+			# respErrEnum = BaiduOcrApiError(errCode=errorCode, errMsg=errorMsg)
+			# RespError = namedtuple("RespError", "errorCode errorMsg")
+			# curRespError = RespError(errorCode, errorMsg)
+			# respErrEnum = BaiduOcrApiError(curRespError)
+			# respErrTuple = (errorCode, errorMsg)
+			# respErrEnum = BaiduOcrApiError(respErrTuple)
+			# logging.warning("respErrEnum=%s", respErrEnum)
+
+			# 【已解决】Linux或Mac的终端中如何显示带颜色的文字即彩色文字
+			# 20210924 12:06:50 crifanEvernote.py:750  INFO    [1/60] imgFilename=None
+			# 20210924 12:06:50 crifanEvernote.py:717  INFO    Resized: PNG,12x12,157.0B -> PNG,12x12,157.0B => ratio=100%
+			# ->
+			# respJson={'log_id': 1441252773455773889, 'error_msg': 'image size error', 'error_code': 216202}
+
 			# {'error_code': 17, 'error_msg': 'Open api daily request limit reached'}
 			# {'error_code': 18, 'error_msg': 'Open api qps request limit reached'}
 			# the limit count can found from
 			# 文字识别 - 免费额度 | 百度AI开放平台
 			# https://ai.baidu.com/ai-doc/OCR/fk3h7xu7h
 			# for "通用文字识别（高精度含位置版）" is "50次/天"
-			if errorCode == self.RESP_ERR_CODE_QPS_LIMIT_REACHED:
+			if errorCode == BaiduOcrApiError.QPS_LIMIT_REACHED.errorCode:
 				# wait sometime and try again
 				time.sleep(1.0)
 				resp = requests.post(self.OCR_URL, params=paramDict, headers=headerDict, data=dataDict)
 				respJson = resp.json()
-				logging.debug("baidu OCR: for errorCode=%s, do again, imgage=%s -> respJson=%s", errorCode, imageFullPath, respJson)
-			elif errorCode == self.RESP_ERR_CODE_DAILY_LIMIT_REACHED:
+				logging.debug("baidu OCR: for errorCode=%s, do again, imgage=%s -> respJson=%s", errorCode, imagePath, respJson)
+			elif errorCode == BaiduOcrApiError.DAILY_LIMIT_REACHED.errorCode:
 				logging.error("Fail to continue using baidu OCR api today for exceed free limit of single day !!!")
-				respJson = None
+				# respJson = None
+				respJson = {}
+			else:
+				logging.error("For other baidu OCR api error %s, just set to None", (errorCode, errorMsg))
+				# respJson = None
+				respJson = {}
 
 		"""
 		{
@@ -202,19 +262,22 @@ class BaiduOCR():
 			inputStr = str(strOrStrList)
 			inputStrList = [inputStr]
 
-		wordsResultList = respJson["words_result"]
-		for curInputWords in inputStrList:
-			curMatchedResultList = []
-			for eachWordsResult in wordsResultList:
-				eachWords = eachWordsResult["words"]
-				# foundCurWords = re.search(curInputWords, eachWords)
-				foundCurWords = re.search(curInputWords, eachWords, re.I)
-				if foundCurWords:
-					curMatchedResultList.append(eachWordsResult)
-					if not isMatchMultiple:
-						break
+		if respJson:
+			wordsResultList = respJson["words_result"]
 
-			orderedMatchedResultDict[curInputWords] = curMatchedResultList
+			for curInputWords in inputStrList:
+				curMatchedResultList = []
+				for eachWordsResult in wordsResultList:
+					eachWords = eachWordsResult["words"]
+					# foundCurWords = re.search(curInputWords, eachWords)
+					foundCurWords = re.search(curInputWords, eachWords, re.I)
+					if foundCurWords:
+						curMatchedResultList.append(eachWordsResult)
+						if not isMatchMultiple:
+							break
+
+				orderedMatchedResultDict[curInputWords] = curMatchedResultList
+
 		return orderedMatchedResultDict
 
 	def isStrInImage(self,
@@ -260,25 +323,26 @@ class BaiduOCR():
 		# add caclulated location and words
 		# Note: use OrderedDict instead dict to keep order, for later get first match result to process
 		processedResultDict = OrderedDict()
-		for eachInputWords in inputStrList:
-			isCurFound = False
-			# curLocatoinList = []
-			# curWordsList = []
-			curResultList = []
+		if matchedResultDict:
+			for eachInputWords in inputStrList:
+				isCurFound = False
+				# curLocatoinList = []
+				# curWordsList = []
+				curResultList = []
 
-			curWordsMatchedResultList = matchedResultDict[eachInputWords]
-			if curWordsMatchedResultList:
-				isCurFound = True
-				for curIdx, eachWordsMatchedResult in enumerate(curWordsMatchedResultList):
-					curMatchedWords = eachWordsMatchedResult["words"]
-					calculatedLocation = self.calcWordsLocation(eachInputWords, eachWordsMatchedResult)
-					# curLocatoinList.append(calculatedLocation)
-					# curWordsList.append(curMatchedWords)
-					curResult = (curMatchedWords, calculatedLocation)
-					curResultList.append(curResult)
+				curWordsMatchedResultList = matchedResultDict[eachInputWords]
+				if curWordsMatchedResultList:
+					isCurFound = True
+					for curIdx, eachWordsMatchedResult in enumerate(curWordsMatchedResultList):
+						curMatchedWords = eachWordsMatchedResult["words"]
+						calculatedLocation = self.calcWordsLocation(eachInputWords, eachWordsMatchedResult)
+						# curLocatoinList.append(calculatedLocation)
+						# curWordsList.append(curMatchedWords)
+						curResult = (curMatchedWords, calculatedLocation)
+						curResultList.append(curResult)
 
-			# processedResultDict[eachInputWords] = (isCurFound, curLocatoinList, curWordsList)
-			processedResultDict[eachInputWords] = (isCurFound, curResultList)
+				# processedResultDict[eachInputWords] = (isCurFound, curLocatoinList, curWordsList)
+				processedResultDict[eachInputWords] = (isCurFound, curResultList)
 		logging.debug("For %s, matchedResult=%s from imgPath=%s", strOrStrList, processedResultDict, imgPath)
 
 		if isMultipleInput:
