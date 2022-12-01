@@ -3,13 +3,13 @@
 """
 Filename: crifanLogging.py
 Function: crifanLib's logging related functions.
-Version: 20210827
+Version: 20221201
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanLogging.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210827"
-__copyright__ = "Copyright (c) 2021, Crifan Li"
+__version__ = "20221201"
+__copyright__ = "Copyright (c) 2022, Crifan Li"
 __license__ = "GPL"
 
 import logging
@@ -344,7 +344,7 @@ def loggingInit(filename = None,
     """
     init logging for both log to file and console
 
-    :param logFilename: input log file name
+    :param filename: input log file name
         if not passed, use current lib filename
     :return: none
     """
