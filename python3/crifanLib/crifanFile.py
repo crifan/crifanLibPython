@@ -278,7 +278,7 @@ def zipFolder(toZipFolder, outputZipFile):
   """
     zip/compress a whole folder/directory to zip file
   """
-  print("Zip for foler %s to file %s" % (toZipFolder, outputZipFile))
+  print("Zip for foler %s" % toZipFolder)
   with zipfile.ZipFile(outputZipFile, 'w', zipfile.ZIP_DEFLATED) as zipFp:
     for dirpath, dirnames, filenames in os.walk(toZipFolder):
       # print("%s" % ("-"*80))
@@ -292,7 +292,7 @@ def zipFolder(toZipFolder, outputZipFile):
         # print("fileRelativePath=%s" % fileRelativePath)
         # print("  %s" % fileRelativePath)
         zipFp.write(curFilePath, arcname=fileRelativePath)
-  print("Complete zip foler %s to file %s" % (toZipFolder, outputZipFile))
+  print("Completed zip file %s" % outputZipFile)
 
 
 ################################################################################
