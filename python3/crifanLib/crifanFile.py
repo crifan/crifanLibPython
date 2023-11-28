@@ -3,13 +3,13 @@
 """
 Filename: crifanFile.py
 Function: crifanLib's file related functions.
-Update: 20210811
+Update: 20231128
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanFile.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210811"
-__copyright__ = "Copyright (c) 2021, Crifan Li"
+__version__ = "20231128"
+__copyright__ = "Copyright (c) 2023, Crifan Li"
 __license__ = "GPL"
 
 import os
@@ -19,6 +19,7 @@ import shutil
 import codecs
 import json
 import re
+import zipfile
 
 try:
     import pysrt
@@ -265,6 +266,14 @@ def updateFileTime(fileOrFolderPath, newAccessTime=None, newModificationTime=Non
         newAccessTime = newModificationTime
 
     os.utime(fileOrFolderPath, (newAccessTime, newModificationTime))
+
+def unzipFile(zipFileFullPath, outputFolder):
+    """
+        unzip a zip file
+    """
+    with zipfile.ZipFile(zipFileFullPath, 'r') as zip_ref:
+        zip_ref.extractall(outputFolder)
+
 
 ################################################################################
 # Folder Function
