@@ -58,9 +58,12 @@ def logSubSub(subStr):
   subsubDelimiter = "-"*20
   print("%s %s %s" % (subsubDelimiter, subStr, subsubDelimiter))
 
+
 ################################################################################
 # IDA Util Function
 ################################################################################
+
+#-------------------- need call IDA api --------------------
 
 def ida_getInfo():
   """
@@ -376,6 +379,25 @@ def ida_getCurrentFolder():
   # . -> /Users/crifan/dev/dev_root/iosReverse/WhatsApp/ipa/Payload/WhatsApp.app
   return curFolder
 
+def isDefaultTypeForObjcMsgSendFunction(funcAddr):
+  """
+  check is objc_msgSend$xxx function's default type "id(void *, const char *, ...)" or not
+  eg:
+    0xF3EF8C -> True
+      note: funcType=id(void *, const char *, __int64, __int64, ...)
+  """
+  isDefType = False
+  funcType = idc.get_type(funcAddr)
+  # print("[0x%X] -> funcType=%s" % (funcAddr, funcType))
+  if funcType:
+    defaultTypeMatch = re.search("\.\.\.\)$", funcType)
+    # print("defaultTypeMatch=%s" % defaultTypeMatch)
+    isDefType = bool(defaultTypeMatch)
+    # print("isDefType=%s" % isDefType)
+  return isDefType
+
+#-------------------- not need call IDA api --------------------
+
 def isDefaultSubFuncName(funcName):
   """
   check is default sub_XXX function or not from name
@@ -429,22 +451,6 @@ def isObjcMsgSendFunction(curAddr):
     isObjcMsgSend, selectorStr = isObjcMsgSendFuncName(curFuncName)
   return isObjcMsgSend, selectorStr
 
-def isDefaultTypeForObjcMsgSendFunction(funcAddr):
-  """
-  check is objc_msgSend$xxx function's default type "id(void *, const char *, ...)" or not
-  eg:
-    0xF3EF8C -> True
-      note: funcType=id(void *, const char *, __int64, __int64, ...)
-  """
-  isDefType = False
-  funcType = idc.get_type(funcAddr)
-  # print("[0x%X] -> funcType=%s" % (funcAddr, funcType))
-  if funcType:
-    defaultTypeMatch = re.search("\.\.\.\)$", funcType)
-    # print("defaultTypeMatch=%s" % defaultTypeMatch)
-    isDefType = bool(defaultTypeMatch)
-    # print("isDefType=%s" % isDefType)
-  return isDefType
 
 ################################################################################
 # IDA Util Class
