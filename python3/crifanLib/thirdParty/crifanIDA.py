@@ -1036,4 +1036,6 @@ class Instruction:
 ################################################################################
 
 # refer:
-# https://github.com/crifan/AutoRename/blob/main/AutoRename.py
+#   https://github.com/crifan/AutoRename/blob/main/AutoRename.py
+#   https://github.com/crifan/restore-symbol/blob/master/tools/IDAScripts/export_ida_symbol/exportIDASymbol.py
+#   https://github.com/crifan/restore-symbol/blob/master/tools/IDAScripts/search_oc_block/ida_search_block.py
