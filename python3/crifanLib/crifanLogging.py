@@ -3,13 +3,13 @@
 """
 Filename: crifanLogging.py
 Function: crifanLib's logging related functions.
-Version: 20221201
+Version: 20240109
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanLogging.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20221201"
-__copyright__ = "Copyright (c) 2022, Crifan Li"
+__version__ = "20240109"
+__copyright__ = "Copyright (c) 2024, Crifan Li"
 __license__ = "GPL"
 
 import logging
@@ -25,12 +25,17 @@ except ImportError:
 # Config
 ################################################################################
 
+# useColorfulLog = True
+useColorfulLog = False
+
 LOG_FORMAT_FILE = "%(asctime)s %(filename)s:%(lineno)-4d %(levelname)-7s %(message)s"
 # https://docs.python.org/3/library/time.html#time.strftime
 LOG_FORMAT_FILE_DATETIME = "%Y/%m/%d %H:%M:%S"
 LOG_LEVEL_FILE = logging.DEBUG
-# LOG_FORMAT_CONSOLE = "%(asctime)s %(filename)s:%(lineno)-4d %(levelname)-7s %(message)s"
-LOG_FORMAT_CONSOLE = "%(color)s%(asctime)s %(filename)s:%(lineno)-4d %(levelname)-7s%(end_color)s %(message)s"
+if useColorfulLog:
+    LOG_FORMAT_CONSOLE = "%(color)s%(asctime)s %(filename)s:%(lineno)-4d %(levelname)-7s%(end_color)s %(message)s"
+else:
+    LOG_FORMAT_CONSOLE = "%(asctime)s %(filename)s:%(lineno)-4d %(levelname)-7s %(message)s"
 LOG_FORMAT_CONSOLE_DATETIME = "%Y%m%d %H:%M:%S"
 LOG_LEVEL_CONSOLE = logging.INFO
 # LOG_LEVEL_CONSOLE = logging.DEBUG
@@ -372,11 +377,10 @@ def loggingInit(filename = None,
         mode='w',
         encoding="utf-8")
     fileHandler.setLevel(fileLogLevel)
-    # fileFormatter = logging.Formatter(
-    #     fmt=fileLogFormat,
-    #     datefmt=fileLogDateFormat
-    # )
-    fileFormatter = LogFormatter(fmt=fileLogFormat, datefmt=fileLogDateFormat)
+    if useColorfulLog:
+        fileFormatter = LogFormatter(fmt=fileLogFormat, datefmt=fileLogDateFormat)
+    else:
+        fileFormatter = logging.Formatter(fmt=fileLogFormat, datefmt=fileLogDateFormat)
     fileHandler.setFormatter(fileFormatter)
     rootLogger.addHandler(fileHandler)
 
@@ -385,10 +389,10 @@ def loggingInit(filename = None,
         console = logging.StreamHandler()
         console.setLevel(consoleLogLevel)
         # set a format which is simpler for console use
-        # formatter = logging.Formatter(
-        #     fmt=consoleLogFormat,
-        #     datefmt=consoleLogDateFormat)
-        consoleFormatter = LogFormatter(fmt=consoleLogFormat, datefmt=consoleLogDateFormat)
+        if useColorfulLog:
+            consoleFormatter = LogFormatter(fmt=consoleLogFormat, datefmt=consoleLogDateFormat)
+        else:
+            consoleFormatter = logging.Formatter(fmt=consoleLogFormat, datefmt=consoleLogDateFormat)
         # tell the handler to use this format
         console.setFormatter(consoleFormatter)
         rootLogger.addHandler(console)
