@@ -3,13 +3,13 @@
 """
 Filename: crifanFile.py
 Function: crifanLib's file related functions.
-Update: 20231128
+Update: 20240715
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanFile.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20231128"
-__copyright__ = "Copyright (c) 2023, Crifan Li"
+__version__ = "20240715"
+__copyright__ = "Copyright (c) 2024, Crifan Li"
 __license__ = "GPL"
 
 import os
@@ -294,6 +294,10 @@ def zipFolder(toZipFolder, outputZipFile):
                 zipFp.write(curFilePath, arcname=fileRelativePath)
     print("Completed zip file %s" % outputZipFile)
 
+def removeFile(filePath):
+  """remove file"""
+  if os.path.exists(filePath):
+    os.remove(filePath)
 
 ################################################################################
 # Folder Function
