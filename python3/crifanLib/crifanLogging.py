@@ -3,12 +3,12 @@
 """
 Filename: crifanLogging.py
 Function: crifanLib's logging related functions.
-Version: 20240109
+Version: 20241216
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanLogging.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20240109"
+__version__ = "20241216"
 __copyright__ = "Copyright (c) 2024, Crifan Li"
 __license__ = "GPL"
 
@@ -20,6 +20,58 @@ try:
     import curses  # type: ignore
 except ImportError:
     curses = None
+
+try:
+    import curses  # type: ignore
+except ImportError:
+    curses = None
+
+try:
+    from crifanFile import createFolder, getFilenameNoPointSuffix
+    from crifanDatetime import getCurDatetimeStr
+except ImportError:
+    print("! If import Crifan lib failed, please manually copy related functions (createFolder, getFilenameNoPointSuffix, getCurDatetimeStr) into you python file")
+
+    import os
+    from datetime import datetime,timedelta
+    import logging
+
+    def createFolder(folderFullPath):
+        """
+            create folder, even if already existed
+            Note: for Python 3.2+
+        """
+        os.makedirs(folderFullPath, exist_ok=True)
+
+    def getCurDatetimeStr(outputFormat="%Y%m%d_%H%M%S"):
+        """
+        get current datetime then format to string
+
+        eg:
+            20171111_220722
+
+        :param outputFormat: datetime output format
+        :return: current datetime formatted string
+        """
+        curDatetime = datetime.now() # 2017-11-11 22:07:22.705101
+        curDatetimeStr = curDatetime.strftime(format=outputFormat) #'20171111_220722'
+        return curDatetimeStr
+
+    def getFilenameNoPointSuffix(curFilePath):
+        """Get current filename without point and suffix
+
+        Args:
+            curFilePath (str): current file path. Normally can use __file__
+        Returns:
+            str, file name without .xxx
+        Raises:
+        Examples:
+            input: /Users/xxx/pymitmdump/mitmdumpOtherApi.py
+            output: mitmdumpOtherApi
+        """
+        root, pointSuffix = os.path.splitext(curFilePath)
+        curFilenameNoSuffix = root.split(os.path.sep)[-1]
+        return curFilenameNoSuffix
 
 ################################################################################
 # Config
@@ -424,6 +476,31 @@ def logSingleLine(curNum, itemStr, totalNum=0, indicatorChar="-", indicatorLengt
     logging.info("%s [%s] %s %s", indicatorStr, curProgressStr, itemStr, indicatorStr)
 
     return
+
+def autoInitLog(pyFileFullPath):
+    """Auto init log file by input current python file full path
+    
+    Examples:
+        crifanLogging.autoInitLog(__file__)
+    """
+    # print("pyFileFullPath=%s" % pyFileFullPath) # pyFileFullPath=/xxx/parseBrJumpOffset/parseBrJumpOffset.py
+    curPyFolder = os.path.dirname(pyFileFullPath)
+    # print("curPyFolder=%s" % curPyFolder) # curPyFolder=/xxx/parseBrJumpOffset
+    curPyFolderFullPath = os.path.abspath(curPyFolder)
+    # print("curPyFolderFullPath=%s" % curPyFolderFullPath) # curPyFolderFullPath=/xxx/parseBrJumpOffset
+    curPyFilenameNoSuffix = getFilenameNoPointSuffix(pyFileFullPath)
+    # print("curPyFilenameNoSuffix=%s" % curPyFilenameNoSuffix) # curPyFilenameNoSuffix=parseBrJumpOffset
+    logFilename = "%s_%s.log" % (curPyFilenameNoSuffix, getCurDatetimeStr())
+    # print("logFilename=%s" % logFilename) # logFilename=parseBrJumpOffset_20241216_105632.log
+    curLogFolder = os.path.join(curPyFolderFullPath, "debug", "log")
+    # print("curLogFolder=%s" % curLogFolder) # curLogFolder=/xxx/parseBrJumpOffset/debug/log
+    createFolder(curLogFolder)
+    curLogFullPath = os.path.join(curLogFolder, logFilename)
+    # print("curLogFullPath=%s" % curLogFullPath) # curLogFullPath=/xxx/parseBrJumpOffset/debug/log/parseBrJumpOffset_20241216_105632.log
+    loggingInit(filename=curLogFullPath)
+    logging.info("Output log to %s", curLogFullPath)
+    return curLogFullPath
+
 
 ################################################################################
 # Test
