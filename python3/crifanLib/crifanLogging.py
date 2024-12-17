@@ -3,12 +3,12 @@
 """
 Filename: crifanLogging.py
 Function: crifanLib's logging related functions.
-Version: 20241216
+Version: 20241217
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanLogging.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20241216"
+__version__ = "20241217"
 __copyright__ = "Copyright (c) 2024, Crifan Li"
 __license__ = "GPL"
 
@@ -27,7 +27,7 @@ except ImportError:
     curses = None
 
 try:
-    from crifanFile import createFolder, getFilenameNoPointSuffix
+    from crifanFile import createFolder, getFilenameNoPointSuffix, getPyFolder
     from crifanDatetime import getCurDatetimeStr
 except ImportError:
     print("! If import Crifan lib failed, please manually copy related functions (createFolder, getFilenameNoPointSuffix, getCurDatetimeStr) into you python file")
@@ -72,6 +72,21 @@ except ImportError:
         root, pointSuffix = os.path.splitext(curFilePath)
         curFilenameNoSuffix = root.split(os.path.sep)[-1]
         return curFilenameNoSuffix
+
+    def getPyFolder(inputPyFile):
+        """Get input python file folder == current folder
+
+        Usage:
+        curFolder = getPyFolder(__file__)
+
+        Example:
+        /xxx/parseBrJumpOffset/parseBrJumpOffset.py -> /xxx/parseBrJumpOffset/
+        """
+        curPyFolder = os.path.dirname(inputPyFile)
+        # print("curPyFolder=%s" % curPyFolder) # curPyFolder=/xxx/parseBrJumpOffset
+        curPyFolderFullPath = os.path.abspath(curPyFolder)
+        # print("curPyFolderFullPath=%s" % curPyFolderFullPath) # curPyFolderFullPath=/xxx/parseBrJumpOffset
+        return curPyFolderFullPath
 
 ################################################################################
 # Config
@@ -484,9 +499,7 @@ def autoInitLog(pyFileFullPath):
         crifanLogging.autoInitLog(__file__)
     """
     # print("pyFileFullPath=%s" % pyFileFullPath) # pyFileFullPath=/xxx/parseBrJumpOffset/parseBrJumpOffset.py
-    curPyFolder = os.path.dirname(pyFileFullPath)
-    # print("curPyFolder=%s" % curPyFolder) # curPyFolder=/xxx/parseBrJumpOffset
-    curPyFolderFullPath = os.path.abspath(curPyFolder)
+    curPyFolderFullPath = getPyFolder(pyFileFullPath)
     # print("curPyFolderFullPath=%s" % curPyFolderFullPath) # curPyFolderFullPath=/xxx/parseBrJumpOffset
     curPyFilenameNoSuffix = getFilenameNoPointSuffix(pyFileFullPath)
     # print("curPyFilenameNoSuffix=%s" % curPyFilenameNoSuffix) # curPyFilenameNoSuffix=parseBrJumpOffset

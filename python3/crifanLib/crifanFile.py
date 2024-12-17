@@ -3,12 +3,12 @@
 """
 Filename: crifanFile.py
 Function: crifanLib's file related functions.
-Update: 20240715
+Update: 20241217
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanFile.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20240715"
+__version__ = "20241217"
 __copyright__ = "Copyright (c) 2024, Crifan Li"
 __license__ = "GPL"
 
@@ -442,7 +442,6 @@ def getPicSufChars():
 
     return gVal['picSufChars']
 
-
 def getBasename(fullFilename):
     """
     get base filename
@@ -474,6 +473,20 @@ def getFilenameNoPointSuffix(curFilePath):
     curFilenameNoSuffix = root.split(os.path.sep)[-1]
     return curFilenameNoSuffix
 
+def getPyFolder(inputPyFile):
+    """Get input python file folder == current folder
+
+    Usage:
+      curFolder = getPyFolder(__file__)
+
+    Example:
+      /xxx/parseBrJumpOffset/parseBrJumpOffset.py -> /xxx/parseBrJumpOffset/
+    """
+    curPyFolder = os.path.dirname(inputPyFile)
+    # print("curPyFolder=%s" % curPyFolder) # curPyFolder=/xxx/parseBrJumpOffset
+    curPyFolderFullPath = os.path.abspath(curPyFolder)
+    # print("curPyFolderFullPath=%s" % curPyFolderFullPath) # curPyFolderFullPath=/xxx/parseBrJumpOffset
+    return curPyFolderFullPath
 
 def getFileSuffix(filename):
     """
