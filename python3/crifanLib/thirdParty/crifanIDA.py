@@ -418,7 +418,7 @@ def ida_patchByArm64InstStr(curAddr, arm64InstStr):
   """
   arm64OpcodeBytes = arm64InstStrToBytesOpcode(arm64InstStr)
   print("arm64InstStr=%s => arm64OpcodeBytes=%s" % (arm64InstStr, arm64OpcodeBytes))
-  idaapi.patch_bytes(curAddr, arm64OpcodeBytes)
+  ida_patchBytes(curAddr, arm64OpcodeBytes)
   print("IDA patched: curAddr=0x%X, arm64OpcodeBytes=%s" % (curAddr, arm64OpcodeBytes))
 
 #-------------------- Keystone Utils --------------------
