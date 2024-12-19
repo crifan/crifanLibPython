@@ -1,6 +1,6 @@
 # Function: IDA common utils functions
 # Author: Crifan Li
-# Update: 20240107
+# Update: 20241219
 # Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanIDA.py
 
 import re
@@ -11,6 +11,9 @@ import idaapi
 import idautils
 import ida_nalt
 import ida_segment
+
+# for Keystone
+from keystone import *
 
 from .crifaniOS import isObjcFunctionName, isObjcMsgSendFuncName
 
@@ -396,6 +399,51 @@ def isDefaultTypeForObjcMsgSendFunction(funcAddr):
     # print("isDefType=%s" % isDefType)
   return isDefType
 
+def ida_patchBytes(curAddr, newOpcodeBytes):
+  """
+  do IDA patch bytes
+  
+  input:
+  example: b'\xd8\xff\xff\x17'
+  """
+  idaapi.patch_bytes(curAddr, newOpcodeBytes)
+  print("IDA patched: curAddr=0x%X, newOpcodeBytes=%s" % (curAddr, newOpcodeBytes))
+
+def ida_patchByArm64InstStr(curAddr, arm64InstStr):
+  """
+  Do IDA patch bytes by ARM64 Instruction string
+  
+  Example: 
+    "B #8" -> IDA patched: b'\x02\x00\x00\x14'
+  """
+  arm64OpcodeBytes = arm64InstStrToBytesOpcode(arm64InstStr)
+  print("arm64InstStr=%s => arm64OpcodeBytes=%s" % (arm64InstStr, arm64OpcodeBytes))
+  idaapi.patch_bytes(curAddr, arm64OpcodeBytes)
+  print("IDA patched: curAddr=0x%X, arm64OpcodeBytes=%s" % (curAddr, arm64OpcodeBytes))
+
+#-------------------- Keystone Utils --------------------
+
+def arm64InstStrToBytesOpcode(arm64InstStr):
+  """
+  Convert ARM64 Instruction string to opcode bytes
+
+  Example:
+    "B #8" -> b'\x02\x00\x00\x14'
+  """
+  try:
+    # Initialize engine in ARM64-64bit mode
+    ksArch = KS_ARCH_ARM64
+    ksMode = KS_MODE_LITTLE_ENDIAN
+    ks = Ks(ksArch, ksMode)
+    print("Keystone init ok for ARM64")
+  except KsError as err:
+    print("Keystone init error: %s" % err)
+
+  opcodeByteList, instCount = ks.asm(arm64InstStr)
+  print("%s => %u instruction: %s" % (arm64InstStr, instCount, opcodeByteList))
+  opcodeBytes = bytes(opcodeByteList)
+  print("opcodeBytes=%s" % opcodeBytes)
+  return opcodeBytes
 #-------------------- not need call IDA api --------------------
 
 def isDefaultSubFuncName(funcName):
