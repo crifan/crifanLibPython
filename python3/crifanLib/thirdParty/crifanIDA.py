@@ -1,16 +1,29 @@
 # Function: IDA common utils functions
 # Author: Crifan Li
-# Update: 20241219
+# Update: 20250103
 # Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanIDA.py
 
 import re
 import os
+import json
+
+import os
+from datetime import datetime,timedelta
+from datetime import time  as datetimeTime
+# import time
+import codecs
+import copy
+
+import logging
 
 import idc
 import idaapi
 import idautils
 import ida_nalt
 import ida_segment
+import ida_name
+import ida_bytes
+import ida_funcs
 
 # for Keystone
 from keystone import *
@@ -26,10 +39,54 @@ from .crifaniOS import isObjcFunctionName, isObjcMsgSendFuncName
 #
 #   idc
 #     https://hex-rays.com//products/ida/support/idapython_docs/idc.html
+#   ida_name
+#     https://hex-rays.com/products/ida/support/idapython_docs/ida_name.html
 
 ################################################################################
 # Config & Settings & Const
 ################################################################################
+
+logUsePrint = True
+logUseLogging = False
+# logUsePrint = False
+# logUseLogging = True # Note: current will 1 log output 7 log -> maybe IDA bug, so temp not using logging
+
+logLevel = logging.INFO
+# logLevel = logging.DEBUG
+IdaReservedStr = [
+  "class",
+  "id",
+  "const",
+  "char",
+  "void",
+  "return",
+  "private",
+  "namespace",
+  "catch",
+  "do",
+  "while",
+  "new",
+  "default",
+  "for",
+]
+
+PrologueEpilogueRegList = [
+  "X19",
+  "X20",
+  "X21",
+  "X22",
+  "X23",
+  "X24",
+  "X25",
+  "X26",
+  "X27",
+  "X28",
+  "X29",
+  "X30",
+
+  "D8",
+  "D9",
+]
 
 ArmSpecialRegNameList = [
   "SB",
@@ -49,18 +106,428 @@ ArmSpecialRegNameList = [
 # Util Function
 ################################################################################
 
-def logMain(mainStr):
+
+CURRENT_LIB_FILENAME = "crifanLogging"
+
+LOG_FORMAT_FILE = "%(asctime)s %(filename)s:%(lineno)-4d %(levelname)-7s %(message)s"
+# https://docs.python.org/3/library/time.html#time.strftime
+LOG_FORMAT_FILE_DATETIME = "%Y/%m/%d %H:%M:%S"
+LOG_LEVEL_FILE = logging.DEBUG
+LOG_FORMAT_CONSOLE = "%(asctime)s %(filename)s:%(lineno)-4d %(levelname)-7s %(message)s"
+LOG_FORMAT_CONSOLE_DATETIME = "%Y%m%d %H:%M:%S"
+LOG_LEVEL_CONSOLE = logging.INFO
+# LOG_LEVEL_CONSOLE = logging.DEBUG
+
+def loggingInit(filename = None,
+                fileLogLevel = LOG_LEVEL_FILE,
+                fileLogFormat = LOG_FORMAT_FILE,
+                fileLogDateFormat = LOG_FORMAT_FILE_DATETIME,
+                enableConsole = True,
+                consoleLogLevel = LOG_LEVEL_CONSOLE,
+                consoleLogFormat = LOG_FORMAT_CONSOLE,
+                consoleLogDateFormat = LOG_FORMAT_CONSOLE_DATETIME,
+                ):
+    """
+    init logging for both log to file and console
+
+    :param filename: input log file name
+        if not passed, use current lib filename
+    :return: none
+    """
+    logFilename = ""
+    if filename:
+        logFilename = filename
+    else:
+        # logFilename = __file__ + ".log"
+        # '/Users/crifan/dev/dev_root/xxx/crifanLogging.py.log'
+        logFilename = CURRENT_LIB_FILENAME + ".log"
+
+    # logging.basicConfig(
+    #                 level    = fileLogLevel,
+    #                 format   = fileLogFormat,
+    #                 datefmt  = fileLogDateFormat,
+    #                 filename = logFilename,
+    #                 encoding = "utf-8",
+    #                 filemode = 'w')
+
+    # rootLogger = logging.getLogger()
+    rootLogger = logging.getLogger("")
+    rootLogger.setLevel(fileLogLevel)
+    fileHandler = logging.FileHandler(
+        filename=logFilename,
+        mode='w',
+        encoding="utf-8")
+    fileHandler.setLevel(fileLogLevel)
+    fileFormatter = logging.Formatter(
+        fmt=fileLogFormat,
+        datefmt=fileLogDateFormat
+    )
+    fileHandler.setFormatter(fileFormatter)
+    rootLogger.addHandler(fileHandler)
+
+    if enableConsole :
+        # define a Handler which writes INFO messages or higher to the sys.stderr
+        console = logging.StreamHandler()
+        console.setLevel(consoleLogLevel)
+        # set a format which is simpler for console use
+        consoleFormatter = logging.Formatter(
+            fmt=consoleLogFormat,
+            datefmt=consoleLogDateFormat)
+        # tell the handler to use this format
+        console.setFormatter(consoleFormatter)
+        rootLogger.addHandler(console)
+
+
+def log_print(formatStr, *paraTuple):
+  if paraTuple:
+    print(formatStr % paraTuple)
+  else:
+    print(formatStr)
+
+def logInfo(formatStr, *paraTuple):
+  if logUsePrint:
+    if logLevel <= logging.INFO:
+      log_print(formatStr, *paraTuple)
+
+  if logUseLogging:
+    logging.info(formatStr, *paraTuple)
+
+def logDebug(formatStr, *paraTuple):
+  if logUsePrint:
+    if logLevel <= logging.DEBUG:
+      log_print(formatStr, *paraTuple)
+  
+  if logUseLogging:
+    logging.debug(formatStr, *paraTuple)
+
+def logMainStr(mainStr):
   mainDelimiter = "="*40
-  print("%s %s %s" % (mainDelimiter, mainStr, mainDelimiter))
+  # print("%s %s %s" % (mainDelimiter, mainStr, mainDelimiter))
+  logInfo("%s %s %s", mainDelimiter, mainStr, mainDelimiter)
 
-def logSub(subStr):
+def logSubStr(subStr):
   subDelimiter = "-"*30
-  print("%s %s %s" % (subDelimiter, subStr, subDelimiter))
+  # print("%s %s %s" % (subDelimiter, subStr, subDelimiter))
+  logDebug("%s %s %s", subDelimiter, subStr, subDelimiter)
 
-def logSubSub(subStr):
+def logSubSubStr(subStr):
   subsubDelimiter = "-"*20
-  print("%s %s %s" % (subsubDelimiter, subStr, subsubDelimiter))
+  # print("%s %s %s" % (subsubDelimiter, subStr, subsubDelimiter))
+  logDebug("%s %s %s", subsubDelimiter, subStr, subsubDelimiter)
 
+
+def datetimeToStr(inputDatetime, format="%Y%m%d_%H%M%S"):
+    """Convert datetime to string
+
+    Args:
+        inputDatetime (datetime): datetime value
+    Returns:
+        str
+    Raises:
+    Examples:
+        datetime.datetime(2020, 4, 21, 15, 44, 13, 2000) -> '20200421_154413'
+    """
+    datetimeStr = inputDatetime.strftime(format=format)
+    # print("inputDatetime=%s -> datetimeStr=%s" % (inputDatetime, datetimeStr)) # 2020-04-21 15:08:59.787623
+    return datetimeStr
+
+def getCurDatetimeStr(outputFormat="%Y%m%d_%H%M%S"):
+    """
+    get current datetime then format to string
+
+    eg:
+        20171111_220722
+
+    :param outputFormat: datetime output format
+    :return: current datetime formatted string
+    """
+    curDatetime = datetime.now() # 2017-11-11 22:07:22.705101
+    # curDatetimeStr = curDatetime.strftime(format=outputFormat) #'20171111_220722'
+    curDatetimeStr = datetimeToStr(curDatetime, format=outputFormat)
+    return curDatetimeStr
+
+def saveJsonToFile(fullFilename, jsonValue, indent=2, fileEncoding="utf-8"):
+    """
+        save json dict into file
+        for non-ascii string, output encoded string, without \\u xxxx
+    """
+    with codecs.open(fullFilename, 'w', encoding=fileEncoding) as jsonFp:
+        json.dump(jsonValue, jsonFp, indent=indent, ensure_ascii=False)
+        # logging.debug("Complete save json %s", fullFilename)
+
+
+#-------------------------------------------------------------------------------
+# iOS Util Function
+#-------------------------------------------------------------------------------
+
+# def isObjcFunctionName(funcName):
+#   """
+#   check is ObjC function name or not
+#   eg:
+#     "+[WAAvatarStringsActions editAvatar]" -> True
+#     "-[ParentGroupInfoViewController initWithParentGroupChatSession:userContext:recentlyLinkedGroupJIDs:]" -> True
+#     "-[OKEvolveSegmentationVC proCard]_116" -> True
+#     "-[WAAvatarStickerUpSellSupplementaryView .cxx_destruct]" -> True
+#     "sub_10004C6D8" -> False
+#     "protocol witness for RawRepresentable.init(rawValue:) in conformance UIFont.FontWeight" -> False
+#   """
+#   isMatchObjcFuncName = re.match("^[\-\+]\[\w+ [\w\.\:]+\]\w*$", funcName)
+#   isObjcFuncName = bool(isMatchObjcFuncName)
+#   # print("funcName=%s -> isObjcFuncName=%s" % (funcName, isObjcFuncName))
+#   return isObjcFuncName
+
+
+def isObjcFunctionName(funcName):
+  """
+  check is ObjC function name or not
+  eg:
+    "+[WAAvatarStringsActions editAvatar]" -> True, True, "WAAvatarStringsActions", "editAvatar"
+    "-[ParentGroupInfoViewController initWithParentGroupChatSession:userContext:recentlyLinkedGroupJIDs:]" -> True, False, "ParentGroupInfoViewController", "initWithParentGroupChatSession:userContext:recentlyLinkedGroupJIDs:"
+    "-[OKEvolveSegmentationVC proCard]_116" -> True, False, "OKEvolveSegmentationVC", "proCard"
+    "-[WAAvatarStickerUpSellSupplementaryView .cxx_destruct]" -> True, False, "WAAvatarStickerUpSellSupplementaryView", ".cxx_destruct"
+    "sub_10004C6D8" -> False, False, None, None
+    "protocol witness for RawRepresentable.init(rawValue:) in conformance UIFont.FontWeight" -> False, False, None, None
+  """
+  isObjcFuncName = False
+  isClass = False
+  className = None
+  selectorStr = None
+
+  objcFuncMatch = re.match("^(?P<classChar>[\-\+])\[(?P<className>\w+) (?P<selectorStr>[\w\.\:]+)\]\w*$", funcName)
+  # print("objcFuncMatch=%s" % objcFuncMatch)
+  if objcFuncMatch:
+    isObjcFuncName = True
+    classChar = objcFuncMatch.group("classChar")
+    # print("classChar=%s" % classChar)
+    if classChar == "+":
+      isClass = True
+    className = objcFuncMatch.group("className")
+    # print("className=%s" % className)
+    selectorStr = objcFuncMatch.group("selectorStr")
+    # print("selectorStr=%s" % selectorStr)
+
+  # print("funcName=%s -> isObjcFuncName=%s, isClass=%s, className=%s, selectorStr=%s" % (funcName, isObjcFuncName, isClass, className, selectorStr))
+  return isObjcFuncName, isClass, className, selectorStr
+
+# testFuncStrList = [
+#     "+[WAAvatarStringsActions editAvatar]",
+#     "-[ParentGroupInfoViewController initWithParentGroupChatSession:userContext:recentlyLinkedGroupJIDs:]",
+#     "-[OKEvolveSegmentationVC proCard]_116",
+#     "-[WAAvatarStickerUpSellSupplementaryView .cxx_destruct]",
+#     "sub_10004C6D8",
+#     "protocol witness for RawRepresentable.init(rawValue:) in conformance UIFont.FontWeight",
+# ]
+# for eachFuncStr in testFuncStrList:
+#   isObjcFunctionName(eachFuncStr)
+
+def ida_getFunctionComment(idaAddr, repeatable=False):
+  """
+  Get function comment
+  """
+  # funcStruct = ida_funcs.get_func(idaAddr)
+  # print("[0x%X] -> funcStruct=%s" % (idaAddr, funcStruct))
+  # curFuncCmt = ida_funcs.get_func_cmt(funcStruct, repeatable)
+  curFuncCmt = idc.get_func_cmt(idaAddr, repeatable)
+  # print("[0x%X] -> curFuncCmt=%s" % (idaAddr, curFuncCmt))
+  return curFuncCmt
+
+def ida_setFunctionComment(idaAddr, newComment, repeatable=False):
+  """
+  Set function comment
+  """
+  setCmtRet = idc.set_func_cmt(idaAddr, newComment, repeatable)
+  # print("[0x%X] -> setCmtRet=%s" % (idaAddr, setCmtRet))
+  return setCmtRet
+
+def ida_setComment(idaAddr, commentStr, repeatable=False):
+  """
+  Set comment for ida address
+  """
+  isSetCmtOk = ida_bytes.set_cmt(idaAddr, commentStr, repeatable)
+  # print("set_cmt: [0x%X] commentStr=%s -> isSetCmtOk=%s" % (idaAddr, commentStr, isSetCmtOk))
+  return isSetCmtOk
+
+# setCmtAddr = 0xF35794
+# # # setCmtAddr = 0xF35798
+# # commentStr = "-[WamEventBotJourney is_ui_surface_set], -[WamEventCallUserJourney is_ui_surface_set], -[WamEventGroupJourney is_ui_surface_set], -[WamEventIncallParticipantPickerShown is_ui_surface_set], -[WamEventSelectParticipantFromPicker is_ui_surface_set]"
+# # # commentStr = ""
+# # # ida_setComment(setCmtAddr, commentStr)
+# # newFuncCmt = commentStr
+# # oldFuncCmt = ida_getFunctionComment(setCmtAddr)
+# # print("oldFuncCmt=%s" % oldFuncCmt)
+# # if oldFuncCmt:
+# #   newFuncCmt = "%s\n%s" % (oldFuncCmt, newFuncCmt)
+# # print("newFuncCmt=%s" % newFuncCmt)
+# # setCmdRet = ida_setFunctionComment(setCmtAddr, newFuncCmt)
+# setCmdRet = ida_setFunctionComment(setCmtAddr, "")
+# print("setCmdRet=%s" % setCmdRet)
+# ssssss
+
+
+def ida_getXrefsToList(idaAddr):
+  """
+  get XrefsTo info dict list from ida address
+  eg:
+    0x139CFBF -> [{'type': 1, 'typeName': 'Data_Offset', 'isCode': 0, 'from': 26301800, 'to': 20565951}]
+  """
+  xrefToInfoDictList = []
+  refToGenerator = idautils.XrefsTo(idaAddr)
+  # print("refToGenerator=%s" % refToGenerator)
+  for eachXrefTo in refToGenerator:
+    # print("eachXrefTo=%s" % eachXrefTo)
+    xrefType = eachXrefTo.type
+    # print("xrefType=%s" % xrefType)
+    xrefTypeName = idautils.XrefTypeName(xrefType)
+    # print("xrefTypeName=%s" % xrefTypeName)
+    xrefIsCode = eachXrefTo.iscode
+    # print("xrefIsCode=%s" % xrefIsCode)
+    xrefFrom = eachXrefTo.frm
+    # print("xrefFrom=0x%X" % xrefFrom)
+    xrefTo = eachXrefTo.to
+    # print("xrefTo=0x%X" % xrefTo)
+    curXrefToInfoDict = {
+      "type": xrefType,
+      "typeName": xrefTypeName,
+      "isCode": xrefIsCode,
+      "from": xrefFrom,
+      "to": xrefTo,
+    }
+    xrefToInfoDictList.append(curXrefToInfoDict)
+  # print("idaAddr=0x%X -> xrefToInfoDictList=%s" % (idaAddr, xrefToInfoDictList))
+  return xrefToInfoDictList
+
+def findClassFromSelector(selectorStr):
+  """
+  find ObjC Class name (and function name) from selector string
+  eg:
+    "setCellsEligibleForExpansion:" -> [{'objcClassName': 'WAAccordionTableView', 'objcFuncName': '-[WAAccordionTableView setCellsEligibleForExpansion:]'}]
+  """
+  foundItemList = []
+
+  # idaSelStr = re.sub(":", "_", selectorStr)
+  # idaSelStr = "sel_%s" % idaSelStr
+  idaSelStr = "sel_%s" % selectorStr
+  logDebug("idaSelStr=%s", idaSelStr)
+  # idaAddr = ida_name.get_name_ea(idaSelStr)
+  idaAddr = idc.get_name_ea_simple(idaSelStr)
+  logDebug("idaAddr=0x%X", idaAddr)
+
+  # realAddr = 0x139CFA1
+  # foundObjcMethname = idc.get_name(realAddr)
+  # logDebug("realAddr=0x%X -> foundObjcMethname=%s" % (realAddr, foundObjcMethname))
+
+  # refToGenerator = idautils.XrefsTo(idaAddr)
+  # logDebug("refToGenerator=%s" % refToGenerator)
+  # for eachXrefTo in refToGenerator:
+  xrefToInfoDictList = ida_getXrefsToList(idaAddr)
+  logDebug("xrefToInfoDictList=%s", xrefToInfoDictList)
+  for eachXrefToInfoDict in xrefToInfoDictList:
+    logDebug("eachXrefToInfoDict=%s" % eachXrefToInfoDict)
+    xrefFrom = eachXrefToInfoDict["from"]
+    logDebug("xrefFrom=%s" % xrefFrom)
+
+    logDebug("--- Xref From [0x%X] ---" % xrefFrom)
+    xrefFromName = idc.get_name(xrefFrom)
+    logDebug("xrefFromName=%s" % xrefFromName)
+    # xrefFromType = idc.get_type(xrefFrom)
+    # logDebug("xrefFromType=%s" % xrefFromType)
+    # xrefFromTinfo = idc.get_tinfo(xrefFrom)
+    # logDebug("xrefFromTinfo=%s" % xrefFromTinfo)
+    xrefFromSegName = idc.get_segm_name(xrefFrom)
+    logDebug("xrefFromSegName=%s" % xrefFromSegName)
+    xrefFromItemSize = idc.get_item_size(xrefFrom)
+    logDebug("xrefFromItemSize=%s" % xrefFromItemSize)
+
+    # (1) __objc_const:000000000183B5F8  __objc2_meth <sel_setCellsEligibleForExpansion_, aV240816_3, \ ;-[WAAccordionTableView setCellsEligibleForExpansion:] ...
+    #     __objc_const:000000000183B5F8  __WAAccordionTableView_setCellsEligibleForExpansion__>
+    # isValidObjcSegment = xrefFromSegName == "__objc_const"
+    # (2) __objc_data:00000000019C8F18                 __objc2_meth <sel_initWithDependencyInversion_, a240816_5, \ ; -[WAContext initWithDependencyInversion:] ...
+    #     __objc_data:00000000019C8F18                               __WAContext_initWithDependencyInversion__>
+    isValidObjcSegment = (xrefFromSegName == "__objc_const") or (xrefFromSegName == "__objc_data")
+    logDebug("isValidObjcSegment=%s" % isValidObjcSegment)
+    Objc2MethSize = 24
+    isObjcMethodSize = xrefFromItemSize == Objc2MethSize
+    logDebug("isObjcMethodSize=%s" % isObjcMethodSize)
+    isObjcConstMeth = isValidObjcSegment and isObjcMethodSize
+    logDebug("isObjcConstMeth=%s" % isObjcConstMeth)
+
+    if isObjcConstMeth:
+      # methodSignatureAddr = xrefFrom + 0x8
+      # logDebug("methodSignatureAddr=0x%X" % methodSignatureAddr)
+      # isRepeatable = False
+      # xrefFromCmt = ida_bytes.get_cmt(xrefFrom, isRepeatable)
+      # logDebug("xrefFromCmt=%s" % xrefFromCmt)
+      # methodSignatureCmt = ida_bytes.get_cmt(methodSignatureAddr, isRepeatable)
+      # logDebug("methodSignatureCmt=%s" % methodSignatureCmt)
+
+      methodImplementAddr = xrefFrom + 0x10
+      logDebug("methodImplementAddr=0x%X" % methodImplementAddr)
+      methodImplementValueAddr = ida_bytes.get_qword(methodImplementAddr)
+      logDebug("methodImplementValueAddr=0x%X" % methodImplementValueAddr)
+      objcMethodName = None
+      methodImplementValueName = idc.get_name(methodImplementValueAddr)
+      logDebug("methodImplementValueName=%s" % methodImplementValueName)
+      if methodImplementValueName:
+        objcMethodName = methodImplementValueName
+      else:
+        methodImplementValueFuncName = idc.get_func_name(methodImplementValueAddr)
+        logDebug("methodImplementValueFuncName=%s" % methodImplementValueFuncName)
+        objcMethodName = methodImplementValueFuncName
+      
+      if objcMethodName:
+        isObjcFuncName, isClass, foundClassName, foundSelectorStr = isObjcFunctionName(objcMethodName)
+        logDebug("objcMethodName=%s -> isObjcFuncName=%s, isClass=%s, foundClassName=%s, selectorStr=%s" % (objcMethodName, isObjcFuncName, isClass, foundClassName, foundSelectorStr))
+        if isObjcFuncName:
+          if selectorStr == foundSelectorStr:
+            className = foundClassName
+            # break
+            curItemDict = {
+              "objcClassName": className,
+              "objcFuncName": objcMethodName,
+            }
+            foundItemList.append(curItemDict)
+            logDebug("foundItemList=%s" % foundItemList)
+
+  logDebug("selectorStr=%s -> foundItemList=%s" % (selectorStr, foundItemList))
+  return foundItemList
+
+# # # selectorStr = "setCellsEligibleForExpansion:"
+# # # selectorStr = "setCenter:"
+# # # selectorStr = "sameDeviceCheckRequestURLWithOfflineExposures:offlineMetrics:pushToken:tokenReadError:"
+# # # selectorStr = "initWithDependencyInversion:" # -[WAContext initWithDependencyInversion:]
+# # # selectorStr = "getChannel" # total 736
+# # # # -[WamEventAutoupdateSetupAction getChannel]
+# # # # -[WamEventAvatarBloksLaunch getChannel]
+# selectorStr = "setQuery:"
+# # -[FMStatement setQuery:]
+# # -[FMResultSet setQuery:]
+# foundItemList = findClassFromSelector(selectorStr)
+# print("selectorStr=%s -> foundItemList: %s, count=%d" % (selectorStr, foundItemList, len(foundItemList)))
+# sssss
+
+def isObjcMsgSendFuncName(funcName):
+  """
+  check function name is _objc_msgSend$xxx or not
+  eg:
+    "_objc_msgSend$arrayByAddingObjectsFromArray:" -> True, "arrayByAddingObjectsFromArray:"
+    "_objc_msgSend$addObject:_AB00" -> True, "addObject:_AB00"
+    "objc_msgSend$initWithKeyValueStore_namespace_binaryCoders_X22toX0_X23toX2_X24toX4" -> True, "initWithKeyValueStore_namespace_binaryCoders_X22toX0_X23toX2_X24toX4"
+  """
+  isOjbcMsgSend = False
+  selectorStr = None
+  # _objc_msgSend$arrangedSubviews
+  # _objc_msgSend$arrayByAddingObjectsFromArray:
+  # _objc_msgSend$arrangeFromView:toView:progress:forwardDirection:
+  # objcMsgSendMatch = re.match("^_*objc_msgSend\$(?P<selectorStr>[\w\:]+¸)$", funcName)
+  # objcMsgSendMatch = re.match("^_*objc_msgSend\$(?P<selectorStr>[\w\:]+)(?P<renamedAddrSuffix>_[A-Za-z0-9]+)?$", funcName)
+  objcMsgSendMatch = re.match("^_*objc_msgSend\$(?P<selectorStr>[\w\:]+)$", funcName)
+  # print("objcMsgSendMatch=%s" % objcMsgSendMatch)
+  if objcMsgSendMatch:
+    selectorStr = objcMsgSendMatch.group("selectorStr")
+    # print("selectorStr=%s" % selectorStr)
+    isOjbcMsgSend = True
+  # print("isOjbcMsgSend=%s, selectorStr=%s" % (isOjbcMsgSend, selectorStr))
+  return isOjbcMsgSend, selectorStr
 
 ################################################################################
 # IDA Util Function
@@ -391,12 +858,12 @@ def isDefaultTypeForObjcMsgSendFunction(funcAddr):
   """
   isDefType = False
   funcType = idc.get_type(funcAddr)
-  # print("[0x%X] -> funcType=%s" % (funcAddr, funcType))
+  logDebug("[0x%X] -> funcType=%s", funcAddr, funcType)
   if funcType:
     defaultTypeMatch = re.search("\.\.\.\)$", funcType)
-    # print("defaultTypeMatch=%s" % defaultTypeMatch)
+    logDebug("defaultTypeMatch=%s", defaultTypeMatch)
     isDefType = bool(defaultTypeMatch)
-    # print("isDefType=%s" % isDefType)
+    logDebug("isDefType=%s", isDefType)
   return isDefType
 
 def ida_patchBytes(curAddr, newOpcodeBytes):
@@ -462,15 +929,17 @@ def isDefaultSubFuncName(funcName):
     addressStr = subMatch.group("addressStr")
   return isSub, addressStr
 
-def isReservedPrefix_loc(funcName):
+def isReservedPrefix_locType(funcName):
   """
-  check is reserved prefix loc_XXX name or not
+  check is reserved prefix loc_XXX / locret_XXX name or not
   eg:
     loc_100007A2C -> True, "100007A2C"
+    locret_16A0 -> True, "16A0"
   """
   isLoc = False
   addressStr = None
-  locMatch = re.match("^loc_(?P<addressStr>[0-9A-Fa-f]+)$", funcName)
+  # locMatch = re.match("^loc_(?P<addressStr>[0-9A-Fa-f]+)$", funcName)
+  locMatch = re.match("^loc(ret)?_(?P<addressStr>[0-9A-F]+)$", funcName)
   # print("locMatch=%s" % locMatch)
   if locMatch:
     isLoc = True
@@ -666,11 +1135,9 @@ class Operand:
         # #-3.0
         # isMatchImm = re.match("^#\w+$", self.operand)
         isMatchImm = re.match("^#[\w\-\.]+$", self.operand)
-        if isDebug:
-          print("isMatchImm=%s" % isMatchImm)
+        logDebug("isMatchImm=%s" % isMatchImm)
         isValidOperand = bool(isMatchImm)
-        if isDebug:
-          print("isValidOperand=%s" % isValidOperand)
+        logDebug("isValidOperand=%s" % isValidOperand)
       elif self.isReg():
         # X0/X1
         # D8/D4
@@ -680,11 +1147,9 @@ class Operand:
         # isMatchReg = re.match("^[XD]\d+$", regNameUpper)
         # isMatchReg = re.match("^[XDW]\d+$", regNameUpper)
         isMatchReg = re.match("^([XDW]\d+)|(XZR)|(WZR)$", regNameUpper)
-        if isDebug:
-          print("isMatchReg=%s" % isMatchReg)
+        logDebug("isMatchReg=%s" % isMatchReg)
         isValidOperand = bool(isMatchReg)
-        if isDebug:
-          print("isValidOperand=%s" % isValidOperand)
+        logDebug("isValidOperand=%s" % isValidOperand)
         if not isValidOperand:
           isValidOperand = regNameUpper in ArmSpecialRegNameList
       elif self.isDispl():
@@ -692,8 +1157,7 @@ class Operand:
         # curOperand=<Operand: op=[SP,#arg_18],type=4,val=0x18>
         # if self.baseReg and (not self.indexReg) and self.displacement:
         # curOperand=<Operand: op=[X9],type=4,val=0x0>
-        if isDebug:
-          print("self.baseReg=%s, self.indexReg=%s, self.displacement=%s" % (self.baseReg, self.indexReg, self.displacement))
+        logDebug("self.baseReg=%s, self.indexReg=%s, self.displacement=%s" % (self.baseReg, self.indexReg, self.displacement))
 
         if self.baseReg and (not self.indexReg):
           # Note: self.displacement is None / Not-None
@@ -701,15 +1165,13 @@ class Operand:
           isValidOperand = True
       elif self.isPhrase():
         # curOperand=<Operand: op=[X19,X8],type=3,val=0x94>
-        if isDebug:
-          print("self.baseReg=%s, self.indexReg=%s" % (self.baseReg, self.indexReg))
+        logDebug("self.baseReg=%s, self.indexReg=%s" % (self.baseReg, self.indexReg))
         if self.baseReg and self.indexReg:
           isValidOperand = True
       elif self.isNear():
         # o_near     = 7        # Immediate Near Address (CODE)        addr
         # curOperand=<Operand: op=_objc_copyWeak,type=7,val=0x1024ABBD0>
-        if isDebug:
-          print("self.value=%s" % self.value)
+        logDebug("self.value=%s" % self.value)
 
         if self.value:
           # jump to some (non 0) address -> consider is valid
@@ -857,55 +1319,38 @@ class Instruction:
 
   @staticmethod
   def parse(addr):
-    isDebug = False
-    # # if addr == 0x10235D610:
-    # # if addr == 0x1002B8340:
-    # if addr == 0x102390B18:
-    #   isDebug = True
-    # isDebug = True
-
-    if isDebug:
-      print("Instruction: parsing 0x%X" % addr)
+    logDebug("Instruction: parsing 0x%X", addr)
     parsedInst = None
 
     instName = idc.print_insn_mnem(addr)
-    if isDebug:
-      print("instName=%s" % instName)
+    logDebug("instName=%s", instName)
 
     curOperandIdx = 0
     curOperandVaild = True
     operandList = []
     while curOperandVaild:
-      if isDebug:
-        logSubSub("[%d]" % curOperandIdx)
+      logSubSubStr("[%d]" % curOperandIdx)
       curOperand = idc.print_operand(addr, curOperandIdx)
-      if isDebug:
-        print("curOperand=%s" % curOperand)
+      logDebug("curOperand=%s", curOperand)
       curOperandType = idc.get_operand_type(addr, curOperandIdx)
-      if isDebug:
-        print("curOperandType=%d" % curOperandType)
+      logDebug("curOperandType=%d", curOperandType)
       curOperandValue = idc.get_operand_value(addr, curOperandIdx)
-      if isDebug:
-        print("curOperandValue=%s=0x%X" % (curOperandValue, curOperandValue))
+      logDebug("curOperandValue=%s=0x%X", curOperandValue, curOperandValue)
       curOperand = Operand(curOperand, curOperandType, curOperandValue)
-      if isDebug:
-        print("curOperand=%s" % curOperand)
+      logDebug("curOperand=%s", curOperand)
       if curOperand.isValid():
         operandList.append(curOperand)
       else:
-        if isDebug:
-          print("End of operand for invalid %s" % curOperand)
+        logDebug("End of operand for invalid %s", curOperand)
         curOperandVaild = False
 
-      if isDebug:
-        print("curOperandVaild=%s" % curOperandVaild)
+      logDebug("curOperandVaild=%s", curOperandVaild)
       curOperandIdx += 1
 
     if operandList:
       parsedInst = Instruction(addr=addr, name=instName, operands=operandList)
-    if isDebug:
-      print("parsedInst=%s" % parsedInst)
-      print("operandList=%s" % Operand.listToStr(operandList))
+    logDebug("parsedInst=%s", parsedInst)
+    logDebug("operandList=%s", Operand.listToStr(operandList))
     return parsedInst
 
   def isInst(self, instName):
@@ -925,30 +1370,23 @@ class Instruction:
     isDebug = False
     # isDebug = True
 
-    if isDebug:
-      print("self=%s" % self)
+    logDebug("self=%s", self)
 
     operandNum = len(self.operands)
-    if isDebug:
-      print("operandNum=%s" % operandNum)
+    logDebug("operandNum=%s", operandNum)
     
     isPairInst = self.isStp() or self.isLdp()
-    if isDebug:
-      print("isPairInst=%s" % isPairInst)
+    logDebug("isPairInst=%s", isPairInst)
     if not isPairInst:
       if operandNum >= 2:
         srcOperand = self.operands[1]
-        if isDebug:
-          print("srcOperand=%s" % srcOperand)
+        logDebug("srcOperand=%s", srcOperand)
         srcOperandStr = srcOperand.contentStr
-        if isDebug:
-          print("srcOperandStr=%s" % srcOperandStr)
+        logDebug("srcOperandStr=%s", srcOperandStr)
         dstOperand = self.operands[0]
-        if isDebug:
-          print("dstOperand=%s" % dstOperand)
+        logDebug("dstOperand=%s", dstOperand)
         dstOperandStr = dstOperand.contentStr
-        if isDebug:
-          print("dstOperandStr=%s" % dstOperandStr)
+        logDebug("dstOperandStr=%s", dstOperandStr)
 
     if self.isMov() or self.isFmov():
       # MOV X0, X24
@@ -982,36 +1420,30 @@ class Instruction:
         contentStr = "%s%s%s" % (srcOperandStr, Instruction.toStr, dstOperandStr)
       elif operandNum > 2:
         # TODO: add case for operand > 2
-        print("TODO: add support operand > 2 of LDR")
+        logInfo("TODO: add support operand > 2 of LDR")
     elif self.isStr():
       # STR XZR, [X19,X8]
       if operandNum == 2:
         contentStr = "%s%s%s" % (dstOperandStr, Instruction.toStr, srcOperandStr)
       elif operandNum > 2:
         # TODO: add case for operand > 2
-        print("TODO: add support operand > 2 of STR")
+        logInfo("TODO: add support operand > 2 of STR")
     elif self.isStp():
       # <Instruction: 0x10235D6B4: STP X8, X9, [SP,#arg_18]>
       if operandNum == 3:
         srcOperand1 = self.operands[0]
-        if isDebug:
-          print("srcOperand1=%s" % srcOperand1)
+        logDebug("srcOperand1=%s", srcOperand1)
         srcOperand1Str = srcOperand1.contentStr
-        if isDebug:
-          print("srcOperand1Str=%s" % srcOperand1Str)
+        logDebug("srcOperand1Str=%s", srcOperand1Str)
         srcOperand2 = self.operands[1]
-        if isDebug:
-          print("srcOperand2=%s" % srcOperand2)
+        logDebug("srcOperand2=%s", srcOperand2)
         srcOperand2Str = srcOperand2.contentStr
-        if isDebug:
-          print("srcOperand2Str=%s" % srcOperand2Str)
+        logDebug("srcOperand2Str=%s", srcOperand2Str)
 
         dstOperand = self.operands[2]
-        if isDebug:
-          print("dstOperand=%s" % dstOperand)
+        logDebug("dstOperand=%s", dstOperand)
         dstOperandStr = dstOperand.contentStr
-        if isDebug:
-          print("dstOperandStr=%s" % dstOperandStr)
+        logDebug("dstOperandStr=%s", dstOperandStr)
         
         contentStr = "%s%s%s%s" % (srcOperand1Str, srcOperand2Str, Instruction.toStr, dstOperandStr)
     elif self.isLdp():
@@ -1019,30 +1451,23 @@ class Instruction:
       # <Instruction: 0x10235D98C: LDP D2, D3, [X8,#0x10]>
       if operandNum == 3:
         dstOperand1 = self.operands[0]
-        if isDebug:
-          print("dstOperand1=%s" % dstOperand1)
+        logDebug("dstOperand1=%s", dstOperand1)
         dstOperand1Str = dstOperand1.contentStr
-        if isDebug:
-          print("dstOperand1Str=%s" % dstOperand1Str)
+        logDebug("dstOperand1Str=%s", dstOperand1Str)
         dstOperand2 = self.operands[1]
-        if isDebug:
-          print("dstOperand2=%s" % dstOperand2)
+        logDebug("dstOperand2=%s", dstOperand2)
         dstOperand2Str = dstOperand2.contentStr
-        if isDebug:
-          print("dstOperand2Str=%s" % dstOperand2Str)
+        logDebug("dstOperand2Str=%s", dstOperand2Str)
 
         srcOperand = self.operands[2]
-        if isDebug:
-          print("srcOperand=%s" % srcOperand)
+        logDebug("srcOperand=%s", srcOperand)
         srcOperandStr = srcOperand.contentStr
-        if isDebug:
-          print("srcOperandStr=%s" % srcOperandStr)
+        logDebug("srcOperandStr=%s", srcOperandStr)
         
         contentStr = "%s%s%s%s" % (srcOperandStr, Instruction.toStr, dstOperand1Str, dstOperand2Str)
 
     # TODO: add other Instruction support: SUB/STR/...
-    if isDebug:
-      print("contentStr=%s" % contentStr)
+    logDebug("contentStr=%s", contentStr)
     return contentStr
 
   def isMov(self):
