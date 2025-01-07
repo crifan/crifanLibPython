@@ -1,6 +1,6 @@
 # Function: IDA common utils functions
 # Author: Crifan Li
-# Update: 20250103
+# Update: 20250107
 # Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanIDA.py
 
 import re
@@ -529,6 +529,15 @@ def isObjcMsgSendFuncName(funcName):
   # print("isOjbcMsgSend=%s, selectorStr=%s" % (isOjbcMsgSend, selectorStr))
   return isOjbcMsgSend, selectorStr
 
+def isFuncName_TypeMetadataAccessorForAppDelegate(funcName):
+  """
+  check function name is 'type metadata accessor for AppDelegate_N' or not
+  eg:
+    type metadata accessor for AppDelegate_5
+  """
+  isTypeMetadataAccessorForAppDelegate = re.match("type metadata accessor for AppDelegate", funcName)
+  return isTypeMetadataAccessorForAppDelegate
+
 ################################################################################
 # IDA Util Function
 ################################################################################
@@ -968,6 +977,13 @@ def isObjcMsgSendFunction(curAddr):
     isObjcMsgSend, selectorStr = isObjcMsgSendFuncName(curFuncName)
   return isObjcMsgSend, selectorStr
 
+def isFunc_TypeMetadataAccessorForAppDelegate(curAddr):
+  """
+  check is function type_metadata_accessor_for_AppDelegate or not from address
+  """
+  curFuncName = ida_getFunctionName(curAddr)
+  isTypeMetadataAccessorForAppDelegate = isFuncName_TypeMetadataAccessorForAppDelegate(curFuncName)
+  return isTypeMetadataAccessorForAppDelegate
 
 ################################################################################
 # IDA Util Class
@@ -975,7 +991,11 @@ def isObjcMsgSendFunction(curAddr):
 
 class Operand:
   # Operand Type
-  # https://hex-rays.com/products/ida/support/idapython_docs/idc.html#idc.get_operand_value
+  # old doc: 
+  #   https://hex-rays.com/products/ida/support/idapython_docs/idc.html#idc.get_operand_value
+  # new doc: 
+  #   https://cpp.docs.hex-rays.com/group__o__.html
+  #   https://docs.hex-rays.com/developer-guide/idc/idc-api-reference/alphabetical-list-of-idc-functions/276
   o_void     = 0        # No Operand                           ----------
   o_reg      = 1        # General Register (al,ax,es,ds...)    reg
   o_mem      = 2        # Direct Memory Reference  (DATA)      addr
@@ -1033,11 +1053,13 @@ class Operand:
     self.indexReg = None
     # for o_displ
     self.displacement = None
+    self.displ_addr = None
 
     self._postInit()
   
   def _postInit(self):
-    # print("_postInit")
+    # print("")
+    logDebug("_postInit: self.operand=%s", self.operand)
     if self.isDispl():
       # o_displ    = 4        # Memory Reg [Base Reg + Index Reg + Displacement] phrase+addr
       # [SP,#arg_18]
@@ -1045,13 +1067,30 @@ class Operand:
       # print("self.operand=%s" % self.operand)
       # displMatch = re.search("\[(?P<baseReg>\w+),(?P<displacement>#[\w\-\.]+)\]", self.operand)
       # [X9]
-      displMatch = re.search("\[(?P<baseReg>\w+)(,(?P<displacement>#[\w\-\.]+))?\]", self.operand)
-      # print("displMatch=%s" % displMatch)
+      # displMatch = re.search("\[(?P<baseReg>\w+)(,(?P<displacement>#[\w\-\.]+))?\]", self.operand)
+      # curOperand=[SP,#-0x10+var_s0]!
+      displMatch = re.search("\[(?P<baseReg>\w+)(,(?P<displacement>#[\w\-\.\+]+))?\]!?", self.operand)
+      logDebug("displMatch=%s", displMatch)
       if displMatch:
         self.baseReg = displMatch.group("baseReg")
-        # print("self.baseReg=%s" % self.baseReg)
+        logDebug("self.baseReg=%s", self.baseReg)
         self.displacement = displMatch.group("displacement")
-        # print("self.displacement=%s" % self.displacement)
+        logDebug("self.displacement=%s", self.displacement)
+
+      if not displMatch:
+        # LDP X29, X30, [SP+var_s0],#0x10
+        # curOperand=[SP+var_s0],#0x10
+        displMatch = re.search("\[(?P<baseReg>\w+)\+(?P<displacement>\w+)\],#(?P<displ_addr>)", self.operand)
+        logDebug("displMatch=%s", displMatch)
+
+        if displMatch:
+          self.baseReg = displMatch.group("baseReg")
+          logDebug("self.baseReg=%s", self.baseReg)
+          self.displacement = displMatch.group("displacement")
+          logDebug("self.displacement=%s", self.displacement)
+          self.displ_addr = displMatch.group("displ_addr")
+          logDebug("self.displ_addr=%s", self.displ_addr)
+
     elif self.isPhrase():
       # o_phrase   = 3        # Memory Ref [Base Reg + Index Reg]    phrase
       # [X19,X8]
@@ -1134,7 +1173,9 @@ class Operand:
         # isMatchImm = re.match("^#[0-9a-fA-FxX]+$", self.operand)
         # #-3.0
         # isMatchImm = re.match("^#\w+$", self.operand)
-        isMatchImm = re.match("^#[\w\-\.]+$", self.operand)
+        # isMatchImm = re.match("^#[\w\-\.]+$", self.operand)
+        # curOperand=#_OBJC_CLASS_$__TtC11XxxxXxxXxxx26ApiInitiateRechargeRequest@PAGEOFF
+        isMatchImm = re.match("^#[\w\-\.\$\@]+$", self.operand)
         logDebug("isMatchImm=%s" % isMatchImm)
         isValidOperand = bool(isMatchImm)
         logDebug("isValidOperand=%s" % isValidOperand)
@@ -1289,6 +1330,7 @@ class Operand:
 
 # class Instruction(object):
 class Instruction:
+  branchToStr = "BranchTo"
   # toStr = "to"
   toStr = "To"
   # addStr = "add"
@@ -1367,10 +1409,10 @@ class Instruction:
     """
     contentStr = ""
 
-    isDebug = False
+    # isDebug = False
     # isDebug = True
 
-    logDebug("self=%s", self)
+    logDebug("----- To contentStr: %s ----- ", self)
 
     operandNum = len(self.operands)
     logDebug("operandNum=%s", operandNum)
@@ -1378,15 +1420,24 @@ class Instruction:
     isPairInst = self.isStp() or self.isLdp()
     logDebug("isPairInst=%s", isPairInst)
     if not isPairInst:
+      if operandNum >= 1:
+        dstOperand = self.operands[0]
+        logDebug("dstOperand=%s", dstOperand)
+        dstOperandStr = dstOperand.contentStr
+        logDebug("dstOperandStr=%s", dstOperandStr)
+
       if operandNum >= 2:
         srcOperand = self.operands[1]
         logDebug("srcOperand=%s", srcOperand)
         srcOperandStr = srcOperand.contentStr
         logDebug("srcOperandStr=%s", srcOperandStr)
-        dstOperand = self.operands[0]
-        logDebug("dstOperand=%s", dstOperand)
-        dstOperandStr = dstOperand.contentStr
-        logDebug("dstOperandStr=%s", dstOperandStr)
+    
+    if self.isBl():
+      if operandNum == 1:
+        # <Instruction: 0xE3C8: BL _swift_getInitializedObjCClass>
+        dstOperandOperand = dstOperand.operand
+        logDebug("dstOperandOperand=%s", dstOperandOperand)
+        contentStr = "%s%s" % (Instruction.branchToStr, dstOperandOperand)
 
     if self.isMov() or self.isFmov():
       # MOV X0, X24
@@ -1407,6 +1458,7 @@ class Instruction:
       # # print("instOperandList=%s" % Operand.listToStr(instOperandList))
       if operandNum == 3:
         # <Instruction: 0x10235D574: ADD X0, X19, X8; location>
+        # <Instruction: 0xE3C4: ADD X0, X0, #_OBJC_CLASS_$__TtC11XxxxXxxXxxx26ApiInitiateRechargeRequest@PAGEOFF>
         extracOperand = self.operands[2]
         # print("extracOperand=%s" % extracOperand)
         extraOperandStr = extracOperand.contentStr
@@ -1465,6 +1517,20 @@ class Instruction:
         logDebug("srcOperandStr=%s", srcOperandStr)
         
         contentStr = "%s%s%s%s" % (srcOperandStr, Instruction.toStr, dstOperand1Str, dstOperand2Str)
+    elif self.isAdrp():
+      if operandNum == 2:
+        # <Instruction: 0xE3C0: ADRP X0, #unk_111D000; classType>
+        dstOperand1 = self.operands[0]
+        logDebug("dstOperand1=%s", dstOperand1)
+        dstOperand1Str = dstOperand1.contentStr
+        logDebug("dstOperand1Str=%s", dstOperand1Str)
+
+        srcOperand = self.operands[1]
+        logDebug("srcOperand=%s", srcOperand)
+        srcOperandStr = srcOperand.contentStr
+        logDebug("srcOperandStr=%s", srcOperandStr)
+
+        contentStr = "PageAddr%s%s%s" % (srcOperandStr, Instruction.toStr, dstOperand1Str)
 
     # TODO: add other Instruction support: SUB/STR/...
     logDebug("contentStr=%s", contentStr)
@@ -1485,9 +1551,12 @@ class Instruction:
   def isBr(self):
     return self.isInst("BR")
 
+  def isBl(self):
+    return self.isInst("BL")
+
   def isBranch(self):
     # TODO: support more: BRAA / ...
-    return self.isB() or self.isBr()
+    return self.isB() or self.isBr() or self.isBl()
 
   def isAdd(self):
     return self.isInst("ADD")
@@ -1509,6 +1578,9 @@ class Instruction:
 
   def isLdr(self):
     return self.isInst("LDR")
+
+  def isAdrp(self):
+    return self.isInst("ADRP")
 
 ################################################################################
 # Demo
