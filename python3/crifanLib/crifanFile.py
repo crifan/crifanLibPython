@@ -3,13 +3,13 @@
 """
 Filename: crifanFile.py
 Function: crifanLib's file related functions.
-Update: 20241217
+Update: 20250424
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanFile.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20241217"
-__copyright__ = "Copyright (c) 2024, Crifan Li"
+__version__ = "20250424"
+__copyright__ = "Copyright (c) 2025, Crifan Li"
 __license__ = "GPL"
 
 import os
@@ -148,7 +148,7 @@ def loadTextFromFile(fullFilename, fileEncoding="utf-8"):
         # logging.debug("Complete load text from %s", fullFilename)
         return allText
 
-def readBinDataFromFile(filePath):
+def loadBytesFromFile(filePath):
     """Read binary data from file
 
     Args:
@@ -157,15 +157,15 @@ def readBinDataFromFile(filePath):
         bytes, file binary data
     Raises:
     """
-    binaryData = None
+    dataBytes = None
     try:
         readFp = open(filePath, "rb")
-        binaryData = readFp.read()
+        dataBytes = readFp.read()
         readFp.close()
     except:
-        binaryData = None
+        dataBytes = None
 
-    return binaryData
+    return dataBytes
 
 def chmodAddX(someFile, isOnlySelf=True):
     """add file executable mode, like chmod +x
