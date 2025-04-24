@@ -97,28 +97,6 @@ def isFileObject(fileObj):
         # io.RawIOBase
         return hasattr(fileObj, 'read')
 
-def saveBinDataToFile(binaryData, fileToSave):
-    """save binary data into file"""
-    saveOK = False
-    try:
-        # open a file, if not exist, create it
-        savedBinFile = open(fileToSave, "wb")
-        #print "savedBinFile=",savedBinFile
-        savedBinFile.write(binaryData)
-        savedBinFile.close()
-        saveOK = True
-    except :
-        saveOK = False
-    return saveOK
-
-
-def saveDataToFile(fullFilename, binaryData):
-    """save binary data info file"""
-    with open(fullFilename, 'wb') as fp:
-        fp.write(binaryData)
-        fp.close()
-        # logging.debug("Complete save file %s", fullFilename)
-
 def saveJsonToFile(fullFilename, jsonValue, indent=2, fileEncoding="utf-8"):
     """
         save json dict into file
@@ -147,6 +125,20 @@ def loadTextFromFile(fullFilename, fileEncoding="utf-8"):
         allText = fp.read()
         # logging.debug("Complete load text from %s", fullFilename)
         return allText
+
+def saveBytesToFile(dataBytes, fileToSave):
+    """save bytes(binary data) into file"""
+    saveOK = False
+    try:
+        # open a file, if not exist, create it
+        savedBinFile = open(fileToSave, "wb")
+        #print "savedBinFile=",savedBinFile
+        savedBinFile.write(dataBytes)
+        savedBinFile.close()
+        saveOK = True
+    except:
+        saveOK = False
+    return saveOK
 
 def loadBytesFromFile(filePath):
     """Read binary data from file
