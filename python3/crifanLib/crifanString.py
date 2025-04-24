@@ -3,13 +3,13 @@
 """
 Filename: crifanString.py
 Function: crifanLib's string related functions
-Version: 20210827
+Version: 20250424
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanString.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210827"
-__copyright__ = "Copyright (c) 2021, Crifan Li"
+__version__ = "20250424"
+__copyright__ = "Copyright (c) 2025, Crifan Li"
 __license__ = "GPL"
 
 import re
@@ -20,6 +20,7 @@ import time
 import uuid
 import codecs
 import binascii
+import string
 
 try:
     import chardet
@@ -482,6 +483,15 @@ CssPropertyKeyList = [
 ################################################################################
 # String
 ################################################################################
+
+def genRandomStr(length=5):
+  """Generate random string"""
+  randomCharList = []
+  for i in range(length):
+    randomChar = random.choice(string.ascii_letters)
+    randomCharList.append(randomChar)
+  randomStr = ''.join(randomCharList)
+  return randomStr
 
 def bytesToStr(inputBytes, encoding="UTF-8"):
     """convert binary bytes into str hexadecimal representation
