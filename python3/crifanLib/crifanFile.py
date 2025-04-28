@@ -3,12 +3,12 @@
 """
 Filename: crifanFile.py
 Function: crifanLib's file related functions.
-Update: 20250424
+Update: 20250428
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanFile.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20250424"
+__version__ = "20250428"
 __copyright__ = "Copyright (c) 2025, Crifan Li"
 __license__ = "GPL"
 
@@ -97,41 +97,41 @@ def isFileObject(fileObj):
         # io.RawIOBase
         return hasattr(fileObj, 'read')
 
-def saveJsonToFile(fullFilename, jsonValue, indent=2, fileEncoding="utf-8"):
+def saveJsonToFile(filePath, jsonValue, indent=2, fileEncoding="utf-8"):
     """
         save json dict into file
         for non-ascii string, output encoded string, without \\u xxxx
     """
-    with codecs.open(fullFilename, 'w', encoding=fileEncoding) as jsonFp:
+    with codecs.open(filePath, 'w', encoding=fileEncoding) as jsonFp:
         json.dump(jsonValue, jsonFp, indent=indent, ensure_ascii=False)
-        # logging.debug("Complete save json %s", fullFilename)
+        # logging.debug("Complete save json %s", filePath)
 
-def loadJsonFromFile(fullFilename, fileEncoding="utf-8"):
+def loadJsonFromFile(filePath, fileEncoding="utf-8"):
     """load and parse json dict from file"""
-    with codecs.open(fullFilename, 'r', encoding=fileEncoding) as jsonFp:
+    with codecs.open(filePath, 'r', encoding=fileEncoding) as jsonFp:
         jsonDict = json.load(jsonFp)
-        # logging.debug("Complete load json from %s", fullFilename)
+        # logging.debug("Complete load json from %s", filePath)
         return jsonDict
 
-def saveTextToFile(fullFilename, text, fileEncoding="utf-8"):
+def saveTextToFile(filePath, text, fileEncoding="utf-8"):
     """save text content into file"""
-    with codecs.open(fullFilename, 'w', encoding=fileEncoding) as fp:
+    with codecs.open(filePath, 'w', encoding=fileEncoding) as fp:
         fp.write(text)
         fp.close()
 
-def loadTextFromFile(fullFilename, fileEncoding="utf-8"):
+def loadTextFromFile(filePath, fileEncoding="utf-8"):
     """load file text content from file"""
-    with codecs.open(fullFilename, 'r', encoding=fileEncoding) as fp:
+    with codecs.open(filePath, 'r', encoding=fileEncoding) as fp:
         allText = fp.read()
-        # logging.debug("Complete load text from %s", fullFilename)
+        # logging.debug("Complete load text from %s", filePath)
         return allText
 
-def saveBytesToFile(dataBytes, fileToSave):
-    """save bytes(binary data) into file"""
+def saveBytesToFile(filePath, dataBytes):
+    """save bytes (binary data) into file"""
     saveOK = False
     try:
         # open a file, if not exist, create it
-        savedBinFile = open(fileToSave, "wb")
+        savedBinFile = open(filePath, "wb")
         #print "savedBinFile=",savedBinFile
         savedBinFile.write(dataBytes)
         savedBinFile.close()
