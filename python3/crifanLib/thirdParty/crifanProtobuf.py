@@ -3,19 +3,19 @@
 """
 Filename: crifanProtobuf.py
 Function: crifanLib's Protobuf(Protocol Buffer) related functions.
-Version: 20250524
+Version: 20250528
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanProtobuf.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20250524"
+__version__ = "20250528"
 __copyright__ = "Copyright (c) 2025, Crifan Li"
 __license__ = "GPL"
 
 import os
+import tempfile
 
-from crifanLib.crifanString import genRandomStr
-from crifanLib.crifanFile import loadTextFromFile, loadBytesFromFile, saveBytesToFile, removeFile
+from crifanLib.crifanFile import loadTextFromFile, loadBytesFromFile
 
 ################################################################################
 # Config
@@ -44,26 +44,28 @@ gConst = {
 # Protobuf Function
 ################################################################################
 
-
 def decodeProtobuf_bytes(protobufBytes):
     """
     Decode protobuf bytes to json string
     """
-    bin_file = f"./{genRandomStr()}"
-    tmp_file = f"./{genRandomStr()}"
+    protoInputFile = tempfile.NamedTemporaryFile()
+    protoInputFileName = protoInputFile.name
+    protoOutputFile = tempfile.NamedTemporaryFile(mode="w", encoding="utf-8")
+    protoOutputFileName = protoOutputFile.name
 
-    saveBytesToFile(protobufBytes, bin_file)
+    # saveBytesToFile(protobufBytes, protoInputFile)
+    protoInputFile.write(protobufBytes)
 
-    # cmd = f"/opt/homebrew/bin/protoc --decode_raw < ./{bin_file} > {tmp_file}"
-    cmd = f"protoc --decode_raw < {bin_file} > {tmp_file}"
+    # cmd = f"/opt/homebrew/bin/protoc --decode_raw < ./{protoInputFileName} > {protoOutputFileName}"
+    cmd = f"protoc --decode_raw < {protoInputFileName} > {protoOutputFileName}"
     os.system(cmd)
 
-    raw_proto = loadTextFromFile(tmp_file)
+    protoParseResult = loadTextFromFile(protoOutputFileName)
 
-    removeFile(tmp_file)
-    removeFile(bin_file)
+    protoInputFile.close()
+    protoOutputFile.close()
 
-    return raw_proto
+    return protoParseResult
 
 def decodeProtobuf_hexStr(protobufBytesHexStr):
     """
