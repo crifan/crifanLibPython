@@ -3,13 +3,13 @@
 """
 Filename: crifanList.py
 Function: crifanLib's list related functions.
-Version: 20210511
+Version: 20250518
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/crifanList.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20210511"
-__copyright__ = "Copyright (c) 2021, Crifan Li"
+__version__ = "20250518"
+__copyright__ = "Copyright (c) 2025, Crifan Li"
 __license__ = "GPL"
 
 
@@ -152,6 +152,21 @@ def tupleListToDict(tupleList):
         (key, value) = eachTuple
         convertedDict[key] = value
     return convertedDict
+
+def javaByteListToPythonByteList(javaByteList):
+  """
+  Convert Java byte list to Python byte list
+
+  Example:
+    [57, -81] -> [57, 175]
+  """
+  pyByteList = []
+  for eachJavaByte in javaByteList:
+    pyByte = eachJavaByte
+    if eachJavaByte < 0:
+      pyByte = eachJavaByte + 256
+    pyByteList.append(pyByte)
+  return pyByteList
 
 ################################################################################
 # Test
