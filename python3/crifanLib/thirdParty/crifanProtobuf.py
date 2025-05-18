@@ -3,12 +3,12 @@
 """
 Filename: crifanProtobuf.py
 Function: crifanLib's Protobuf(Protocol Buffer) related functions.
-Version: 20250528
+Version: 20250428
 Latest: https://github.com/crifan/crifanLibPython/blob/master/python3/crifanLib/thirdParty/crifanProtobuf.py
 """
 
 __author__ = "Crifan Li (admin@crifan.com)"
-__version__ = "20250528"
+__version__ = "20250428"
 __copyright__ = "Copyright (c) 2025, Crifan Li"
 __license__ = "GPL"
 
